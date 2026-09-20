@@ -1,5 +1,7 @@
 # climbcal 🧗
 
+[![CI](https://github.com/jose-luis-b-bautista/climbcal/actions/workflows/ci.yml/badge.svg)](https://github.com/jose-luis-b-bautista/climbcal/actions/workflows/ci.yml)
+
 A small web app for answering one question: **who is climbing, where, and when — this week?**
 
 Open the week view, see your friends' sessions as cards (name, gym, time window), and add your
@@ -150,6 +152,9 @@ feed reuses the same hook with no user filter, letting RLS return the visible ro
 only `visibility = 'public'` profiles.
 
 ## Testing notes
+
+CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push
+to `main` and on pull requests — no secrets required.
 
 `npm test` covers the date/format helpers plus one integration render of the week view against a
 mocked Supabase client (`src/test/`), which verifies the auth gate, friend lookup, climb query
