@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
+import { ThemeToggle } from './ThemeToggle'
 import { Avatar, cx, ghostButtonClass } from './ui'
 
 const NAV_ITEMS = [
@@ -51,6 +52,7 @@ export function Layout() {
         </nav>
 
         <div className="order-2 flex items-center gap-2 sm:order-3">
+          <ThemeToggle />
           <Avatar profile={profile} size="sm" />
           <span className="hidden text-sm text-zinc-300 sm:inline">
             {profile?.username ? `@${profile.username}` : 'climber'}

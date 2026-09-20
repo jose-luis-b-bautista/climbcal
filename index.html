@@ -10,6 +10,24 @@
       content="climbcal — see who is climbing, where, and when, this week."
     />
     <title>climbcal — weekly climbing calendar</title>
+    <script>
+      // Apply the saved theme before the first paint so there is no flash of the
+      // wrong colours. The storage key must match THEME_STORAGE_KEY in
+      // src/hooks/useTheme.tsx (asserted in src/theme.test.ts).
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('climbcal-theme')
+          var dark = stored
+            ? stored === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+          document.documentElement.classList.toggle('dark', dark)
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', dark ? '#09090b' : '#fafafa')
+        } catch (error) {
+          /* localStorage may be unavailable; the default theme still applies. */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

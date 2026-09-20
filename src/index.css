@@ -1,8 +1,104 @@
 @import 'tailwindcss';
 
+/* `dark:` utilities key off a class on <html> instead of the OS preference, so
+   the in-app toggle can drive the theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Theme tokens
+
+   The components are written dark-first against Tailwind's scales:
+     zinc-950 = page background     zinc-900 = card / raised surface
+     zinc-800 = card border         zinc-700 = input + button border
+     zinc-600 = hover border, ring  zinc-100/200/300 = primary text
+     zinc-400/500 = progressively muted text
+     emerald  = accent (primary buttons, own sessions, links)
+     red/sky  = danger and info surfaces
+
+   The light theme below redefines those same tokens, so every existing utility
+   class keeps its role in both themes: surface shades become light, text shades
+   become dark. Contrast of these pairs is asserted in src/theme.test.ts.
+--------------------------------------------------------------------------- */
 @theme {
   --font-sans:
     ui-sans-serif, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* light theme (default) ------------------------------------------------- */
+  --color-zinc-100: #18181b;
+  --color-zinc-200: #27272a;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-400: #52525b;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #a1a1aa;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-900: #ffffff;
+  --color-zinc-950: #fafafa;
+
+  --color-emerald-100: #065f46;
+  --color-emerald-200: #047857;
+  --color-emerald-300: #065f46;
+  --color-emerald-400: #047857;
+  --color-emerald-500: #065f46;
+  --color-emerald-600: #047857;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+  --color-emerald-950: #ecfdf5;
+
+  --color-red-100: #7f1d1d;
+  --color-red-200: #991b1b;
+  --color-red-300: #b91c1c;
+  --color-red-800: #fca5a5;
+  --color-red-900: #fecaca;
+  --color-red-950: #fef2f2;
+
+  --color-sky-200: #1e40af;
+  --color-sky-900: #bfdbfe;
+  --color-sky-950: #eff6ff;
+}
+
+/* dark theme: the palette the app was originally designed in. */
+.dark {
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-zinc-950: #09090b;
+
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
+
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-red-950: #450a0a;
+
+  --color-sky-200: #bae6fd;
+  --color-sky-900: #0c4a6e;
+  --color-sky-950: #082f49;
+
+  /* Native widgets (date/time pickers, scrollbars, form controls) follow suit. */
+  color-scheme: dark;
+}
+
+:root {
+  color-scheme: light;
 }
 
 html {
@@ -12,8 +108,8 @@ html {
 body {
   margin: 0;
   min-height: 100svh;
-  background-color: #09090b; /* zinc-950 */
-  color: #f4f4f5; /* zinc-100 */
+  background-color: var(--color-zinc-950);
+  color: var(--color-zinc-100);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -23,9 +119,5 @@ body {
   min-height: 100svh;
 }
 
-/* Keep native date/time pickers legible on the dark surface. */
-input[type='date'],
-input[type='time'] {
-  color-scheme: dark;
-}
+/* The date/time pickers inherit `color-scheme` from the theme tokens above. */
 

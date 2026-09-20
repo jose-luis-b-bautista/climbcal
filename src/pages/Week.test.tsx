@@ -8,6 +8,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { AuthProvider } from '../hooks/useAuth'
+import { ThemeProvider } from '../hooks/useTheme'
 
 vi.mock('../lib/supabase', async () => {
   const { createClimbcalSupabaseMock } = await import('../test/fixture')
@@ -25,11 +26,13 @@ beforeAll(() => {
 describe('<Week />', () => {
   it('shows own and friend sessions for the selected week', async () => {
     render(
-      <MemoryRouter initialEntries={['/week?week=2026-09-14']}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </MemoryRouter>,
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/week?week=2026-09-14']}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>,
     )
 
     // Friend's session card (gym stored as free text).
@@ -57,5 +60,8 @@ describe('<Week />', () => {
 
     // Signed-in navigation, not the login screen.
     expect(screen.getByRole('link', { name: 'Feed' })).toBeTruthy()
+
+    // The theme switch is available in the app shell.
+    expect(screen.getByRole('button', { name: /switch to .* mode/i })).toBeTruthy()
   })
 })

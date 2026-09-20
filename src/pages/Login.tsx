@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { SetupRequired } from '../components/ProtectedRoute'
+import { ThemeToggle } from '../components/ThemeToggle'
 import {
   ErrorBanner,
   Field,
@@ -55,7 +56,8 @@ export default function Login() {
   }
 
   return (
-    <div className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4 py-12">
+    <div className="relative mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4 py-12">
+      <ThemeToggle className="absolute right-4 top-4" />
       <div className="mb-6 text-center">
         <p className="text-3xl" aria-hidden="true">
           🧗

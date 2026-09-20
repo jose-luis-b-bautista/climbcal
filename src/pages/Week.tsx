@@ -236,7 +236,7 @@ export default function Week() {
                 </div>
 
                 {dayEntries.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-zinc-800 px-2 py-4 text-center text-xs text-zinc-600">
+                  <p className="rounded-lg border border-dashed border-zinc-800 px-2 py-4 text-center text-xs text-zinc-500">
                     Nothing planned
                   </p>
                 ) : (

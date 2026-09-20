@@ -33,6 +33,9 @@ read or write what.
 - **Friends** — search by username, send/accept/decline requests, cancel, unfriend.
 - **Public feed** — the next ~3 weeks of sessions from climbers whose profile is public.
 - **Settings** — edit profile, flip public/private, manage the shared gym list.
+- **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
+  choice per browser and falls back to your OS setting. No flash on load: a tiny inline script in
+  `index.html` sets the theme before first paint.
 
 Out of scope for v1: notifications, chat, maps, recurring sessions, comments, native apps.
 
@@ -135,9 +138,9 @@ Nothing is granted to the `anon` role, so there is no anonymous browsing: every 
 ```
 src/
   components/   Layout (nav shell), ProtectedRoute (session/onboarding gates),
-                SessionFormModal, ui.tsx (shared primitives + class tokens)
-  hooks/        useAuth (session + profile context), useWeekClimbs (range queries),
-                useFriends, useGyms
+                SessionFormModal, ThemeToggle, ui.tsx (shared primitives + class tokens)
+  hooks/        useAuth (session + profile context), useTheme (light/dark),
+                useWeekClimbs (range queries), useFriends, useGyms
   lib/          supabase (client), date (week math, formatting), format (names/usernames)
   pages/        Login, Onboarding, Week, Friends, Feed, Settings
   test/         Supabase client mock + fixtures for the integration render test
@@ -150,6 +153,24 @@ Queries work in two steps: load the accepted friend ids, then fetch climbs for `
 in the selected week (embedded gym name included) and map the climber profiles onto the rows. The
 feed reuses the same hook with no user filter, letting RLS return the visible rows and keeping
 only `visibility = 'public'` profiles.
+
+## Theming
+
+The components are written **dark-first** against the Tailwind scales: `zinc-950` is the page
+background, `zinc-900` a card, `zinc-800` a border, `zinc-100` primary text, `zinc-400/500` muted
+text, and `emerald` is the accent with `red`/`sky` for danger and info surfaces.
+
+Instead of duplicating `dark:` variants everywhere, [`src/index.css`](src/index.css) redefines those
+same tokens for the light theme, so every existing class keeps its *role* in both themes (surface
+shades become light, text shades become dark). `ThemeProvider` toggles a `.dark` class on `<html>`,
+which is what the token overrides and any future `dark:` utilities key off.
+
+Practical consequences when editing UI:
+
+- Keep using the existing scales rather than raw hex values, or a colour will not adapt.
+- Light-theme values are checked for contrast by `src/theme.test.ts` — it parses the tokens out of
+  the CSS and asserts WCAG AA (4.5:1) for body text, and perceivable borders. Change a colour and
+  the test tells you if it broke.
 
 ## Testing notes
 
