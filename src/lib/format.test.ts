@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { displayNameOf, gymNameOf, initialsOf, normaliseUsername } from './format'
+import {
+  GYM_REGIONS,
+  OTHER_REGION_LABEL,
+  displayNameOf,
+  groupGymsByRegion,
+  gymNameOf,
+  initialsOf,
+  normaliseUsername,
+} from './format'
 import type { Profile } from '../types'
 
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
@@ -51,5 +59,44 @@ describe('gymNameOf', () => {
     )
     expect(gymNameOf({ gym: null, custom_gym_name: 'Boulder Barn' })).toBe('Boulder Barn')
     expect(gymNameOf({})).toBe('Gym not set')
+  })
+})
+
+describe('groupGymsByRegion', () => {
+  function gym(name: string, region: string | null) {
+    return { name, region }
+  }
+
+  it('orders the canonical regions, then custom ones, then Other', () => {
+    const groups = groupGymsByRegion([
+      gym('Boulder24', 'Mindanao'),
+      gym('Cordillera Club', 'Cordillera'),
+      gym('Boulder Space', 'Luzon'),
+      gym('Rock On Boulder', 'Visayas'),
+      gym('Batanes Wall', 'Batanes'),
+      gym('One-off', null),
+    ])
+
+    expect(GYM_REGIONS).toEqual(['Luzon', 'Visayas', 'Mindanao'])
+    expect(groups.map((group) => group.region)).toEqual([
+      'Luzon',
+      'Visayas',
+      'Mindanao',
+      'Batanes',
+      'Cordillera',
+      OTHER_REGION_LABEL,
+    ])
+    expect(groups[0].gyms.map((item) => item.name)).toEqual(['Boulder Space'])
+    expect(groups[groups.length - 1].gyms.map((item) => item.name)).toEqual(['One-off'])
+  })
+
+  it('treats blank regions as Other and drops empty buckets', () => {
+    const groups = groupGymsByRegion([gym('Blank', '   '), gym('Luzon gym', 'Luzon')])
+
+    expect(groups.map((group) => group.region)).toEqual(['Luzon', OTHER_REGION_LABEL])
+  })
+
+  it('returns nothing for an empty gym list', () => {
+    expect(groupGymsByRegion([])).toEqual([])
   })
 })

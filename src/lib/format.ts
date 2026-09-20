@@ -23,6 +23,46 @@ export function gymNameOf(
   return climb.gym?.name ?? climb.custom_gym_name?.trim() ?? 'Gym not set'
 }
 
+/** Island regions the seeded gym list is grouped by, in display order. */
+export const GYM_REGIONS = ['Luzon', 'Visayas', 'Mindanao']
+
+/** Bucket label for gyms with no region, or one outside {@link GYM_REGIONS}. */
+export const OTHER_REGION_LABEL = 'Other'
+
+export interface GymGroup<T> {
+  region: string
+  gyms: T[]
+}
+
+/**
+ * Groups gyms for display: the canonical regions in {@link GYM_REGIONS} order
+ * first, then any custom region alphabetically, and the "Other" bucket for
+ * untagged gyms last. Empty buckets are never emitted.
+ */
+export function groupGymsByRegion<T extends { region?: string | null }>(
+  gyms: T[],
+): GymGroup<T>[] {
+  const buckets = new Map<string, T[]>()
+
+  for (const gym of gyms) {
+    const region = gym.region?.trim() || OTHER_REGION_LABEL
+    const bucket = buckets.get(region)
+    if (bucket) bucket.push(gym)
+    else buckets.set(region, [gym])
+  }
+
+  const canonical = GYM_REGIONS.filter((region) => buckets.has(region))
+  const custom = [...buckets.keys()]
+    .filter((region) => !canonical.includes(region) && region !== OTHER_REGION_LABEL)
+    .sort((a, b) => a.localeCompare(b))
+  const other = buckets.has(OTHER_REGION_LABEL) ? [OTHER_REGION_LABEL] : []
+
+  return [...canonical, ...custom, ...other].map((region) => ({
+    region,
+    gyms: buckets.get(region) ?? [],
+  }))
+}
+
 /** Normalise user input into a valid username, or return the error message. */
 export function normaliseUsername(raw: string): { value: string } | { error: string } {
   const value = raw.trim().toLowerCase().replace(/^@/, '')

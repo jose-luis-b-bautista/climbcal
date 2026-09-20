@@ -34,6 +34,7 @@ export const gymFixture = {
   id: GYM_ID,
   name: 'Vertical Hub',
   city: null,
+  region: 'Luzon',
   created_by: null,
   created_at: timestamp,
 }

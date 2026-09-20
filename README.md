@@ -28,8 +28,9 @@ read or write what.
 - **Week view** (home) — Mon–Sun of any week (prev / this week / next), with `?week=YYYY-MM-DD`
   in the URL so weeks are linkable. Each day shows a count of friends climbing plus session
   cards; your own sessions are highlighted and editable.
-- **Add / edit / delete session** — date, gym (seeded dropdown or free-text "Other"), start/end
-  time, optional note. Multiple sessions per day are allowed.
+- **Add / edit / delete session** — date, gym (dropdown grouped by region — Luzon / Visayas /
+  Mindanao — or free-text "Other"), start/end time, optional note. Multiple sessions per day are
+  allowed.
 - **Friends** — search by username, send/accept/decline requests, cancel, unfriend.
 - **Public feed** — the next ~3 weeks of sessions from climbers whose profile is public.
 - **Settings** — edit profile, flip public/private, manage the shared gym list.
@@ -46,7 +47,10 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
    - **Dashboard → SQL Editor → New query**: paste
      [`supabase/migrations/20260919000000_init.sql`](supabase/migrations/20260919000000_init.sql),
      run it, then paste and run
-     [`supabase/migrations/20260919000100_seed_gyms.sql`](supabase/migrations/20260919000100_seed_gyms.sql).
+     [`supabase/migrations/20260919000100_seed_gyms.sql`](supabase/migrations/20260919000100_seed_gyms.sql)
+     and finally
+     [`supabase/migrations/20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql)
+     (the real gym list, tagged by region).
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -58,7 +62,11 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   Both files are idempotent, so re-running is safe.
+   All three files are idempotent, so re-running is safe.
+   > Already set the project up before the region migration? Just run
+   > `20260920000000_gym_regions.sql`: it adds the `region` column, retires the old
+   > placeholder gyms (keeping sessions that referenced them as free-text names) and
+   > seeds the regional list. Running `db push` does this for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
      "check your inbox" notice.
@@ -111,13 +119,15 @@ npm run lint       # oxlint
 ```
 auth.users ──1:1── profiles (username, display_name, visibility[public|private])
 auth.users ──1:n── climbs   (climb_date, start_time, end_time, gym_id | custom_gym_name, note)
-gyms                        (seeded list + user-created rows, created_by)
+gyms                        (name, city, region, seeded list + user-created rows, created_by)
 auth.users ──n:n── friendships (requester_id, addressee_id, status[pending|accepted])
 ```
 
 - One `friendships` row per pair: a unique index on `(least(requester_id, addressee_id),
   greatest(requester_id, addressee_id))` makes an A→B / B→A duplicate impossible.
 - `climbs` checks `end_time > start_time` and requires either a `gym_id` or a `custom_gym_name`.
+- `gyms.region` is free text (`Luzon` / `Visayas` / `Mindanao` for the seeded list): the session
+  dropdown and the Settings list are grouped by it, with an "Other" bucket for untagged gyms.
 - Signing up creates the `profiles` row automatically (`on_auth_user_created` trigger).
 - `updated_at` is maintained by triggers.
 
@@ -141,11 +151,13 @@ src/
                 SessionFormModal, ThemeToggle, ui.tsx (shared primitives + class tokens)
   hooks/        useAuth (session + profile context), useTheme (light/dark),
                 useWeekClimbs (range queries), useFriends, useGyms
-  lib/          supabase (client), date (week math, formatting), format (names/usernames)
+  lib/          supabase (client), date (week math, formatting),
+                format (names/usernames, gym-by-region grouping)
   pages/        Login, Onboarding, Week, Friends, Feed, Settings
   test/         Supabase client mock + fixtures for the integration render test
 supabase/
-  migrations/   init: schema + RLS + triggers, seed_gyms: starter gym list
+  migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
+                gym_regions: real gym list grouped by region
   config.toml   minimal CLI config (link / db push)
 ```
 

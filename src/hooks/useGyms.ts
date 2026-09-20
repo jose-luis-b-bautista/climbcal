@@ -9,7 +9,7 @@ interface UseGymsResult {
   error: string | null
   reload: () => void
   /** Adds a user-created gym and returns the inserted row. */
-  addGym: (name: string, city?: string | null) => Promise<Gym>
+  addGym: (name: string, city?: string | null, region?: string | null) => Promise<Gym>
 }
 
 /** Loads the shared gym list (seeded rows plus user-created ones). */
@@ -57,13 +57,18 @@ export function useGyms(enabled = true): UseGymsResult {
   }, [enabled, nonce])
 
   const addGym = useCallback(
-    async (name: string, city?: string | null) => {
+    async (name: string, city?: string | null, region?: string | null) => {
       const trimmed = name.trim()
       if (!trimmed) throw new Error('Gym name is required.')
 
       const { data, error: insertError } = await supabase
         .from('gyms')
-        .insert({ name: trimmed, city: city?.trim() || null, created_by: userId })
+        .insert({
+          name: trimmed,
+          city: city?.trim() || null,
+          region: region?.trim() || null,
+          created_by: userId,
+        })
         .select('*')
         .single()
 

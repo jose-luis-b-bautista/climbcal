@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { OTHER_REGION_LABEL, groupGymsByRegion } from '../lib/format'
 import type { Climb, Gym } from '../types'
 import {
   ErrorBanner,
@@ -47,6 +48,11 @@ export function SessionFormModal({
   // Gyms may arrive after the dialog opens, so fall back to the first one (or
   // the free-text option) without clobbering a choice the user already made.
   const selectedGym = gymChoice || gyms[0]?.id || OTHER_GYM
+
+  // Native <optgroup>s keep the dropdown separated by region; the free-text
+  // "Other" option rides along in the Other group so there is always a way out.
+  const gymGroups = groupGymsByRegion(gyms)
+  const hasOtherGroup = gymGroups.some((group) => group.region === OTHER_REGION_LABEL)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -163,13 +169,24 @@ export function SessionFormModal({
               className={inputClass}
             >
               <option value="">Select a gym…</option>
-              {gyms.map((gym) => (
-                <option key={gym.id} value={gym.id}>
-                  {gym.name}
-                  {gym.city ? ` — ${gym.city}` : ''}
-                </option>
+              {gymGroups.map((group) => (
+                <optgroup key={group.region} label={group.region}>
+                  {group.gyms.map((gym) => (
+                    <option key={gym.id} value={gym.id}>
+                      {gym.name}
+                      {gym.city ? ` — ${gym.city}` : ''}
+                    </option>
+                  ))}
+                  {group.region === OTHER_REGION_LABEL ? (
+                    <option value={OTHER_GYM}>Other (type it in)</option>
+                  ) : null}
+                </optgroup>
               ))}
-              <option value={OTHER_GYM}>Other (type it in)</option>
+              {hasOtherGroup ? null : (
+                <optgroup label={OTHER_REGION_LABEL}>
+                  <option value={OTHER_GYM}>Other (type it in)</option>
+                </optgroup>
+              )}
             </select>
           </Field>
 

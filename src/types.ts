@@ -1,5 +1,6 @@
 /**
- * Hand-written types mirroring supabase/migrations/0001_init.sql.
+ * Hand-written types mirroring the migrations in `supabase/migrations/`
+ * (init: schema, seed_gyms + gym_regions: gym list).
  * Keep in sync when the schema changes.
  */
 
@@ -27,6 +28,8 @@ export type GymRow = {
   id: string
   name: string
   city: string | null
+  /** Island region the gym is grouped under (Luzon / Visayas / Mindanao / …). */
+  region: string | null
   created_by: string | null
   created_at: string
 }
@@ -90,6 +93,7 @@ export interface Database {
           id?: string
           name: string
           city?: string | null
+          region?: string | null
           created_by?: string | null
           created_at?: string
         }
@@ -97,6 +101,7 @@ export interface Database {
           id?: string
           name?: string
           city?: string | null
+          region?: string | null
           created_by?: string | null
           created_at?: string
         }
