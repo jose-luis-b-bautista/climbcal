@@ -31,8 +31,10 @@ read or write what.
   a count of friends climbing plus session cards; your own sessions are highlighted and editable.
   The day cards always describe the *real* today and tomorrow, whatever week the grid is parked on.
 - **Add / edit / delete session** — date, gym (dropdown grouped by region — Luzon / Visayas /
-  Mindanao — or free-text "Other"), a time window (exact clock times **or** flexible labels such as
-  "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day are allowed.
+  Mindanao — or free-text "Other"), an optional second gym so it reads as **"Either X or Y"**, or
+  **"Not sure yet"** when the venue isn't decided; a time window (exact clock times **or** flexible
+  labels such as "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day
+  are allowed.
 - **Friends** — search by username, send/accept/decline requests, cancel, unfriend.
 - **Public feed** — the next ~3 weeks of sessions from climbers whose profile is public.
 - **Settings** — edit profile, flip public/private. The gym list itself is curated by admins, not in
@@ -55,7 +57,9 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      [`20260920000100_session_windows.sql`](supabase/migrations/20260920000100_session_windows.sql)
      (flexible time-of-day windows), then
      [`20260920000200_gyms_admin_only.sql`](supabase/migrations/20260920000200_gyms_admin_only.sql)
-     (the gym list becomes read-only for users).
+     (the gym list becomes read-only for users), then
+     [`20260920000300_second_gym.sql`](supabase/migrations/20260920000300_second_gym.sql) (the
+     optional second gym and "Not sure yet").
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -67,13 +71,14 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   All five files are idempotent, so re-running is safe.
+   All six files are idempotent, so re-running is safe.
    > Already set the project up earlier? Just run the migrations you haven't:
    > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
    > (keeping sessions that referenced them as free-text names) and seeds the regional list;
    > `20260920000100_session_windows.sql` adds the flexible `start_slot` / `end_slot` windows and
    > leaves existing clock-time sessions untouched; `20260920000200_gyms_admin_only.sql` makes the
-   > gym list read-only for users. Running `db push` does all of them for you.
+   > gym list read-only for users; `20260920000300_second_gym.sql` adds the optional second gym and
+   > relaxes the old "a gym is required" rule. Running `db push` does all of them for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
      "check your inbox" notice.
@@ -126,18 +131,24 @@ npm run lint       # oxlint
 ```
 auth.users ──1:1── profiles (username, display_name, visibility[public|private])
 auth.users ──1:n── climbs   (climb_date, start_time | start_slot, end_time | end_slot,
-                             gym_id | custom_gym_name, note)
+                             gym_id | custom_gym_name, gym_id_2 | custom_gym_name_2, note)
 gyms                        (name, city, region, admin-curated reference data, created_by)
 auth.users ──n:n── friendships (requester_id, addressee_id, status[pending|accepted])
 ```
 
 - One `friendships` row per pair: a unique index on `(least(requester_id, addressee_id),
   greatest(requester_id, addressee_id))` makes an A→B / B→A duplicate impossible.
-- `climbs` requires either a `gym_id` or a `custom_gym_name`, and its window is **either** two
-  clock times (`start_time` / `end_time`) **or** two time-of-day labels (`start_slot` /
-  `end_slot`, one of the eight in `src/lib/slots.ts`). `public.window_minutes()` puts both forms on
-  one canonical scale, so a single constraint can insist the end comes after the start — mixed
-  windows such as `Opening → 21:00` included. The scale is never displayed: labels are shown
+- The gym is **optional** — "Not sure yet" simply stores nulls — and there are two slots: `gym_id` /
+  `custom_gym_name`, plus an optional alternative `gym_id_2` / `custom_gym_name_2`. Each slot is
+  either a listed gym or a typed name (never both, never blank), the alternative cannot repeat the
+  first, and a session with two names renders as **"Either X or Y"** (`gymNameOf` in `lib/format`).
+- Because `climbs` now references `gyms` twice, every embed names its foreign key:
+  `gym:gyms!climbs_gym_id_fkey(id, name)` and `gym_2:gyms!climbs_gym_id_2_fkey(id, name)`. Without
+  the hint PostgREST cannot tell the two relationships apart (and the types need it too).
+- A window is **either** two clock times (`start_time` / `end_time`) **or** two time-of-day labels
+  (`start_slot` / `end_slot`, one of the eight in `src/lib/slots.ts`). `public.window_minutes()` puts
+  both forms on one canonical scale, so a single constraint can insist the end comes after the start
+  — mixed windows such as `Opening → 21:00` included. The scale is never displayed: labels are shown
   verbatim, and a duration appears only when both ends are clock times.
 - `gyms.region` is free text (`Luzon` / `Visayas` / `Mindanao` for the seeded list): the session
   dropdown groups by it, with an "Other" bucket for untagged gyms.
@@ -177,7 +188,8 @@ supabase/
   migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
                 gym_regions: real gym list grouped by region,
                 session_windows: flexible window columns + constraints,
-                gyms_admin_only: gyms read-only for users
+                gyms_admin_only: gyms read-only for users,
+                second_gym: optional "either" gym + "not sure yet"
   config.toml   minimal CLI config (link / db push)
 ```
 

@@ -65,10 +65,13 @@ vi.mock('../lib/supabase', async () => {
     climb_date,
     gym_id: null,
     custom_gym_name,
+    gym_id_2: null,
+    custom_gym_name_2: null,
     note: null,
     created_at: stamp,
     updated_at: stamp,
     gym: null,
+    gym_2: null,
     ...window,
   })
 

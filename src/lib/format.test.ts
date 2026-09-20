@@ -58,7 +58,21 @@ describe('gymNameOf', () => {
       'Vertical Hub',
     )
     expect(gymNameOf({ gym: null, custom_gym_name: 'Boulder Barn' })).toBe('Boulder Barn')
-    expect(gymNameOf({})).toBe('Gym not set')
+  })
+
+  it('reads a second gym as "either"', () => {
+    expect(gymNameOf({ gym: { name: 'Boulder Space' }, gym_2: { name: 'BHive' } })).toBe(
+      'Either Boulder Space or BHive',
+    )
+    expect(
+      gymNameOf({ gym: { name: 'Boulder Space' }, custom_gym_name_2: '  Boulder Barn  ' }),
+    ).toBe('Either Boulder Space or Boulder Barn')
+    expect(gymNameOf({ gym_2: { name: 'GHive' } })).toBe('GHive')
+  })
+
+  it('falls back to "Not sure yet" when no gym is set', () => {
+    expect(gymNameOf({})).toBe('Not sure yet')
+    expect(gymNameOf({ gym: null, custom_gym_name: '   ' })).toBe('Not sure yet')
   })
 })
 

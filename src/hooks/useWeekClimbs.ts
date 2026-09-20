@@ -56,7 +56,9 @@ export function useClimbs({
       setError(null)
       let query = supabase
         .from('climbs')
-        .select('*, gym:gyms(id, name)')
+        .select(
+          '*, gym:gyms!climbs_gym_id_fkey(id, name), gym_2:gyms!climbs_gym_id_2_fkey(id, name)',
+        )
         .gte('climb_date', startDate)
         .lte('climb_date', endDate)
         .order('climb_date', { ascending: true })

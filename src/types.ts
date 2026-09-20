@@ -44,8 +44,12 @@ export type ClimbRow = {
   /** Flexible time-of-day label, e.g. "Opening" / "Closing". */
   start_slot: string | null
   end_slot: string | null
+  /** Gym slot 1: a listed gym or a typed `custom_gym_name`; both may be null. */
   gym_id: string | null
   custom_gym_name: string | null
+  /** Optional alternative gym slot 2 — rendered as "Either X or Y". */
+  gym_id_2: string | null
+  custom_gym_name_2: string | null
   note: string | null
   created_at: string
   updated_at: string
@@ -131,6 +135,8 @@ export interface Database {
           end_slot?: string | null
           gym_id?: string | null
           custom_gym_name?: string | null
+          gym_id_2?: string | null
+          custom_gym_name_2?: string | null
           note?: string | null
           created_at?: string
           updated_at?: string
@@ -145,6 +151,8 @@ export interface Database {
           end_slot?: string | null
           gym_id?: string | null
           custom_gym_name?: string | null
+          gym_id_2?: string | null
+          custom_gym_name_2?: string | null
           note?: string | null
           created_at?: string
           updated_at?: string
@@ -160,6 +168,13 @@ export interface Database {
           {
             foreignKeyName: 'climbs_gym_id_fkey'
             columns: ['gym_id']
+            isOneToOne: false
+            referencedRelation: 'gyms'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'climbs_gym_id_2_fkey'
+            columns: ['gym_id_2']
             isOneToOne: false
             referencedRelation: 'gyms'
             referencedColumns: ['id']
@@ -226,9 +241,14 @@ export type Gym = GymRow
 export type Climb = ClimbRow
 export type Friendship = FriendshipRow
 
-/** A climb row with its gym embedded (see `select('*, gym:gyms(...)')`). */
+/**
+ * A climb row with its gym embedded, plus the optional "either" gym:
+ * `select('*, gym:gyms!climbs_gym_id_fkey(id, name), gym_2:gyms!climbs_gym_id_2_fkey(id, name)')`.
+ * Both embeds name their FK because `climbs` now references `gyms` twice.
+ */
 export type ClimbWithGym = Climb & {
   gym: Pick<Gym, 'id' | 'name'> | null
+  gym_2: Pick<Gym, 'id' | 'name'> | null
 }
 
 /** A climb joined with the profile of the climber, ready for rendering. */

@@ -59,6 +59,26 @@ const slotClimb: Climb = {
   end_slot: 'Closing',
   gym_id: 'Boulder Space',
   custom_gym_name: null,
+  gym_id_2: null,
+  custom_gym_name_2: null,
+  note: null,
+  created_at: timestamp,
+  updated_at: timestamp,
+}
+
+/** An existing session that could happen at either of two gyms. */
+const eitherClimb: Climb = {
+  id: 'climb-either',
+  user_id: '11111111-1111-1111-1111-111111111111',
+  climb_date: '2026-09-16',
+  start_time: '18:30:00',
+  end_time: '21:00:00',
+  start_slot: null,
+  end_slot: null,
+  gym_id: 'Boulder Space',
+  custom_gym_name: null,
+  gym_id_2: 'Boulder24',
+  custom_gym_name_2: null,
   note: null,
   created_at: timestamp,
   updated_at: timestamp,
@@ -226,5 +246,92 @@ describe('<SessionFormModal />', () => {
     expect((screen.getByLabelText('From') as HTMLSelectElement).value).toBe('Before Dinner')
     expect((screen.getByLabelText('To') as HTMLSelectElement).value).toBe('Closing')
     expect(screen.queryByLabelText('From time')).toBeNull()
+  })
+
+  it('defaults the gym to "Not sure yet" and stores no gym', async () => {
+    renderModal()
+
+    expect((screen.getByLabelText('Gym') as HTMLSelectElement).value).toBe('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }))
+
+    await waitFor(() => expect(insertSpy).toHaveBeenCalledTimes(1))
+    expect(insertSpy.mock.calls[0][0]).toMatchObject({
+      gym_id: null,
+      custom_gym_name: null,
+      gym_id_2: null,
+      custom_gym_name_2: null,
+    })
+  })
+
+  it('records a second gym as an alternative', async () => {
+    renderModal()
+
+    fireEvent.change(screen.getByLabelText('Gym'), { target: { value: 'Boulder Space' } })
+    fireEvent.click(screen.getByRole('button', { name: /Add a second gym/ }))
+    fireEvent.change(screen.getByLabelText('Second gym'), { target: { value: 'Boulder24' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }))
+
+    await waitFor(() => expect(insertSpy).toHaveBeenCalledTimes(1))
+    expect(insertSpy.mock.calls[0][0]).toMatchObject({
+      gym_id: 'Boulder Space',
+      custom_gym_name: null,
+      gym_id_2: 'Boulder24',
+      custom_gym_name_2: null,
+    })
+  })
+
+  it('drops the second gym again when it is removed', () => {
+    renderModal()
+
+    fireEvent.click(screen.getByRole('button', { name: /Add a second gym/ }))
+    fireEvent.change(screen.getByLabelText('Second gym'), { target: { value: 'Boulder24' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(screen.queryByLabelText('Second gym')).toBeNull()
+  })
+
+  it('refuses the same gym twice', async () => {
+    renderModal()
+
+    fireEvent.change(screen.getByLabelText('Gym'), { target: { value: 'Boulder Space' } })
+    fireEvent.click(screen.getByRole('button', { name: /Add a second gym/ }))
+    fireEvent.change(screen.getByLabelText('Second gym'), { target: { value: 'Boulder Space' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }))
+
+    expect(
+      await screen.findByText('Pick two different gyms, or leave the second one empty.'),
+    ).toBeTruthy()
+    expect(insertSpy).not.toHaveBeenCalled()
+  })
+
+  it('promotes a lone second gym into the first slot', async () => {
+    renderModal()
+
+    fireEvent.click(screen.getByRole('button', { name: /Add a second gym/ }))
+    fireEvent.change(screen.getByLabelText('Second gym'), { target: { value: 'Boulder24' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }))
+
+    await waitFor(() => expect(insertSpy).toHaveBeenCalledTimes(1))
+    expect(insertSpy.mock.calls[0][0]).toMatchObject({ gym_id: 'Boulder24', gym_id_2: null })
+  })
+
+  it('restores both gyms when editing an "either" session', () => {
+    render(
+      <SessionFormModal
+        userId="11111111-1111-1111-1111-111111111111"
+        gyms={regionalGyms}
+        defaultDate="2026-09-16"
+        initial={eitherClimb}
+        onClose={() => undefined}
+        onSaved={() => undefined}
+        onDeleted={() => undefined}
+      />,
+    )
+
+    expect((screen.getByLabelText('Gym') as HTMLSelectElement).value).toBe('Boulder Space')
+    expect((screen.getByLabelText('Second gym') as HTMLSelectElement).value).toBe('Boulder24')
   })
 })

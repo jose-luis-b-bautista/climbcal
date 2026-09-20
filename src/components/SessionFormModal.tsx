@@ -9,6 +9,7 @@ import {
   Field,
   Select,
   dangerButtonClass,
+  ghostButtonClass,
   inputClass,
   primaryButtonClass,
   secondaryButtonClass,
@@ -44,6 +45,15 @@ export function SessionFormModal({
     initial?.gym_id ?? (initial?.custom_gym_name ? OTHER_GYM : ''),
   )
   const [customGym, setCustomGym] = useState(initial?.custom_gym_name ?? '')
+  // The optional alternative gym ("either"): its own pair of columns, and the
+  // picker only appears once the user asks for it.
+  const [secondGymOpen, setSecondGymOpen] = useState(
+    Boolean(initial?.gym_id_2 ?? initial?.custom_gym_name_2),
+  )
+  const [gymChoice2, setGymChoice2] = useState(
+    initial?.gym_id_2 ?? (initial?.custom_gym_name_2 ? OTHER_GYM : ''),
+  )
+  const [customGym2, setCustomGym2] = useState(initial?.custom_gym_name_2 ?? '')
   // Each end of the window is either an exact clock time or a time-of-day slot
   // ("Opening", "Before Dinner", …), so the preset survives an edit round trip.
   const [startKind, setStartKind] = useState<string>(initial?.start_slot ?? EXACT_TIME)
@@ -54,14 +64,40 @@ export function SessionFormModal({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Gyms may arrive after the dialog opens, so fall back to the first one (or
-  // the free-text option) without clobbering a choice the user already made.
-  const selectedGym = gymChoice || gyms[0]?.id || OTHER_GYM
-
   // Native <optgroup>s keep the dropdown separated by region; the free-text
   // "Other" option rides along in the Other group so there is always a way out.
+  // The same options are reused by the optional second-gym picker.
   const gymGroups = groupGymsByRegion(gyms)
   const hasOtherGroup = gymGroups.some((group) => group.region === OTHER_REGION_LABEL)
+
+  const gymOptions = (
+    <>
+      {gymGroups.map((group) => (
+        <optgroup key={group.region} label={group.region}>
+          {group.gyms.map((gym) => (
+            <option key={gym.id} value={gym.id}>
+              {gym.name}
+              {gym.city ? ` — ${gym.city}` : ''}
+            </option>
+          ))}
+          {group.region === OTHER_REGION_LABEL ? (
+            <option value={OTHER_GYM}>Other (type it in)</option>
+          ) : null}
+        </optgroup>
+      ))}
+      {hasOtherGroup ? null : (
+        <optgroup label={OTHER_REGION_LABEL}>
+          <option value={OTHER_GYM}>Other (type it in)</option>
+        </optgroup>
+      )}
+    </>
+  )
+
+  const closeSecondGym = () => {
+    setSecondGymOpen(false)
+    setGymChoice2('')
+    setCustomGym2('')
+  }
 
   const startIsExact = startKind === EXACT_TIME
   const endIsExact = endKind === EXACT_TIME
@@ -101,9 +137,36 @@ export function SessionFormModal({
       return
     }
 
-    const useOtherGym = selectedGym === OTHER_GYM
-    if (useOtherGym && !customGym.trim()) {
+    if (gymChoice === OTHER_GYM && !customGym.trim()) {
       setError('Name the gym (or pick one from the list).')
+      return
+    }
+    if (secondGymOpen && gymChoice2 === OTHER_GYM && !customGym2.trim()) {
+      setError('Name the second gym (or pick one from the list).')
+      return
+    }
+
+    // One slot is one gym or one typed name; an empty slot means "not sure yet".
+    const gymSlot = (choice: string, custom: string) => {
+      if (choice === OTHER_GYM) return { gym_id: null, custom_gym_name: custom.trim() || null }
+      if (choice) return { gym_id: choice, custom_gym_name: null }
+      return { gym_id: null, custom_gym_name: null }
+    }
+
+    const emptySlot = { gym_id: null, custom_gym_name: null }
+    let firstGym = gymSlot(gymChoice, customGym)
+    let secondGym = secondGymOpen ? gymSlot(gymChoice2, customGym2) : emptySlot
+
+    // A second gym without a first one is simply the gym.
+    if (!firstGym.gym_id && !firstGym.custom_gym_name && (secondGym.gym_id || secondGym.custom_gym_name)) {
+      firstGym = secondGym
+      secondGym = emptySlot
+    }
+
+    const firstKey = firstGym.gym_id ?? firstGym.custom_gym_name
+    const secondKey = secondGym.gym_id ?? secondGym.custom_gym_name
+    if (firstKey && secondKey && firstKey === secondKey) {
+      setError('Pick two different gyms, or leave the second one empty.')
       return
     }
 
@@ -114,8 +177,10 @@ export function SessionFormModal({
       end_time: endIsExact ? endTime : null,
       start_slot: startIsExact ? null : startKind,
       end_slot: endIsExact ? null : endKind,
-      gym_id: useOtherGym ? null : selectedGym,
-      custom_gym_name: useOtherGym ? customGym.trim() : null,
+      gym_id: firstGym.gym_id,
+      custom_gym_name: firstGym.custom_gym_name,
+      gym_id_2: secondGym.gym_id,
+      custom_gym_name_2: secondGym.custom_gym_name,
       note: note.trim() || null,
     }
 
@@ -188,32 +253,15 @@ export function SessionFormModal({
           <Field label="Gym" htmlFor="session-gym">
             <Select
               id="session-gym"
-              value={selectedGym}
+              value={gymChoice}
               onChange={(event) => setGymChoice(event.target.value)}
             >
-              <option value="">Select a gym…</option>
-              {gymGroups.map((group) => (
-                <optgroup key={group.region} label={group.region}>
-                  {group.gyms.map((gym) => (
-                    <option key={gym.id} value={gym.id}>
-                      {gym.name}
-                      {gym.city ? ` — ${gym.city}` : ''}
-                    </option>
-                  ))}
-                  {group.region === OTHER_REGION_LABEL ? (
-                    <option value={OTHER_GYM}>Other (type it in)</option>
-                  ) : null}
-                </optgroup>
-              ))}
-              {hasOtherGroup ? null : (
-                <optgroup label={OTHER_REGION_LABEL}>
-                  <option value={OTHER_GYM}>Other (type it in)</option>
-                </optgroup>
-              )}
+              <option value="">Not sure yet</option>
+              {gymOptions}
             </Select>
           </Field>
 
-          {selectedGym === OTHER_GYM ? (
+          {gymChoice === OTHER_GYM ? (
             <Field
               label="Gym name"
               htmlFor="session-custom-gym"
@@ -229,6 +277,47 @@ export function SessionFormModal({
               />
             </Field>
           ) : null}
+
+          {secondGymOpen ? (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-zinc-300">Either also this gym</p>
+                <button type="button" className={ghostButtonClass} onClick={closeSecondGym}>
+                  Remove
+                </button>
+              </div>
+
+              <Select
+                id="session-gym-2"
+                aria-label="Second gym"
+                value={gymChoice2}
+                onChange={(event) => setGymChoice2(event.target.value)}
+              >
+                <option value="">No second gym</option>
+                {gymOptions}
+              </Select>
+
+              {gymChoice2 === OTHER_GYM ? (
+                <input
+                  id="session-custom-gym-2"
+                  type="text"
+                  aria-label="Second gym name"
+                  value={customGym2}
+                  onChange={(event) => setCustomGym2(event.target.value)}
+                  placeholder="e.g. Boulderklub Kreuzberg"
+                  className={`${inputClass} mt-2`}
+                />
+              ) : null}
+
+              <p className="mt-2 text-xs text-zinc-500">
+                Friends will see it as “Either … or …”.
+              </p>
+            </div>
+          ) : (
+            <button type="button" className={ghostButtonClass} onClick={() => setSecondGymOpen(true)}>
+              + Add a second gym — show it as “either”
+            </button>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

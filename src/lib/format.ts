@@ -17,10 +17,20 @@ export function initialsOf(profile: Profile | null | undefined): string {
 }
 
 /** Gym label for a climb: linked gym name, else the free-text fallback. */
-export function gymNameOf(
-  climb: { custom_gym_name?: string | null; gym?: { name: string } | null },
-): string {
-  return climb.gym?.name ?? climb.custom_gym_name?.trim() ?? 'Gym not set'
+export function gymNameOf(climb: {
+  custom_gym_name?: string | null
+  gym?: { name: string } | null
+  custom_gym_name_2?: string | null
+  gym_2?: { name: string } | null
+}): string {
+  const names = [
+    climb.gym?.name ?? climb.custom_gym_name?.trim(),
+    climb.gym_2?.name ?? climb.custom_gym_name_2?.trim(),
+  ].filter((name): name is string => Boolean(name))
+
+  if (names.length === 0) return 'Not sure yet'
+  if (names.length === 1) return names[0]
+  return `Either ${names[0]} or ${names[1]}`
 }
 
 /** Island regions the seeded gym list is grouped by, in display order. */
