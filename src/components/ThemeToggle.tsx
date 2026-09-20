@@ -19,7 +19,6 @@ export function ThemeToggle({ className }: { className?: string }) {
       data-theme={theme}
     >
       <span aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span>
-      <span className="hidden sm:inline">{nextTheme === 'dark' ? 'Dark' : 'Light'}</span>
     </button>
   )
 }
