@@ -138,6 +138,11 @@ export default function Login() {
                   className={inputClass}
                 />
               </Field>
+              {mode === 'signin' ? (
+                <p className="text-sm text-zinc-400">
+                  Forgot your password? Contact the owner (luis) of this app to reset it.
+                </p>
+              ) : null}
 
               <button type="submit" disabled={busy} className={`${primaryButtonClass} w-full`}>
                 {busy ? 'One moment…' : mode === 'signin' ? 'Sign in' : 'Create account'}
