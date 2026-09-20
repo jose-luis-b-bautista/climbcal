@@ -42,11 +42,17 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      [`supabase/migrations/20260919000000_init.sql`](supabase/migrations/20260919000000_init.sql),
      run it, then paste and run
      [`supabase/migrations/20260919000100_seed_gyms.sql`](supabase/migrations/20260919000100_seed_gyms.sql).
-   - or use the CLI:
+   - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
-     supabase link --project-ref <your-project-ref>
-     supabase db push
+     npx supabase@latest login          # opens the browser once
+     npx supabase@latest link --project-ref <your-project-ref>
+     npx supabase@latest db push        # asks for your DB password if not linked with -p
+     npx supabase@latest migration list --linked   # local vs remote should match
      ```
+     `db push` applies the files in `supabase/migrations/` in filename order and records them in
+     `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
+     date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
+     add a `seed.sql`.
    Both files are idempotent, so re-running is safe.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
@@ -54,10 +60,15 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
    - OFF: sign-up logs the user straight in (handy while testing).
 4. **Auth → URL Configuration**: set *Site URL* to your deployed URL (e.g.
    `https://climbcal.vercel.app`) and add `http://localhost:5173` to *Redirect URLs*.
-5. **Project Settings → API**: copy the *Project URL* and the *anon public* key.
+5. **Settings → API Keys**: copy the **Project URL** and the **publishable key**
+   (`sb_publishable_…`). That pair is what a browser app uses. The *secret* key (`sb_secret_…`)
+   and the legacy `service_role` key bypass RLS and must never reach the frontend. Supabase is
+   deprecating the legacy `anon` / `service_role` keys by the end of 2026 — if your project still
+   only shows the legacy keys, the `anon` key works in exactly the same slot.
 
-> The anon key is meant to live in the browser — it is protected by RLS. Never put the
-> `service_role` key in a Vite env var: everything prefixed with `VITE_` ships to users.
+> The var is named `VITE_SUPABASE_ANON_KEY` for historical reasons; paste the **publishable** key
+> there (a legacy anon key also still works — verified identical handling in supabase-js 2.116).
+> Everything prefixed with `VITE_` ships to users, so a secret key must never appear in it.
 
 ## 2. Run locally
 
@@ -85,7 +96,7 @@ npm run lint       # oxlint
 2. In Vercel: **Add New → Project → Import** the repository. The Vite preset is detected
    automatically (`npm run build`, output `dist/`).
 3. **Settings → Environment Variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-   for Production *and* Preview. Redeploy after adding them.
+   (the Project URL + publishable key) for Production *and* Preview. Redeploy after adding them.
 4. `vercel.json` rewrites every path to `index.html` so client-side routes such as `/friends`
    work on refresh.
 5. Go back to Supabase → Auth → URL Configuration and set the Site URL to the Vercel domain.

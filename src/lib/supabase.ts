@@ -13,14 +13,16 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 if (!isSupabaseConfigured) {
   console.error(
     '[climbcal] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are not set. ' +
-      'Copy .env.example to .env.local and paste your Supabase project values.',
+      'Copy .env.example to .env.local and paste your Supabase Project URL and ' +
+      'publishable key (sb_publishable_…, from Settings → API Keys).',
   )
 }
 
 /**
  * Placeholders keep `createClient` from throwing at import time so the app can
  * still render the "finish setup" screen. Requests will fail until real values
- * are provided. The anon key is a public, RLS-protected key: safe in the client.
+ * are provided. The publishable (or legacy anon) key is a public, RLS-protected
+ * key: safe in the client. A secret/service_role key must never go here.
  */
 export const supabase = createClient<Database>(
   supabaseUrl ?? 'http://localhost:54321',
