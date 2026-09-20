@@ -29,8 +29,8 @@ read or write what.
   in the URL so weeks are linkable. Each day shows a count of friends climbing plus session
   cards; your own sessions are highlighted and editable.
 - **Add / edit / delete session** — date, gym (dropdown grouped by region — Luzon / Visayas /
-  Mindanao — or free-text "Other"), start/end time, optional note. Multiple sessions per day are
-  allowed.
+  Mindanao — or free-text "Other"), a time window (exact clock times **or** flexible labels such as
+  "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day are allowed.
 - **Friends** — search by username, send/accept/decline requests, cancel, unfriend.
 - **Public feed** — the next ~3 weeks of sessions from climbers whose profile is public.
 - **Settings** — edit profile, flip public/private, manage the shared gym list.
@@ -44,13 +44,13 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
 
 1. Create a project at [supabase.com](https://supabase.com) (free tier).
 2. **Apply the schema.** Either:
-   - **Dashboard → SQL Editor → New query**: paste
-     [`supabase/migrations/20260919000000_init.sql`](supabase/migrations/20260919000000_init.sql),
-     run it, then paste and run
-     [`supabase/migrations/20260919000100_seed_gyms.sql`](supabase/migrations/20260919000100_seed_gyms.sql)
-     and finally
-     [`supabase/migrations/20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql)
-     (the real gym list, tagged by region).
+   - **Dashboard → SQL Editor → New query**: run every file under `supabase/migrations/` in
+     filename order — [`20260919000000_init.sql`](supabase/migrations/20260919000000_init.sql)
+     (schema + RLS), [`20260919000100_seed_gyms.sql`](supabase/migrations/20260919000100_seed_gyms.sql)
+     and [`20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql) (the
+     gym list, tagged by region), then
+     [`20260920000100_session_windows.sql`](supabase/migrations/20260920000100_session_windows.sql)
+     (flexible time-of-day windows).
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -62,11 +62,12 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   All three files are idempotent, so re-running is safe.
-   > Already set the project up before the region migration? Just run
-   > `20260920000000_gym_regions.sql`: it adds the `region` column, retires the old
-   > placeholder gyms (keeping sessions that referenced them as free-text names) and
-   > seeds the regional list. Running `db push` does this for you.
+   All four files are idempotent, so re-running is safe.
+   > Already set the project up earlier? Just run the migrations you haven't:
+   > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
+   > (keeping sessions that referenced them as free-text names) and seeds the regional list;
+   > `20260920000100_session_windows.sql` adds the flexible `start_slot` / `end_slot` windows and
+   > leaves existing clock-time sessions untouched. Running `db push` does both for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
      "check your inbox" notice.
@@ -118,14 +119,20 @@ npm run lint       # oxlint
 
 ```
 auth.users ──1:1── profiles (username, display_name, visibility[public|private])
-auth.users ──1:n── climbs   (climb_date, start_time, end_time, gym_id | custom_gym_name, note)
+auth.users ──1:n── climbs   (climb_date, start_time | start_slot, end_time | end_slot,
+                             gym_id | custom_gym_name, note)
 gyms                        (name, city, region, seeded list + user-created rows, created_by)
 auth.users ──n:n── friendships (requester_id, addressee_id, status[pending|accepted])
 ```
 
 - One `friendships` row per pair: a unique index on `(least(requester_id, addressee_id),
   greatest(requester_id, addressee_id))` makes an A→B / B→A duplicate impossible.
-- `climbs` checks `end_time > start_time` and requires either a `gym_id` or a `custom_gym_name`.
+- `climbs` requires either a `gym_id` or a `custom_gym_name`, and its window is **either** two
+  clock times (`start_time` / `end_time`) **or** two time-of-day labels (`start_slot` /
+  `end_slot`, one of the eight in `src/lib/slots.ts`). `public.window_minutes()` puts both forms on
+  one canonical scale, so a single constraint can insist the end comes after the start — mixed
+  windows such as `Opening → 21:00` included. The scale is never displayed: labels are shown
+  verbatim, and a duration appears only when both ends are clock times.
 - `gyms.region` is free text (`Luzon` / `Visayas` / `Mindanao` for the seeded list): the session
   dropdown and the Settings list are grouped by it, with an "Other" bucket for untagged gyms.
 - Signing up creates the `profiles` row automatically (`on_auth_user_created` trigger).
@@ -151,13 +158,15 @@ src/
                 SessionFormModal, ThemeToggle, ui.tsx (shared primitives + class tokens)
   hooks/        useAuth (session + profile context), useTheme (light/dark),
                 useWeekClimbs (range queries), useFriends, useGyms
-  lib/          supabase (client), date (week math, formatting),
-                format (names/usernames, gym-by-region grouping)
+  lib/          supabase (client), date (week math, window helpers),
+                format (names/usernames, gym-by-region grouping),
+                slots (the eight time-of-day window labels)
   pages/        Login, Onboarding, Week, Friends, Feed, Settings
   test/         Supabase client mock + fixtures for the integration render test
 supabase/
   migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
-                gym_regions: real gym list grouped by region
+                gym_regions: real gym list grouped by region,
+                session_windows: flexible window columns + constraints
   config.toml   minimal CLI config (link / db push)
 ```
 

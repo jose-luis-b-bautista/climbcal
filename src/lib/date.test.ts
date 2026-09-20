@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addDays,
   addWeeks,
+  clockMinutes,
   compareClimbsByTime,
   formatDuration,
   formatTimeWindow,
@@ -12,6 +13,7 @@ import {
   toISODate,
   trimTime,
   weekDays,
+  windowMinutes,
 } from './date'
 
 describe('toISODate', () => {
@@ -82,6 +84,23 @@ describe('time helpers', () => {
     expect(formatDuration('07:00:00', '07:25:00')).toBe('25m')
     expect(formatDuration('09:00:00', '08:00:00')).toBe('0m')
   })
+
+  it('formats slot windows, including mixed ones', () => {
+    expect(formatTimeWindow(null, null, 'Opening', 'Before Dinner')).toBe('Opening – Before Dinner')
+    expect(formatTimeWindow(null, '21:00:00', 'Opening', null)).toBe('Opening – 21:00')
+    expect(formatTimeWindow('18:30:00', null, null, 'Closing')).toBe('18:30 – Closing')
+  })
+
+  it('puts clock times and slots on one canonical scale', () => {
+    expect(clockMinutes('07:15:00')).toBe(435)
+    expect(clockMinutes(null)).toBeNull()
+    expect(clockMinutes('not a time')).toBeNull()
+
+    expect(windowMinutes('07:15:00', null)).toBe(435)
+    expect(windowMinutes(null, 'Before Lunch')).toBe(630)
+    expect(windowMinutes(null, 'Brunch')).toBeNull()
+    expect(windowMinutes(null, null)).toBeNull()
+  })
 })
 
 describe('formatWeekRange', () => {
@@ -111,6 +130,22 @@ describe('compareClimbsByTime', () => {
       { climb_date: '2026-09-16', start_time: '07:00:00' },
       { climb_date: '2026-09-16', start_time: '18:00:00' },
     ])
+  })
+
+  it('interleaves slot-based starts with exact times', () => {
+    const rows = [
+      { climb_date: '2026-09-16', start_time: '18:00:00', start_slot: null },
+      { climb_date: '2026-09-16', start_time: null, start_slot: 'Opening' },
+      { climb_date: '2026-09-16', start_time: null, start_slot: 'After Dinner' },
+      { climb_date: '2026-09-15', start_time: null, start_slot: 'Closing' },
+    ]
+
+    expect(
+      rows
+        .slice()
+        .sort(compareClimbsByTime)
+        .map((row) => row.start_time ?? row.start_slot),
+    ).toEqual(['Closing', 'Opening', '18:00:00', 'After Dinner'])
   })
 })
 

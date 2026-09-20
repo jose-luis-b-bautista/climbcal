@@ -59,8 +59,14 @@ function SessionCard({ entry, isOwn, onEdit }: SessionCardProps) {
       </div>
 
       <p className="mt-2 text-xs font-medium text-emerald-300">
-        {formatTimeWindow(entry.start_time, entry.end_time)}
-        <span className="text-zinc-500"> · {formatDuration(entry.start_time, entry.end_time)}</span>
+        {formatTimeWindow(entry.start_time, entry.end_time, entry.start_slot, entry.end_slot)}
+        {/* A duration only makes sense when both ends are clock times. */}
+        {entry.start_time && entry.end_time ? (
+          <span className="text-zinc-500">
+            {' '}
+            · {formatDuration(entry.start_time, entry.end_time)}
+          </span>
+        ) : null}
       </p>
 
       {entry.note ? <p className="mt-1 text-xs text-zinc-400">{entry.note}</p> : null}

@@ -38,8 +38,12 @@ export type ClimbRow = {
   id: string
   user_id: string
   climb_date: string
-  start_time: string
-  end_time: string
+  /** Exact clock time, xor `start_slot` / `end_slot` (see lib/slots). */
+  start_time: string | null
+  end_time: string | null
+  /** Flexible time-of-day label, e.g. "Opening" / "Closing". */
+  start_slot: string | null
+  end_slot: string | null
   gym_id: string | null
   custom_gym_name: string | null
   note: string | null
@@ -121,8 +125,10 @@ export interface Database {
           id?: string
           user_id: string
           climb_date: string
-          start_time: string
-          end_time: string
+          start_time?: string | null
+          end_time?: string | null
+          start_slot?: string | null
+          end_slot?: string | null
           gym_id?: string | null
           custom_gym_name?: string | null
           note?: string | null
@@ -133,8 +139,10 @@ export interface Database {
           id?: string
           user_id?: string
           climb_date?: string
-          start_time?: string
-          end_time?: string
+          start_time?: string | null
+          end_time?: string | null
+          start_slot?: string | null
+          end_slot?: string | null
           gym_id?: string | null
           custom_gym_name?: string | null
           note?: string | null

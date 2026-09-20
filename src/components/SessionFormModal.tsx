@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { windowMinutes } from '../lib/date'
 import { OTHER_REGION_LABEL, groupGymsByRegion } from '../lib/format'
+import { TIME_SLOTS } from '../lib/slots'
 import type { Climb, Gym } from '../types'
 import {
   ErrorBanner,
@@ -12,6 +14,8 @@ import {
 } from './ui'
 
 const OTHER_GYM = '__other__'
+/** Sentinel for "use an exact clock time" in the From / To selects. */
+const EXACT_TIME = '__exact__'
 
 interface SessionFormModalProps {
   userId: string
@@ -39,8 +43,12 @@ export function SessionFormModal({
     initial?.gym_id ?? (initial?.custom_gym_name ? OTHER_GYM : ''),
   )
   const [customGym, setCustomGym] = useState(initial?.custom_gym_name ?? '')
-  const [startTime, setStartTime] = useState(initial?.start_time.slice(0, 5) ?? '18:00')
-  const [endTime, setEndTime] = useState(initial?.end_time.slice(0, 5) ?? '21:00')
+  // Each end of the window is either an exact clock time or a time-of-day slot
+  // ("Opening", "Before Dinner", …), so the preset survives an edit round trip.
+  const [startKind, setStartKind] = useState<string>(initial?.start_slot ?? EXACT_TIME)
+  const [endKind, setEndKind] = useState<string>(initial?.end_slot ?? EXACT_TIME)
+  const [startTime, setStartTime] = useState(initial?.start_time?.slice(0, 5) ?? '18:00')
+  const [endTime, setEndTime] = useState(initial?.end_time?.slice(0, 5) ?? '21:00')
   const [note, setNote] = useState(initial?.note ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,6 +61,9 @@ export function SessionFormModal({
   // "Other" option rides along in the Other group so there is always a way out.
   const gymGroups = groupGymsByRegion(gyms)
   const hasOtherGroup = gymGroups.some((group) => group.region === OTHER_REGION_LABEL)
+
+  const startIsExact = startKind === EXACT_TIME
+  const endIsExact = endKind === EXACT_TIME
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -70,12 +81,22 @@ export function SessionFormModal({
       setError('Pick a date for your session.')
       return
     }
-    if (!startTime || !endTime) {
-      setError('Pick both a start and an end time.')
+
+    // Compare both forms on the canonical clock so a slot can sit next to an
+    // exact time ("Opening" → "21:00").
+    const startAt = windowMinutes(startIsExact ? startTime : null, startIsExact ? null : startKind)
+    const endAt = windowMinutes(endIsExact ? endTime : null, endIsExact ? null : endKind)
+
+    if (startAt === null) {
+      setError('Pick when the session starts.')
       return
     }
-    if (endTime <= startTime) {
-      setError('The end time has to be after the start time.')
+    if (endAt === null) {
+      setError('Pick when the session ends.')
+      return
+    }
+    if (endAt <= startAt) {
+      setError('The end has to come after the start.')
       return
     }
 
@@ -88,8 +109,10 @@ export function SessionFormModal({
     const payload = {
       user_id: userId,
       climb_date: date,
-      start_time: startTime,
-      end_time: endTime,
+      start_time: startIsExact ? startTime : null,
+      end_time: endIsExact ? endTime : null,
+      start_slot: startIsExact ? null : startKind,
+      end_slot: endIsExact ? null : endKind,
       gym_id: useOtherGym ? null : selectedGym,
       custom_gym_name: useOtherGym ? customGym.trim() : null,
       note: note.trim() || null,
@@ -208,27 +231,68 @@ export function SessionFormModal({
           ) : null}
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="From" htmlFor="session-start">
-              <input
-                id="session-start"
-                type="time"
-                required
-                value={startTime}
-                onChange={(event) => setStartTime(event.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="To" htmlFor="session-end">
-              <input
-                id="session-end"
-                type="time"
-                required
-                value={endTime}
-                onChange={(event) => setEndTime(event.target.value)}
-                className={inputClass}
-              />
-            </Field>
+            <div>
+              <Field label="From" htmlFor="session-start">
+                <select
+                  id="session-start"
+                  value={startKind}
+                  onChange={(event) => setStartKind(event.target.value)}
+                  className={inputClass}
+                >
+                  <option value={EXACT_TIME}>Exact time…</option>
+                  {TIME_SLOTS.map((slot) => (
+                    <option key={slot.label} value={slot.label}>
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {startIsExact ? (
+                <input
+                  id="session-start-time"
+                  type="time"
+                  aria-label="From time"
+                  value={startTime}
+                  onChange={(event) => setStartTime(event.target.value)}
+                  className={`${inputClass} mt-2`}
+                />
+              ) : null}
+            </div>
+
+            <div>
+              <Field label="To" htmlFor="session-end">
+                <select
+                  id="session-end"
+                  value={endKind}
+                  onChange={(event) => setEndKind(event.target.value)}
+                  className={inputClass}
+                >
+                  <option value={EXACT_TIME}>Exact time…</option>
+                  {TIME_SLOTS.map((slot) => (
+                    <option key={slot.label} value={slot.label}>
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {endIsExact ? (
+                <input
+                  id="session-end-time"
+                  type="time"
+                  aria-label="To time"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
+                  className={`${inputClass} mt-2`}
+                />
+              ) : null}
+            </div>
           </div>
+
+          <p className="text-xs text-zinc-500">
+            Pick an exact time, or a time of day like “Opening” or “After Dinner”.
+          </p>
 
           <Field label="Note (optional)" htmlFor="session-note">
             <input

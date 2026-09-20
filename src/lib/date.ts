@@ -5,6 +5,7 @@
  * Postgres `date` columns and `input[type=date]` values in agreement without
  * UTC shifting surprises.
  */
+import { slotMinutes } from './slots'
 
 export const DAY_NAMES = [
   'Monday',
@@ -103,9 +104,39 @@ export function trimTime(value: string): string {
   return value.slice(0, 5)
 }
 
-/** e.g. "18:30 – 21:00". */
-export function formatTimeWindow(start: string, end: string): string {
-  return `${trimTime(start)} – ${trimTime(end)}`
+/** e.g. "18:30 – 21:00", "Opening – Before Lunch" or "Opening – 21:00". */
+export function formatTimeWindow(
+  start: string | null,
+  end: string | null,
+  startSlot?: string | null,
+  endSlot?: string | null,
+): string {
+  return `${windowEndLabel(start, startSlot)} – ${windowEndLabel(end, endSlot)}`
+}
+
+function windowEndLabel(time: string | null, slot?: string | null): string {
+  if (time) return trimTime(time)
+  return slot?.trim() || 'Time not set'
+}
+
+/** Minutes past midnight for an `HH:MM[:SS]` clock time, or null. */
+export function clockMinutes(time: string | null | undefined): number | null {
+  if (!time) return null
+  const [hours, minutes] = trimTime(time).split(':').map(Number)
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+  return hours * 60 + minutes
+}
+
+/**
+ * Canonical minutes past midnight for one end of a window: the clock time when
+ * there is one, else the slot label's position (see `lib/slots`). Used for
+ * ordering and validation only — never for display.
+ */
+export function windowMinutes(
+  time: string | null | undefined,
+  slot: string | null | undefined,
+): number | null {
+  return clockMinutes(time) ?? slotMinutes(slot)
 }
 
 /** Human duration between two `HH:MM[:SS]` values, e.g. "2h 30m". */
@@ -120,11 +151,69 @@ export function formatDuration(start: string, end: string): string {
   return `${hours}h ${minutes}m`
 }
 
-/** Sort by date then start time, ascending. */
+/**
+ * Sort by date, then by the start of the window on the canonical clock, so
+ * slot-based sessions ("Opening") interleave with exact-time ones.
+ */
 export function compareClimbsByTime(
-  a: { climb_date: string; start_time: string },
-  b: { climb_date: string; start_time: string },
+  a: { climb_date: string; start_time?: string | null; start_slot?: string | null },
+  b: { climb_date: string; start_time?: string | null; start_slot?: string | null },
 ): number {
   if (a.climb_date !== b.climb_date) return a.climb_date < b.climb_date ? -1 : 1
-  return a.start_time < b.start_time ? -1 : 1
+  const aStart = windowMinutes(a.start_time, a.start_slot) ?? Number.MAX_SAFE_INTEGER
+  const bStart = windowMinutes(b.start_time, b.start_slot) ?? Number.MAX_SAFE_INTEGER
+  return aStart - bStart
+}
+
+/** Minutes since midnight for an `HH:MM[:SS]` value (non-null form of `clockMinutes`). */
+export function minutesOfDay(value: string): number {
+  return clockMinutes(value) ?? 0
+}
+
+/** Compact minutes span, e.g. "45m", "2h", "2h 15m". */
+export function formatMinutesSpan(totalMinutes: number): string {
+  const clamped = Math.max(0, Math.round(totalMinutes))
+  const hours = Math.floor(clamped / 60)
+  const minutes = clamped % 60
+  if (hours === 0) return `${minutes}m`
+  if (minutes === 0) return `${hours}h`
+  return `${hours}h ${minutes}m`
+}
+
+export interface SessionTiming {
+  state: 'live' | 'soon' | 'done'
+  label: string
+}
+
+/**
+ * Where a session sits relative to now, for the day views: "On now",
+ * "Starts in 45m" or "Finished". Only meaningful for the current day, so any
+ * other date returns null and the card shows no badge.
+ *
+ * A flexible window ("Opening", "After Dinner") is placed on the same scale as
+ * a clock time via `windowMinutes`; an end that maps to neither gets no badge.
+ */
+export function sessionTiming(
+  date: string,
+  start: string | null,
+  end: string | null,
+  now: Date = new Date(),
+  startSlot?: string | null,
+  endSlot?: string | null,
+): SessionTiming | null {
+  if (date !== toISODate(now)) return null
+
+  const startMinutes = windowMinutes(start, startSlot)
+  const endMinutes = windowMinutes(end, endSlot)
+  if (startMinutes === null || endMinutes === null) return null
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+  if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
+    return { state: 'live', label: 'On now' }
+  }
+  if (nowMinutes < startMinutes) {
+    return { state: 'soon', label: `Starts in ${formatMinutesSpan(startMinutes - nowMinutes)}` }
+  }
+  return { state: 'done', label: 'Finished' }
 }
