@@ -11,12 +11,13 @@ public profiles additionally appear on a public climbers feed. Built for a frien
 
 ## Stack
 
-| Layer    | Choice                                                       |
-| -------- | ------------------------------------------------------------ |
-| Frontend | React 19 + Vite + TypeScript + Tailwind CSS 4 + React Router |
-| Backend  | Supabase (Auth + Postgres + Row Level Security) — no server  |
-| Hosting  | Vercel (Hobby) for the static build                          |
-| Tests    | Vitest + Testing Library (jsdom)                             |
+| Layer     | Choice                                                            |
+| --------- | ----------------------------------------------------------------- |
+| Frontend  | React 19 + Vite + TypeScript + Tailwind CSS 4 + React Router      |
+| Backend   | Supabase (Auth + Postgres + Row Level Security) — no server       |
+| Hosting   | Vercel (Hobby) for the static build                               |
+| Analytics | Vercel Web Analytics (`@vercel/analytics`) — cookieless pageviews |
+| Tests     | Vitest + Testing Library (jsdom)                                  |
 
 There is no custom backend: the browser talks to Supabase directly and **RLS** enforces who may
 read or write what.
@@ -125,6 +126,10 @@ npm run lint       # oxlint
 4. `vercel.json` rewrites every path to `index.html` so client-side routes such as `/friends`
    work on refresh.
 5. Go back to Supabase → Auth → URL Configuration and set the Site URL to the Vercel domain.
+6. **Analytics** (optional): Project → **Analytics → Enable Web Analytics**. Nothing is collected
+   until that toggle is on — the app already reports cookieless pageviews (initial load plus
+   client-side route changes, no cookies and no personal data), and off Vercel the script simply
+   404s, so local dev is unaffected.
 
 ## Data model
 
