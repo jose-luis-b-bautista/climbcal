@@ -134,6 +134,23 @@ describe('<SessionFormModal />', () => {
     expect(screen.getByLabelText(/Gym name/)).toBeTruthy()
   })
 
+  it('renders a Select with its own chevron, clear of the right edge', () => {
+    renderModal()
+
+    const select = gymSelect()
+
+    // Native arrow off (it hugged the edge) so the chevron can be placed.
+    expect(select.className).toContain('appearance-none')
+    expect(select.className).toContain('pr-9')
+
+    // The chevron lives in the relative wrapper and stays out of the a11y tree.
+    expect(select.parentElement?.className).toContain('relative')
+    const chevron = select.parentElement?.querySelector('svg')
+    expect(chevron?.getAttribute('aria-hidden')).toBe('true')
+    expect(chevron?.getAttribute('class')).toContain('right-3')
+    expect(chevron?.getAttribute('class')).toContain('-translate-y-1/2')
+  })
+
   it('records a flexible window as slot labels with no clock times', async () => {
     renderModal()
 
@@ -183,7 +200,7 @@ describe('<SessionFormModal />', () => {
     })
   })
 
-  it('brings the clock input back when Exact time is picked again', () => {
+  it('brings the clock input back when the specific-time option is picked again', () => {
     renderModal()
 
     fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Opening' } })

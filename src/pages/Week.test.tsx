@@ -1,11 +1,11 @@
 /**
- * Integration render of the week view with the Supabase client mocked out:
- * proves the auth gate, friend lookup, climb query and gym join all wire up and
- * render the expected cards.
+ * Integration render of the calendar page with the Supabase client mocked out:
+ * proves the auth gate, friend lookup, climb queries and gym join all wire up,
+ * render the expected cards, and that today, tomorrow and the week share a page.
  */
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { AuthProvider } from '../hooks/useAuth'
 import { ThemeProvider } from '../hooks/useTheme'
@@ -24,6 +24,17 @@ beforeAll(() => {
 })
 
 describe('<Week />', () => {
+  beforeEach(() => {
+    // Pinned so "today" is deterministic: the fixture's sessions are on
+    // Wednesday 2026-09-16 — inside the week being browsed, but not today.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-09-20T19:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('shows own and friend sessions for the selected week', async () => {
     render(
       <ThemeProvider>
@@ -63,5 +74,34 @@ describe('<Week />', () => {
 
     // The theme switch is available in the app shell.
     expect(screen.getByRole('button', { name: /switch to .* mode/i })).toBeTruthy()
+  })
+
+  it('stacks today and tomorrow above the week grid, without tabs', async () => {
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/week?week=2026-09-14']}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    // All three sections on one page.
+    expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Tomorrow' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Week' })).toBeTruthy()
+
+    // The fixture has nothing on the pinned today / tomorrow, so those cards say
+    // so instead of borrowing Wednesday's sessions.
+    expect(await screen.findByText('Nothing on today')).toBeTruthy()
+    expect(screen.getByText('Nothing on tomorrow')).toBeTruthy()
+
+    // Mon–Sun grid below: six empty columns plus Wednesday's two sessions.
+    expect(screen.getAllByText('Nothing planned')).toHaveLength(6)
+
+    // And no view switcher to switch between them.
+    expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Week' })).toBeNull()
   })
 })

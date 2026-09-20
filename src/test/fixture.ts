@@ -100,9 +100,14 @@ const resolver: MockResolver = ({ table, filters }) => {
     }
     case 'climbs': {
       const ids = filters['in.user_id']
-      const rows = Array.isArray(ids)
-        ? climbFixture.filter((climb) => ids.includes(climb.user_id))
-        : climbFixture
+      const from = filters['gte.climb_date']
+      const to = filters['lte.climb_date']
+      const rows = climbFixture.filter((climb) => {
+        if (Array.isArray(ids) && !ids.includes(climb.user_id)) return false
+        if (typeof from === 'string' && climb.climb_date < from) return false
+        if (typeof to === 'string' && climb.climb_date > to) return false
+        return true
+      })
       return { data: rows, error: null }
     }
     case 'friendships':

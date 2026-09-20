@@ -22,7 +22,6 @@ import {
   DAY_NAMES_SHORT,
   addDays,
   addWeeks,
-  formatDayLabel,
   formatShortDate,
   formatWeekRange,
   isToday,
@@ -33,25 +32,12 @@ import {
 } from '../lib/date'
 import type { Climb, ClimbEntry } from '../types'
 
-type WeekView = 'today' | 'tomorrow' | 'week'
-
-const VIEWS: Array<{ value: WeekView; label: string }> = [
-  { value: 'today', label: 'Today' },
-  { value: 'tomorrow', label: 'Tomorrow' },
-  { value: 'week', label: 'Week' },
-]
-
-/** Resolves the `?week=YYYY-MM-DD` param into a Monday, defaulting to today. */
+/** Resolves the `?week=YYYY-MM-DD` param into a Monday, defaulting to this week. */
 function resolveWeekStart(param: string | null): Date {
   if (!param) return startOfWeek(new Date())
   const parsed = parseISODate(param)
   if (Number.isNaN(parsed.getTime())) return startOfWeek(new Date())
   return startOfWeek(parsed)
-}
-
-/** Resolves the `?view=` param, defaulting to the Mon–Sun grid. */
-function resolveView(param: string | null): WeekView {
-  return param === 'today' || param === 'tomorrow' ? param : 'week'
 }
 
 export default function Week() {
@@ -60,33 +46,45 @@ export default function Week() {
   const { friendIds, friends, loading: friendsLoading, error: friendsError } = useFriends()
   const { gyms } = useGyms()
 
-  // "Today" is captured once per mount; which day is in focus comes from the URL.
+  // "Today" is captured once per mount so the day cards and the grid agree.
   const today = useMemo(() => new Date(), [])
+  const tomorrow = useMemo(() => addDays(today, 1), [today])
   const todayISO = toISODate(today)
-
-  const view = resolveView(searchParams.get('view'))
-  const focusDate = view === 'tomorrow' ? addDays(today, 1) : today
-  const focusISO = toISODate(focusDate)
+  const tomorrowISO = toISODate(tomorrow)
 
   const weekStart = useMemo(() => resolveWeekStart(searchParams.get('week')), [searchParams])
   const weekStartDate = toISODate(weekStart)
+  const weekEndDate = toISODate(addDays(weekStart, 6))
   const days = useMemo(() => weekDays(weekStart), [weekStart])
-
-  // A focused day queries one date; the grid queries Mon–Sun.
-  const rangeStart = view === 'week' ? weekStartDate : focusISO
-  const rangeEnd = view === 'week' ? toISODate(addDays(weekStart, 6)) : focusISO
 
   const participantIds = useMemo(
     () => (userId ? [userId, ...friendIds] : null),
     [userId, friendIds],
   )
 
-  const { entries, loading, error, reload } = useWeekClimbs(
-    rangeStart,
-    rangeEnd,
-    participantIds,
-    Boolean(userId),
-  )
+  // Two queries on purpose: the day cards always describe the real today and
+  // tomorrow, whatever week the grid below is parked on.
+  const {
+    entries: upcoming,
+    loading: upcomingLoading,
+    error: upcomingError,
+    reload: reloadUpcoming,
+  } = useWeekClimbs(todayISO, tomorrowISO, participantIds, Boolean(userId))
+
+  const {
+    entries: weekEntries,
+    loading: weekLoading,
+    error: weekError,
+    reload: reloadWeek,
+  } = useWeekClimbs(weekStartDate, weekEndDate, participantIds, Boolean(userId))
+
+  const reload = () => {
+    reloadUpcoming()
+    reloadWeek()
+  }
+
+  // Both queries fail together in practice, so surface a single banner.
+  const dataError = upcomingError ?? weekError
 
   const [modal, setModal] = useState<{ open: boolean; date: string; initial: Climb | null }>({
     open: false,
@@ -96,15 +94,19 @@ export default function Week() {
 
   const byDate = useMemo(() => {
     const map = new Map<string, ClimbEntry[]>()
-    for (const group of groupByDate(entries)) map.set(group.date, group.entries)
+    for (const group of groupByDate(weekEntries)) map.set(group.date, group.entries)
     return map
-  }, [entries])
+  }, [weekEntries])
+
+  /** The two-day query feeds both day cards, so split it by date here. */
+  const dayEntries = (dateISO: string) => upcoming.filter((entry) => entry.climb_date === dateISO)
 
   const isCurrentWeek = weekStartDate === toISODate(startOfWeek(today))
   const friendCountTotal = useMemo(
     () =>
-      new Set(entries.filter((entry) => entry.user_id !== userId).map((entry) => entry.user_id)).size,
-    [entries, userId],
+      new Set(weekEntries.filter((entry) => entry.user_id !== userId).map((entry) => entry.user_id))
+        .size,
+    [weekEntries, userId],
   )
   const friendLabel =
     friendCountTotal === 0
@@ -115,25 +117,11 @@ export default function Week() {
     setSearchParams({ week: toISODate(addWeeks(weekStart, offset)) })
   }
 
-  const showView = (next: WeekView) => {
-    const params = new URLSearchParams(searchParams)
-    if (next === 'week') {
-      // Keep whatever week the user was browsing; Today/Tomorrow don't need it.
-      params.delete('view')
-    } else {
-      params.set('view', next)
-      params.delete('week')
-    }
-    setSearchParams(params)
-  }
-
   return (
     <div>
       <SectionHeading
-        title="Weekly climbing calendar"
-        hint={`${
-          view === 'week' ? formatWeekRange(weekStart) : formatDayLabel(focusDate)
-        } · ${friendLabel}`}
+        title="Climbing calendar"
+        hint="Today and tomorrow first, then the whole week."
         action={
           <div className="flex items-center gap-2">
             <button type="button" onClick={reload} className={ghostButtonClass}>
@@ -142,9 +130,7 @@ export default function Week() {
             <button
               type="button"
               className={primaryButtonClass}
-              onClick={() =>
-                setModal({ open: true, date: view === 'week' ? todayISO : focusISO, initial: null })
-              }
+              onClick={() => setModal({ open: true, date: todayISO, initial: null })}
             >
               + Add session
             </button>
@@ -152,55 +138,11 @@ export default function Week() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div
-          role="group"
-          aria-label="Calendar view"
-          className="inline-flex gap-1 rounded-lg bg-zinc-950/60 p-1"
-        >
-          {VIEWS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={view === option.value}
-              onClick={() => showView(option.value)}
-              className={cx(
-                'rounded-md px-3 py-1.5 text-sm transition',
-                view === option.value
-                  ? 'bg-zinc-800 font-semibold text-zinc-100'
-                  : 'font-medium text-zinc-400 hover:text-zinc-200',
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+      <div className="space-y-6">
+        {dataError ? <ErrorBanner message={dataError} /> : null}
+        {friendsError ? <ErrorBanner message={friendsError} /> : null}
 
-        {view === 'week' ? (
-          <>
-            <button type="button" className={secondaryButtonClass} onClick={() => goToWeek(-1)}>
-              ← Prev
-            </button>
-            <button
-              type="button"
-              className={secondaryButtonClass}
-              onClick={() => setSearchParams({})}
-              disabled={isCurrentWeek}
-            >
-              This week
-            </button>
-            <button type="button" className={secondaryButtonClass} onClick={() => goToWeek(1)}>
-              Next →
-            </button>
-          </>
-        ) : null}
-      </div>
-
-      {error ? <ErrorBanner message={error} /> : null}
-      {friendsError ? <ErrorBanner message={friendsError} /> : null}
-
-      {!friendsLoading && friends.length === 0 ? (
-        <div className="mb-4">
+        {!friendsLoading && friends.length === 0 ? (
           <Notice>
             You have no friends yet, so this shows only your own sessions.{' '}
             <Link to="/friends" className="font-semibold underline">
@@ -208,95 +150,137 @@ export default function Week() {
             </Link>{' '}
             to see their weeks too.
           </Notice>
-        </div>
-      ) : null}
+        ) : null}
 
-      {loading ? (
-        <PageLoader label={view === 'week' ? 'Loading this week…' : 'Loading…'} />
-      ) : view === 'week' ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          {days.map((day, index) => {
-            const dateISO = toISODate(day)
-            const dayEntries = byDate.get(dateISO) ?? []
-            const friendCount = new Set(
-              dayEntries.filter((entry) => entry.user_id !== userId).map((entry) => entry.user_id),
-            ).size
-            const today = isToday(day) && isCurrentWeek
-
-            return (
-              <section
-                key={dateISO}
-                className={cx(
-                  'rounded-xl border p-3',
-                  today
-                    ? 'border-emerald-800/70 bg-emerald-950/20'
-                    : 'border-zinc-800 bg-zinc-900/30',
-                )}
-              >
-                <div className="mb-2 flex items-start justify-between gap-1">
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-100">
-                      {DAY_NAMES_SHORT[index]}{' '}
-                      <span className="font-normal text-zinc-500">{formatShortDate(day)}</span>
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {friendCount === 0
-                        ? 'No friends yet'
-                        : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setModal({ open: true, date: dateISO, initial: null })}
-                    className="rounded-md border border-zinc-700 px-1.5 text-sm leading-6 text-zinc-400 hover:border-emerald-700 hover:text-emerald-300"
-                    aria-label={`Add a session on ${dateISO}`}
-                    title="Add a session on this day"
-                  >
-                    +
-                  </button>
-                </div>
-
-                {dayEntries.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-zinc-800 px-2 py-4 text-center text-xs text-zinc-500">
-                    Nothing planned
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {dayEntries.map((entry) => (
-                      <SessionCard
-                        key={entry.id}
-                        entry={entry}
-                        isOwn={entry.user_id === userId}
-                        onEdit={(climb) =>
-                          setModal({ open: true, date: climb.climb_date, initial: climb })
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            )
-          })}
-        </div>
-      ) : (
         <DaySessions
-          kind={view}
-          date={focusDate}
-          entries={entries}
+          kind="today"
+          date={today}
+          entries={dayEntries(todayISO)}
           userId={userId}
+          loading={upcomingLoading}
           onAdd={(date) => setModal({ open: true, date, initial: null })}
           onEdit={(climb) => setModal({ open: true, date: climb.climb_date, initial: climb })}
         />
-      )}
 
-      {!loading && view === 'week' && entries.length === 0 ? (
-        <div className="mt-4">
-          <EmptyState
-            title="Bone dry week"
-            hint="Add your own sessions so friends know when to meet you at the wall."
+        <DaySessions
+          kind="tomorrow"
+          date={tomorrow}
+          entries={dayEntries(tomorrowISO)}
+          userId={userId}
+          loading={upcomingLoading}
+          onAdd={(date) => setModal({ open: true, date, initial: null })}
+          onEdit={(climb) => setModal({ open: true, date: climb.climb_date, initial: climb })}
+        />
+
+        <section>
+          <SectionHeading
+            title="Week"
+            hint={`${formatWeekRange(weekStart)} · ${friendLabel}`}
+            action={
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" className={secondaryButtonClass} onClick={() => goToWeek(-1)}>
+                  ← Prev
+                </button>
+                <button
+                  type="button"
+                  className={secondaryButtonClass}
+                  onClick={() => setSearchParams({})}
+                  disabled={isCurrentWeek}
+                >
+                  This week
+                </button>
+                <button type="button" className={secondaryButtonClass} onClick={() => goToWeek(1)}>
+                  Next →
+                </button>
+              </div>
+            }
           />
-        </div>
-      ) : null}
+
+          {weekLoading ? (
+            <PageLoader label="Loading this week…" />
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+                {days.map((day, index) => {
+                  const dateISO = toISODate(day)
+                  const columnEntries = byDate.get(dateISO) ?? []
+                  const friendCount = new Set(
+                    columnEntries
+                      .filter((entry) => entry.user_id !== userId)
+                      .map((entry) => entry.user_id),
+                  ).size
+                  const isTodayColumn = isToday(day) && isCurrentWeek
+
+                  return (
+                    <div
+                      key={dateISO}
+                      className={cx(
+                        'rounded-xl border p-3',
+                        isTodayColumn
+                          ? 'border-emerald-800/70 bg-emerald-950/20'
+                          : 'border-zinc-800 bg-zinc-900/30',
+                      )}
+                    >
+                      <div className="mb-2 flex items-start justify-between gap-1">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-100">
+                            {DAY_NAMES_SHORT[index]}{' '}
+                            <span className="font-normal text-zinc-500">
+                              {formatShortDate(day)}
+                            </span>
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {friendCount === 0
+                              ? 'No friends yet'
+                              : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setModal({ open: true, date: dateISO, initial: null })}
+                          className="rounded-md border border-zinc-700 px-1.5 text-sm leading-6 text-zinc-400 hover:border-emerald-700 hover:text-emerald-300"
+                          aria-label={`Add a session on ${dateISO}`}
+                          title="Add a session on this day"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {columnEntries.length === 0 ? (
+                        <p className="rounded-lg border border-dashed border-zinc-800 px-2 py-4 text-center text-xs text-zinc-500">
+                          Nothing planned
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {columnEntries.map((entry) => (
+                            <SessionCard
+                              key={entry.id}
+                              entry={entry}
+                              isOwn={entry.user_id === userId}
+                              onEdit={(climb) =>
+                                setModal({ open: true, date: climb.climb_date, initial: climb })
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {weekEntries.length === 0 ? (
+                <div className="mt-3">
+                  <EmptyState
+                    title="Bone dry week"
+                    hint="Add your own sessions so friends know when to meet you at the wall."
+                  />
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
+      </div>
 
       {modal.open ? (
         <SessionFormModal

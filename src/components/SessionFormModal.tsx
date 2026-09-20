@@ -7,6 +7,7 @@ import type { Climb, Gym } from '../types'
 import {
   ErrorBanner,
   Field,
+  Select,
   dangerButtonClass,
   inputClass,
   primaryButtonClass,
@@ -185,11 +186,10 @@ export function SessionFormModal({
           </Field>
 
           <Field label="Gym" htmlFor="session-gym">
-            <select
+            <Select
               id="session-gym"
               value={selectedGym}
               onChange={(event) => setGymChoice(event.target.value)}
-              className={inputClass}
             >
               <option value="">Select a gym…</option>
               {gymGroups.map((group) => (
@@ -210,7 +210,7 @@ export function SessionFormModal({
                   <option value={OTHER_GYM}>Other (type it in)</option>
                 </optgroup>
               )}
-            </select>
+            </Select>
           </Field>
 
           {selectedGym === OTHER_GYM ? (
@@ -233,19 +233,18 @@ export function SessionFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Field label="From" htmlFor="session-start">
-                <select
+                <Select
                   id="session-start"
                   value={startKind}
                   onChange={(event) => setStartKind(event.target.value)}
-                  className={inputClass}
                 >
-                  <option value={EXACT_TIME}>Exact time…</option>
+                  <option value={EXACT_TIME}>Specific time…</option>
                   {TIME_SLOTS.map((slot) => (
                     <option key={slot.label} value={slot.label}>
                       {slot.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
 
               {startIsExact ? (
@@ -262,19 +261,18 @@ export function SessionFormModal({
 
             <div>
               <Field label="To" htmlFor="session-end">
-                <select
+                <Select
                   id="session-end"
                   value={endKind}
                   onChange={(event) => setEndKind(event.target.value)}
-                  className={inputClass}
                 >
-                  <option value={EXACT_TIME}>Exact time…</option>
+                  <option value={EXACT_TIME}>Specific time…</option>
                   {TIME_SLOTS.map((slot) => (
                     <option key={slot.label} value={slot.label}>
                       {slot.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
 
               {endIsExact ? (
@@ -291,7 +289,7 @@ export function SessionFormModal({
           </div>
 
           <p className="text-xs text-zinc-500">
-            Pick an exact time, or a time of day like “Opening” or “After Dinner”.
+            Pick a specific time, or a time of day like “Opening” or “After Dinner”.
           </p>
 
           <Field label="Note (optional)" htmlFor="session-note">

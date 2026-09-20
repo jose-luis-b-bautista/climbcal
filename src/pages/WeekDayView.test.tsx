@@ -1,11 +1,12 @@
 /**
- * Integration coverage for the Today / Tomorrow tabs on the week page.
+ * Integration coverage for the calendar page: the Today and Tomorrow cards sit
+ * on top of the week grid, on one page and with no tab switcher.
  *
  * The clock is pinned, so "today" is deterministic, and the fixture is built
  * around that pinned day: a session spanning the whole day, a slot-based one,
  * a finished one, one starting in an hour, and one tomorrow.
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -165,13 +166,11 @@ function renderApp(path: string) {
   )
 }
 
-/** The date range of the most recent climbs query. */
-function lastClimbRange() {
-  const query = queryLog.filter((entry) => entry.table === 'climbs').at(-1)
-  return {
-    from: query?.filters['gte.climb_date'],
-    to: query?.filters['lte.climb_date'],
-  }
+/** Every date range the page has queried for climbs, in order. */
+function climbRanges() {
+  return queryLog
+    .filter((entry) => entry.table === 'climbs')
+    .map((entry) => `${entry.filters['gte.climb_date']}..${entry.filters['lte.climb_date']}`)
 }
 
 describe('<Week /> day views', () => {
@@ -186,59 +185,79 @@ describe('<Week /> day views', () => {
     vi.useRealTimers()
   })
 
-  it('shows only today, with live timing badges', async () => {
-    renderApp('/week?view=today')
+  it('opens on today and tomorrow above the week, with no tab switcher', async () => {
+    renderApp('/week')
 
     expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Tomorrow' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Week' })).toBeTruthy()
 
-    // Wait for the data to land before the synchronous assertions below.
-    expect(await screen.findByText('Vertical Hub')).toBeTruthy()
-    expect(screen.getByText('Boulder Barn')).toBeTruthy()
-    expect(screen.getByText('Summit Loft')).toBeTruthy()
-    expect(screen.getByText('The Crux')).toBeTruthy()
+    // Today's sessions are summarised up top; today is also a column in the grid
+    // below, so each name legitimately shows up more than once. The friend's row
+    // only appears once the friend lookup has resolved, so wait on that first.
+    expect((await screen.findAllByText('Boulder Barn')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Vertical Hub')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Summit Loft').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('The Crux').length).toBeGreaterThan(0)
 
-    // Tomorrow's session belongs to the other tab.
-    expect(screen.queryByText('Riverside Boulders')).toBeNull()
-
-    // The day-long session and the Opening–Closing slot session are live.
+    // Relative badges belong to today only. The day-long session and the
+    // "Opening – Closing" slot session are both live (slots sit on the same
+    // canonical scale the app orders by), the 07:00 one is done, and the 20:00
+    // one starts in an hour.
     expect(screen.getAllByText('On now').length).toBe(2)
     expect(screen.getByText('Finished')).toBeTruthy()
     expect(screen.getByText('Starts in 1h')).toBeTruthy()
+    expect(screen.getAllByText('Opening – Closing').length).toBeGreaterThan(0)
 
     // Summary line: sessions, friends, and the day's span.
     expect(screen.getByText(/4 sessions · 1 friend climbing · 00:00 – 22:00/)).toBeTruthy()
 
-    // One day only — not the surrounding week.
-    expect(lastClimbRange()).toEqual({ from: TODAY, to: TODAY })
+    // Tomorrow's card is on the page too — there is no tab to reach it.
+    expect(screen.getAllByText('Riverside Boulders').length).toBe(1)
+
+    // The grid covers Mon–Sun with an add button per day, and the view switcher
+    // is gone entirely.
+    expect(screen.getAllByRole('button', { name: /^Add a session on / })).toHaveLength(7)
+    expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Today' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Tomorrow' })).toBeNull()
+
+    // Two ranges: the day cards always ask for the real today → tomorrow, the
+    // grid asks for the week being browsed.
+    expect(climbRanges()).toContain(`${TODAY}..${TOMORROW}`)
+    expect(climbRanges()).toContain('2026-09-14..2026-09-20')
   })
 
-  it('shows only tomorrow, without timing badges', async () => {
-    renderApp('/week?view=tomorrow')
+  it('keeps the day cards on today when the grid is paged to another week', async () => {
+    renderApp('/week?week=2026-08-31')
 
-    expect(await screen.findByRole('heading', { name: 'Tomorrow' })).toBeTruthy()
-    expect(await screen.findByText('Riverside Boulders')).toBeTruthy()
+    // The far-away week is empty…
+    expect(await screen.findByText('Bone dry week')).toBeTruthy()
+    expect(climbRanges()).toContain('2026-08-31..2026-09-06')
 
-    expect(screen.queryByText('Vertical Hub')).toBeNull()
-    expect(screen.queryByText('Boulder Barn')).toBeNull()
-    expect(screen.queryAllByText('On now').length).toBe(0)
-
-    expect(lastClimbRange()).toEqual({ from: TOMORROW, to: TOMORROW })
+    // …while today and tomorrow keep describing the real days. Wait for the
+    // friend's row (the day query resolves before the friend lookup does).
+    expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Tomorrow' })).toBeTruthy()
+    expect((await screen.findAllByText('Boulder Barn')).length).toBeGreaterThan(0)
+    await waitFor(() => expect(screen.getAllByText('On now').length).toBe(2))
+    expect(screen.getAllByText('Vertical Hub').length).toBe(1)
+    expect(screen.getAllByText('Riverside Boulders').length).toBe(1)
+    expect(climbRanges()).toContain(`${TODAY}..${TOMORROW}`)
   })
 
-  it('returns to the Mon–Sun grid from the Week tab', async () => {
-    renderApp('/week?view=today')
-    await screen.findByRole('heading', { name: 'Today' })
+  it('pages the grid without re-scoping the day cards', async () => {
+    renderApp('/week')
+    expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Week' }))
+    fireEvent.click(screen.getByRole('button', { name: '← Prev' }))
+    await waitFor(() => expect(climbRanges()).toContain('2026-09-07..2026-09-13'))
 
-    // Seven day columns, each with its own add button.
-    expect(await screen.findAllByRole('button', { name: /^Add a session on / })).toHaveLength(7)
-    expect(screen.queryByRole('heading', { name: 'Today' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'This week' }))
+    await waitFor(() => expect(climbRanges()).toContain('2026-09-14..2026-09-20'))
 
-    // Today is a Sunday, so this Mon–Sun range holds today's sessions; tomorrow
-    // is Monday of the *next* week and must not leak in.
-    expect(await screen.findByText('Vertical Hub')).toBeTruthy()
-    expect(screen.queryByText('Riverside Boulders')).toBeNull()
-    expect(lastClimbRange()).toEqual({ from: '2026-09-14', to: '2026-09-20' })
+    // The day cards were never re-scoped by either move.
+    expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy()
+    expect(screen.getAllByText('Vertical Hub').length).toBeGreaterThan(0)
   })
 })

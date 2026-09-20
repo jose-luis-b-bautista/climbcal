@@ -24,7 +24,9 @@ export function Layout() {
           <span className="text-xl" aria-hidden="true">
             🧗
           </span>
-          <span className="text-lg font-semibold tracking-tight text-zinc-100">climbcal</span>
+          <span className="text-lg font-semibold tracking-tight text-zinc-100">climbcal
+            <span className="text-xs font-semibold tracking-tight text-zinc-100"> (alpha)</span>
+          </span>
         </div>
 
         <nav className="order-3 flex w-full items-center gap-1 sm:order-2 sm:w-auto">

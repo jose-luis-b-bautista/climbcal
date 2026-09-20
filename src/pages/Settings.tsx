@@ -5,6 +5,7 @@ import {
   Field,
   Notice,
   SectionHeading,
+  Select,
   ghostButtonClass,
   inputClass,
   primaryButtonClass,
@@ -231,11 +232,10 @@ export default function Settings() {
           </Field>
 
           <Field label="Region (optional)" htmlFor="gym-region">
-            <select
+            <Select
               id="gym-region"
               value={gymRegion}
               onChange={(event) => setGymRegion(event.target.value)}
-              className={inputClass}
             >
               <option value="">No region</option>
               {GYM_REGIONS.map((region) => (
@@ -244,7 +244,7 @@ export default function Settings() {
                 </option>
               ))}
               <option value={OTHER_REGION}>Other…</option>
-            </select>
+            </Select>
           </Field>
 
           <button type="submit" disabled={gymBusy} className={primaryButtonClass}>

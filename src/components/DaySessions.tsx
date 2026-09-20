@@ -10,12 +10,22 @@ interface DaySessionsProps {
   date: Date
   entries: ClimbEntry[]
   userId: string | null
+  /** True while the two-day query is still in flight, so nothing flashes empty. */
+  loading?: boolean
   onAdd: (dateISO: string) => void
   onEdit: (climb: Climb) => void
 }
 
-/** Focused single-day view behind the Today and Tomorrow tabs. */
-export function DaySessions({ kind, date, entries, userId, onAdd, onEdit }: DaySessionsProps) {
+/** Single-day summary; the calendar page stacks Today and Tomorrow over the week. */
+export function DaySessions({
+  kind,
+  date,
+  entries,
+  userId,
+  loading = false,
+  onAdd,
+  onEdit,
+}: DaySessionsProps) {
   const dateISO = toISODate(date)
   const label = kind === 'today' ? 'Today' : 'Tomorrow'
 
@@ -34,20 +44,22 @@ export function DaySessions({ kind, date, entries, userId, onAdd, onEdit }: DayS
     ? formatTimeWindow(first.start_time, last.end_time, first.start_slot, last.end_slot)
     : null
 
-  const summary = entries.length
-    ? [
-        `${entries.length} session${entries.length === 1 ? '' : 's'}`,
-        friendCount === 0
-          ? 'no friends climbing'
-          : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`,
-        span,
-      ]
-        .filter(Boolean)
-        .join(' · ')
-    : 'Nobody has posted a session yet.'
+  const summary = loading
+    ? 'Loading sessions…'
+    : entries.length === 0
+      ? 'Nobody has posted a session yet.'
+      : [
+          `${entries.length} session${entries.length === 1 ? '' : 's'}`,
+          friendCount === 0
+            ? 'no friends climbing'
+            : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`,
+          span,
+        ]
+          .filter(Boolean)
+          .join(' · ')
 
   const nudge =
-    entries.length === 0
+    loading || entries.length === 0
       ? null
       : ownCount === 0
         ? 'Your friends are out — add your own session to join them.'
@@ -65,7 +77,7 @@ export function DaySessions({ kind, date, entries, userId, onAdd, onEdit }: DayS
       {nudge ? <p className="mt-1 text-xs text-zinc-500">{nudge}</p> : null}
 
       <div className="mt-4">
-        {entries.length === 0 ? (
+        {loading ? null : entries.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center">
             <p className="text-sm font-medium text-zinc-300">
               {kind === 'today' ? 'Nothing on today' : 'Nothing on tomorrow'}

@@ -25,9 +25,11 @@ read or write what.
 
 - **Auth** — email + password (Supabase Auth).
 - **Onboarding** — pick a username, display name, and profile visibility (defaults to private).
-- **Week view** (home) — Mon–Sun of any week (prev / this week / next), with `?week=YYYY-MM-DD`
-  in the URL so weeks are linkable. Each day shows a count of friends climbing plus session
-  cards; your own sessions are highlighted and editable.
+- **Calendar** (home) — one page, no tabs: **Today** and **Tomorrow** summary cards on top (with
+  "On now" / "Starts in 45m" badges on today's sessions), then the **Mon–Sun week** below
+  (prev / this week / next), with `?week=YYYY-MM-DD` in the URL so weeks are linkable. Each day shows
+  a count of friends climbing plus session cards; your own sessions are highlighted and editable.
+  The day cards always describe the *real* today and tomorrow, whatever week the grid is parked on.
 - **Add / edit / delete session** — date, gym (dropdown grouped by region — Luzon / Visayas /
   Mindanao — or free-text "Other"), a time window (exact clock times **or** flexible labels such as
   "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day are allowed.
@@ -155,7 +157,8 @@ Nothing is granted to the `anon` role, so there is no anonymous browsing: every 
 ```
 src/
   components/   Layout (nav shell), ProtectedRoute (session/onboarding gates),
-                SessionFormModal, ThemeToggle, ui.tsx (shared primitives + class tokens)
+                SessionFormModal, SessionCard + DaySessions (day summaries),
+                ThemeToggle, ui.tsx (shared primitives + class tokens)
   hooks/        useAuth (session + profile context), useTheme (light/dark),
                 useWeekClimbs (range queries), useFriends, useGyms
   lib/          supabase (client), date (week math, window helpers),
