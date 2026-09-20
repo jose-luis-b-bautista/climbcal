@@ -25,13 +25,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           # vite 8 requires ^20.19 || >=22.12; vitest 4 requires ^20 || ^22 || >=24
-          node-version: '22'
+          node-version: '24'
           cache: npm
 
       - name: Install dependencies
