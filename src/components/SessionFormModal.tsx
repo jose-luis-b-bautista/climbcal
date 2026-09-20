@@ -217,7 +217,7 @@ export function SessionFormModal({
             <Field
               label="Gym name"
               htmlFor="session-custom-gym"
-              hint="Great for one-off or new gyms."
+              hint="No need to add it to the list — a one-off name is fine."
             >
               <input
                 id="session-custom-gym"

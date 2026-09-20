@@ -1,26 +1,24 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from './useAuth'
 import type { Gym } from '../types'
 
 interface UseGymsResult {
   gyms: Gym[]
   loading: boolean
   error: string | null
-  reload: () => void
-  /** Adds a user-created gym and returns the inserted row. */
-  addGym: (name: string, city?: string | null, region?: string | null) => Promise<Gym>
 }
 
-/** Loads the shared gym list (seeded rows plus user-created ones). */
+/**
+ * Loads the shared gym list.
+ *
+ * Read-only on purpose: gyms are curated reference data (see
+ * `supabase/migrations/20260920000200_gyms_admin_only.sql`), and a one-off gym
+ * goes in a session's free-text `custom_gym_name` instead of a new row.
+ */
 export function useGyms(enabled = true): UseGymsResult {
-  const { userId } = useAuth()
   const [gyms, setGyms] = useState<Gym[]>([])
   const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState<string | null>(null)
-  const [nonce, setNonce] = useState(0)
-
-  const reload = useCallback(() => setNonce((value) => value + 1), [])
 
   useEffect(() => {
     if (!enabled) return
@@ -54,34 +52,7 @@ export function useGyms(enabled = true): UseGymsResult {
     return () => {
       active = false
     }
-  }, [enabled, nonce])
+  }, [enabled])
 
-  const addGym = useCallback(
-    async (name: string, city?: string | null, region?: string | null) => {
-      const trimmed = name.trim()
-      if (!trimmed) throw new Error('Gym name is required.')
-
-      const { data, error: insertError } = await supabase
-        .from('gyms')
-        .insert({
-          name: trimmed,
-          city: city?.trim() || null,
-          region: region?.trim() || null,
-          created_by: userId,
-        })
-        .select('*')
-        .single()
-
-      if (insertError) {
-        if (insertError.code === '23505') throw new Error('That gym already exists.')
-        throw new Error(insertError.message)
-      }
-
-      reload()
-      return data as Gym
-    },
-    [userId, reload],
-  )
-
-  return { gyms, loading: enabled ? loading : false, error, reload, addGym }
+  return { gyms, loading: enabled ? loading : false, error }
 }

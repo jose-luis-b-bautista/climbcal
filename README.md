@@ -35,7 +35,8 @@ read or write what.
   "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day are allowed.
 - **Friends** — search by username, send/accept/decline requests, cancel, unfriend.
 - **Public feed** — the next ~3 weeks of sessions from climbers whose profile is public.
-- **Settings** — edit profile, flip public/private, manage the shared gym list.
+- **Settings** — edit profile, flip public/private. The gym list itself is curated by admins, not in
+  the app (see [Data model](#data-model)).
 - **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
   choice per browser and falls back to your OS setting. No flash on load: a tiny inline script in
   `index.html` sets the theme before first paint.
@@ -52,7 +53,9 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      and [`20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql) (the
      gym list, tagged by region), then
      [`20260920000100_session_windows.sql`](supabase/migrations/20260920000100_session_windows.sql)
-     (flexible time-of-day windows).
+     (flexible time-of-day windows), then
+     [`20260920000200_gyms_admin_only.sql`](supabase/migrations/20260920000200_gyms_admin_only.sql)
+     (the gym list becomes read-only for users).
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -64,12 +67,13 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   All four files are idempotent, so re-running is safe.
+   All five files are idempotent, so re-running is safe.
    > Already set the project up earlier? Just run the migrations you haven't:
    > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
    > (keeping sessions that referenced them as free-text names) and seeds the regional list;
    > `20260920000100_session_windows.sql` adds the flexible `start_slot` / `end_slot` windows and
-   > leaves existing clock-time sessions untouched. Running `db push` does both for you.
+   > leaves existing clock-time sessions untouched; `20260920000200_gyms_admin_only.sql` makes the
+   > gym list read-only for users. Running `db push` does all of them for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
      "check your inbox" notice.
@@ -123,7 +127,7 @@ npm run lint       # oxlint
 auth.users ──1:1── profiles (username, display_name, visibility[public|private])
 auth.users ──1:n── climbs   (climb_date, start_time | start_slot, end_time | end_slot,
                              gym_id | custom_gym_name, note)
-gyms                        (name, city, region, seeded list + user-created rows, created_by)
+gyms                        (name, city, region, admin-curated reference data, created_by)
 auth.users ──n:n── friendships (requester_id, addressee_id, status[pending|accepted])
 ```
 
@@ -136,7 +140,10 @@ auth.users ──n:n── friendships (requester_id, addressee_id, status[pendi
   windows such as `Opening → 21:00` included. The scale is never displayed: labels are shown
   verbatim, and a duration appears only when both ends are clock times.
 - `gyms.region` is free text (`Luzon` / `Visayas` / `Mindanao` for the seeded list): the session
-  dropdown and the Settings list are grouped by it, with an "Other" bucket for untagged gyms.
+  dropdown groups by it, with an "Other" bucket for untagged gyms.
+- The gym list is **admin-curated**: signed-in users only ever read it. Add or change a row with the
+  SQL editor or a migration (see `20260920000200_gyms_admin_only.sql`); a one-off gym is recorded by
+  typing its name on a session, which never creates a gym row.
 - Signing up creates the `profiles` row automatically (`on_auth_user_created` trigger).
 - `updated_at` is maintained by triggers.
 
@@ -145,7 +152,7 @@ auth.users ──n:n── friendships (requester_id, addressee_id, status[pendi
 | Table         | Read                                                               | Write                                                                                  |
 | ------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
 | `profiles`    | any signed-in user (needed for username search + feed attribution)  | owner only                                                                             |
-| `gyms`        | any signed-in user                                                  | creator (insert/update/delete)                                                          |
+| `gyms`        | any signed-in user                                                  | **admin only** — read-only in the app (SQL editor / migrations)                          |
 | `climbs`      | owner, **accepted friends**, or everyone when the owner is `public` | owner only                                                                             |
 | `friendships` | only the two participants                                           | insert self as requester; **only the addressee can accept**; either side can delete      |
 
@@ -169,7 +176,8 @@ src/
 supabase/
   migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
                 gym_regions: real gym list grouped by region,
-                session_windows: flexible window columns + constraints
+                session_windows: flexible window columns + constraints,
+                gyms_admin_only: gyms read-only for users
   config.toml   minimal CLI config (link / db push)
 ```
 
@@ -207,5 +215,6 @@ and gym join end to end. The SQL was validated against a local Postgres with a s
 schema: signup trigger, check constraints, per-visibility read rules, the one-row-per-pair
 constraint, "only the addressee accepts", and the denial of `anon` access.
 
-Renaming gyms: edit the seed file or the rows themselves; sessions keep working because a deleted
-gym falls back to the session's own name text.
+Curating gyms: add, rename or retire rows in the SQL editor or a migration (users have no write
+access to the table). Retiring a gym leaves its sessions intact — they fall back to the session's
+own name text.

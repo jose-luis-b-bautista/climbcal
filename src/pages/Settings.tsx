@@ -5,24 +5,17 @@ import {
   Field,
   Notice,
   SectionHeading,
-  Select,
-  ghostButtonClass,
   inputClass,
   primaryButtonClass,
   secondaryButtonClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
-import { useGyms } from '../hooks/useGyms'
-import { GYM_REGIONS, groupGymsByRegion, normaliseUsername } from '../lib/format'
+import { normaliseUsername } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Visibility } from '../types'
 
-/** Sentinel for the "type your own region" branch of the region select. */
-const OTHER_REGION = '__other__'
-
 export default function Settings() {
   const { profile, session, userId, refreshProfile, signOut } = useAuth()
-  const { gyms, addGym, loading: gymsLoading, error: gymsError, reload: reloadGyms } = useGyms()
 
   // Settings only renders once RequireProfile has loaded the row, so the
   // current values can seed the form directly.
@@ -32,14 +25,6 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-
-  const [gymName, setGymName] = useState('')
-  const [gymCity, setGymCity] = useState('')
-  const [gymRegion, setGymRegion] = useState('')
-  const [gymCustomRegion, setGymCustomRegion] = useState('')
-  const [gymBusy, setGymBusy] = useState(false)
-  const [gymMessage, setGymMessage] = useState<string | null>(null)
-  const [gymFormError, setGymFormError] = useState<string | null>(null)
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -81,40 +66,12 @@ export default function Settings() {
     setSaved(true)
   }
 
-  const handleAddGym = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setGymFormError(null)
-    setGymMessage(null)
-
-    if (!gymName.trim()) {
-      setGymFormError('Enter the gym name.')
-      return
-    }
-    if (gymRegion === OTHER_REGION && !gymCustomRegion.trim()) {
-      setGymFormError('Name the region (or pick one from the list).')
-      return
-    }
-
-    const region = gymRegion === OTHER_REGION ? gymCustomRegion : gymRegion
-
-    setGymBusy(true)
-    try {
-      const created = await addGym(gymName, gymCity, region)
-      setGymName('')
-      setGymCity('')
-      setGymRegion('')
-      setGymCustomRegion('')
-      setGymMessage(`${created.name} added to the gym list.`)
-    } catch (failure) {
-      setGymFormError(failure instanceof Error ? failure.message : 'Could not add the gym.')
-    } finally {
-      setGymBusy(false)
-    }
-  }
-
   return (
     <div className="space-y-6">
-      <SectionHeading title="Settings" hint="Your profile, visibility, and the shared gym list." />
+      <SectionHeading
+        title="Settings"
+        hint="Your profile, and who can see your climbing week."
+      />
 
       <Card>
         <SectionHeading
@@ -187,116 +144,6 @@ export default function Settings() {
             {saving ? 'Saving…' : 'Save profile'}
           </button>
         </form>
-      </Card>
-
-      <Card>
-        <SectionHeading
-          title="Gyms"
-          hint="Seeded gyms grouped by region, plus anything you add. One-off names in a session don't need a gym row."
-          action={
-            <button type="button" className={ghostButtonClass} onClick={reloadGyms}>
-              Refresh
-            </button>
-          }
-        />
-
-        {gymsError ? <ErrorBanner message={gymsError} /> : null}
-        {gymFormError ? (
-          <ErrorBanner message={gymFormError} onDismiss={() => setGymFormError(null)} />
-        ) : null}
-        {gymMessage ? <Notice tone="success">{gymMessage}</Notice> : null}
-
-        <form
-          onSubmit={handleAddGym}
-          className="mt-3 mb-4 grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end"
-        >
-          <Field label="Gym name" htmlFor="gym-name">
-            <input
-              id="gym-name"
-              type="text"
-              value={gymName}
-              onChange={(event) => setGymName(event.target.value)}
-              placeholder="e.g. Boulder Space"
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="City (optional)" htmlFor="gym-city">
-            <input
-              id="gym-city"
-              type="text"
-              value={gymCity}
-              onChange={(event) => setGymCity(event.target.value)}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Region (optional)" htmlFor="gym-region">
-            <Select
-              id="gym-region"
-              value={gymRegion}
-              onChange={(event) => setGymRegion(event.target.value)}
-            >
-              <option value="">No region</option>
-              {GYM_REGIONS.map((region) => (
-                <option key={region} value={region}>
-                  {region}
-                </option>
-              ))}
-              <option value={OTHER_REGION}>Other…</option>
-            </Select>
-          </Field>
-
-          <button type="submit" disabled={gymBusy} className={primaryButtonClass}>
-            {gymBusy ? 'Adding…' : 'Add gym'}
-          </button>
-        </form>
-
-        {gymRegion === OTHER_REGION ? (
-          <div className="mb-4">
-            <Field
-              label="Region name"
-              htmlFor="gym-custom-region"
-              hint="Anything you like — it gets its own group in the list and the session dropdown."
-            >
-              <input
-                id="gym-custom-region"
-                type="text"
-                value={gymCustomRegion}
-                onChange={(event) => setGymCustomRegion(event.target.value)}
-                placeholder="e.g. Cordillera"
-                className={inputClass}
-              />
-            </Field>
-          </div>
-        ) : null}
-
-        {gymsLoading ? (
-          <p className="text-sm text-zinc-500">Loading gyms…</p>
-        ) : (
-          <div className="space-y-4">
-            {groupGymsByRegion(gyms).map((group) => (
-              <div key={group.region}>
-                <h3 className="mb-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
-                  {group.region}
-                </h3>
-                <ul className="divide-y divide-zinc-800/80">
-                  {group.gyms.map((gym) => (
-                    <li key={gym.id} className="flex items-center justify-between gap-3 py-2">
-                      <span className="text-sm text-zinc-200">
-                        {gym.name}
-                        {gym.city ? <span className="text-zinc-500"> — {gym.city}</span> : null}
-                      </span>
-                      {gym.created_by === userId ? (
-                        <span className="text-xs text-emerald-400">yours</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
       </Card>
 
       <Card>
