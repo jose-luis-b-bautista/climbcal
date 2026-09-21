@@ -100,6 +100,14 @@ describe('<Week />', () => {
     // Mon–Sun grid below: six empty columns plus Wednesday's two sessions.
     expect(screen.getAllByText('Nothing planned')).toHaveLength(6)
 
+    // The muted asides (per-day counts, empty-card hints) are desktop-only, so
+    // they keep `hidden sm:block`; the tests run without CSS, hence the classes.
+    expect(screen.getAllByText('No friends yet')[0].className).toContain('sm:block')
+    expect(screen.getAllByText('No friends yet')[0].className).toContain('hidden')
+    expect(
+      screen.getAllByText('Post a session and your friends will see it here.')[0].className,
+    ).toContain('hidden')
+
     // And no view switcher to switch between them.
     expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Week' })).toBeNull()

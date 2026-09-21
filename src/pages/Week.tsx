@@ -13,6 +13,7 @@ import {
   ghostButtonClass,
   primaryButtonClass,
   secondaryButtonClass,
+  subTextClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
@@ -228,7 +229,7 @@ export default function Week() {
                               {formatShortDate(day)}
                             </span>
                           </p>
-                          <p className="text-xs text-zinc-500">
+                          <p className={subTextClass}>
                             {friendCount === 0
                               ? 'No friends yet'
                               : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`}

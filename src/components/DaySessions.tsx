@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { formatDayLabel, formatTimeWindow, sessionTiming, toISODate } from '../lib/date'
 import type { Climb, ClimbEntry } from '../types'
 import { SessionCard } from './SessionCard'
-import { Card, cx, ghostButtonClass } from './ui'
+import { Card, cx, ghostButtonClass, subTextClass } from './ui'
 
 interface DaySessionsProps {
   kind: 'today' | 'tomorrow'
@@ -74,7 +74,7 @@ export function DaySessions({
         <p className="text-sm text-zinc-500">{formatDayLabel(date)}</p>
       </div>
       <p className="mt-1 text-sm text-zinc-400">{summary}</p>
-      {nudge ? <p className="mt-1 text-xs text-zinc-500">{nudge}</p> : null}
+      {nudge ? <p className={cx('mt-1', subTextClass)}>{nudge}</p> : null}
 
       <div className="mt-4">
         {loading ? null : entries.length === 0 ? (
@@ -82,7 +82,7 @@ export function DaySessions({
             <p className="text-sm font-medium text-zinc-300">
               {kind === 'today' ? 'Nothing on today' : 'Nothing on tomorrow'}
             </p>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className={cx('mt-1', subTextClass)}>
               Post a session and your friends will see it here.
             </p>
             <button

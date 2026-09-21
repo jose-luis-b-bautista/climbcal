@@ -29,8 +29,10 @@ read or write what.
 - **Calendar** (home) — one page, no tabs: **Today** and **Tomorrow** summary cards on top (with
   "On now" / "Starts in 45m" badges on today's sessions), then the **Mon–Sun week** below
   (prev / this week / next), with `?week=YYYY-MM-DD` in the URL so weeks are linkable. Each day shows
-  a count of friends climbing plus session cards; your own sessions are highlighted and editable.
-  The day cards always describe the *real* today and tomorrow, whatever week the grid is parked on.
+  session cards, plus a count of friends climbing from `sm` up — like the day cards' nudges, that
+  small print is desktop-only so phones stay uncluttered. Your own sessions are highlighted and
+  editable. The day cards always describe the *real* today and tomorrow, whatever week the grid is
+  parked on.
 - **Add / edit / delete session** — date, gym (dropdown grouped by region — Luzon / Visayas /
   Mindanao — or free-text "Other"), an optional second gym so it reads as **"Either X or Y"**, or
   **"Not sure yet"** when the venue isn't decided; a time window (exact clock times **or** flexible

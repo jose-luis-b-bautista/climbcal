@@ -166,6 +166,12 @@ export const inputClass =
  * sits hard against the right edge), so `Select` can place its own chevron. */
 export const selectClass = cx(inputClass, 'appearance-none pr-9')
 
+/**
+ * Muted aside that only shows from `sm` up: on a phone the friend nudges and
+ * per-day counts crowd the cards, so the small print is desktop-only.
+ */
+export const subTextClass = 'hidden text-xs text-zinc-500 sm:block'
+
 /** Chevron for {@link Select}; `currentColor` keeps it in step with the theme. */
 function ChevronDownIcon({ className }: { className?: string }) {
   return (

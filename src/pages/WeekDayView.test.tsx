@@ -215,6 +215,11 @@ describe('<Week /> day views', () => {
     // Summary line: sessions, friends, and the day's span.
     expect(screen.getByText(/4 sessions · 1 friend climbing · 00:00 – 22:00/)).toBeTruthy()
 
+    // The nudge is a desktop-only aside (hidden below `sm`).
+    expect(
+      screen.getByText('Your friends are out — add your own session to join them.').className,
+    ).toContain('hidden')
+
     // Tomorrow's card is on the page too — there is no tab to reach it.
     expect(screen.getAllByText('Riverside Boulders').length).toBe(1)
 
