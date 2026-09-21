@@ -212,8 +212,10 @@ describe('<Week /> day views', () => {
     expect(screen.getByText('Starts in 1h')).toBeTruthy()
     expect(screen.getAllByText('Opening – Closing').length).toBeGreaterThan(0)
 
-    // Summary line: sessions, friends, and the day's span.
-    expect(screen.getByText(/4 sessions · 1 friend climbing · 00:00 – 22:00/)).toBeTruthy()
+    // The day summary is the social signal only — the session count and the
+    // day's time span are gone (the cards below carry the timings).
+    expect(screen.queryByText(/\d+ sessions?/)).toBeNull()
+    expect(screen.getAllByText('1 friend climbing').length).toBeGreaterThan(0)
 
     // The nudge is a desktop-only aside (hidden below `sm`).
     expect(

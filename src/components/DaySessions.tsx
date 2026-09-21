@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { formatDayLabel, formatTimeWindow, sessionTiming, toISODate } from '../lib/date'
+import { formatDayLabel, sessionTiming, toISODate } from '../lib/date'
 import type { Climb, ClimbEntry } from '../types'
 import { SessionCard } from './SessionCard'
 import { Card, cx, ghostButtonClass, subTextClass } from './ui'
@@ -37,26 +37,15 @@ export function DaySessions({
     entries.filter((entry) => entry.user_id !== userId).map((entry) => entry.user_id),
   ).size
 
-  // entries arrive sorted by start time, so first start → last end is the day's span.
-  const first = entries[0]
-  const last = entries[entries.length - 1]
-  const span = entries.length
-    ? formatTimeWindow(first.start_time, last.end_time, first.start_slot, last.end_slot)
-    : null
-
+  // The day summary is the social signal only: the session count duplicates the
+  // cards below, and the friends line is what a phone needs at a glance.
   const summary = loading
     ? 'Loading sessions…'
     : entries.length === 0
       ? 'Nobody has posted a session yet.'
-      : [
-          `${entries.length} session${entries.length === 1 ? '' : 's'}`,
-          friendCount === 0
-            ? 'no friends climbing'
-            : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`,
-          span,
-        ]
-          .filter(Boolean)
-          .join(' · ')
+      : friendCount === 0
+        ? 'no friends climbing'
+        : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`
 
   const nudge =
     loading || entries.length === 0
