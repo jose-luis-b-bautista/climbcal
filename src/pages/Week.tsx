@@ -121,7 +121,6 @@ export default function Week() {
     <div>
       <SectionHeading
         title="Climbing calendar"
-        hint="Today and tomorrow first, then the whole week."
         action={
           <div className="flex items-center gap-2">
             <button type="button" onClick={reload} className={ghostButtonClass}>
