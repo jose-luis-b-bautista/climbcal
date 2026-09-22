@@ -264,6 +264,19 @@ value **per theme** to stay readable, so they live as `--color-avatar-<hue>` /
 `--color-avatar-<hue>-ink` pairs in `index.css`, and `theme.test.ts` asserts every pair at AA in both
 themes and fails if the CSS and the palette list drift apart.
 
+### Gym cells
+
+Each session's gym is rendered as a small cell (`GymCell`) wearing that gym's own colours, from
+[`src/lib/gymColors.ts`](src/lib/gymColors.ts) — the same list the seed migration creates, and
+`gymColors.test.ts` parses that migration so a new gym without a palette fails CI. One-off names and
+"Not sure yet" get a neutral bordered cell instead, and an "either" session borrows the look of its
+first *known* gym.
+
+The brand backgrounds are used exactly as supplied, and so is the primary — as the cell's **border**.
+Only the *text* colour is derived: ten primaries sit below WCAG AA on their own background (two are
+nearly invisible — Good Climbs PH at 2.6:1, Flow State Bouldering at 1.9:1), so `readablePrimary()`
+keeps the hue and lightens it until it clears 4.5:1. Nothing changes for pairs that already pass.
+
 ## Testing notes
 
 CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push

@@ -50,6 +50,9 @@ describe('<Week />', () => {
     expect(await screen.findByText('Mara')).toBeTruthy()
     expect(screen.getByText('Boulder Barn')).toBeTruthy()
 
+    // A one-off name has no brand palette, so it gets the neutral cell.
+    expect(screen.getByText('Boulder Barn').className).toContain('border-zinc-700')
+
     // Own session card, highlighted with "(you)".
     const ownLabel = screen.getByText(/\(you\)/)
     expect(ownLabel.parentElement?.textContent).toContain('Luis')

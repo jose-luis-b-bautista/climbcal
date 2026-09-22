@@ -1,7 +1,7 @@
 import { formatDuration, formatTimeWindow, type SessionTiming } from '../lib/date'
-import { displayNameOf, gymNameOf } from '../lib/format'
+import { displayNameOf } from '../lib/format'
 import type { Climb, ClimbEntry } from '../types'
-import { Avatar, cx } from './ui'
+import { Avatar, GymCell, cx } from './ui'
 
 export interface SessionCardProps {
   entry: ClimbEntry
@@ -33,7 +33,7 @@ export function SessionCard({ entry, isOwn, onEdit, timing }: SessionCardProps) 
             {displayNameOf(entry.climber)}
             {isOwn ? <span className="text-emerald-400"> (you)</span> : null}
           </p>
-          <p className="truncate text-xs text-zinc-400">{gymNameOf(entry)}</p>
+          <GymCell climb={entry} />
         </div>
         {timing ? (
           <span

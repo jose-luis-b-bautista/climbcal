@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorBanner,
   Field,
+  GymCell,
   PageLoader,
   SectionHeading,
   Select,
@@ -15,7 +16,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useGyms } from '../hooks/useGyms'
 import { groupByDate, useClimbs } from '../hooks/useWeekClimbs'
 import { addDays, formatDuration, formatMediumDate, formatTimeWindow, toISODate } from '../lib/date'
-import { climbGymNames, displayNameOf, groupGymsByRegion, gymNameOf, usernameOf } from '../lib/format'
+import { climbGymNames, displayNameOf, groupGymsByRegion, usernameOf } from '../lib/format'
 
 /** Days ahead included in the feed. */
 const FEED_HORIZON_DAYS = 20
@@ -140,7 +141,7 @@ export default function Feed() {
                             <span className="text-xs text-zinc-500">{handle}</span>
                           ) : null}
                         </div>
-                        <p className="text-sm text-zinc-300">{gymNameOf(entry)}</p>
+                        <GymCell climb={entry} />
                         <p className="text-xs font-medium text-emerald-300">
                           {formatTimeWindow(
                             entry.start_time,

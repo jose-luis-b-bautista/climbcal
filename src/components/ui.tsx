@@ -3,7 +3,8 @@
 // together on purpose (this module is not a route/feature component).
 import type { ReactNode, SelectHTMLAttributes } from 'react'
 import { AVATAR_HUE_CLASSES, avatarHueFor } from '../lib/avatar'
-import { initialsOf } from '../lib/format'
+import { initialsOf, gymNameOf } from '../lib/format'
+import { gymPaletteFor } from '../lib/gymColors'
 import type { Profile } from '../types'
 
 /** Tiny classname joiner (avoids pulling in clsx for a handful of cases). */
@@ -137,6 +138,34 @@ export function VisibilityBadge({ visibility }: { visibility: Profile['visibilit
       )}
     >
       {isPublic ? 'Public' : 'Private'}
+    </span>
+  )
+}
+
+/**
+ * The gym label as a cell: the gym's own colours when it has a palette, and a
+ * neutral bordered cell for one-off names and "Not sure yet".
+ */
+export function GymCell({ climb }: { climb: Parameters<typeof gymNameOf>[0] }) {
+  const palette = gymPaletteFor(climb)
+
+  return (
+    <span
+      className={cx(
+        'inline-block max-w-full truncate rounded-md border px-1.5 py-0.5 text-xs font-semibold',
+        palette ? null : 'border-zinc-700 bg-zinc-800/60 text-zinc-300',
+      )}
+      style={
+        palette
+          ? {
+              backgroundColor: palette.background,
+              borderColor: palette.border,
+              color: palette.text,
+            }
+          : undefined
+      }
+    >
+      {gymNameOf(climb)}
     </span>
   )
 }

@@ -163,13 +163,16 @@ describe('<Feed />', () => {
   it('shows your own sessions next to public ones, and no visibility badge', async () => {
     renderFeed()
 
-    // Mine (private profile) and a public climber's session. `selector: 'p'`
-    // picks the card row rather than the gym filter's <option> of the same name.
-    expect(await screen.findByText('Boulder Space', { selector: 'p' })).toBeTruthy()
-    expect(screen.getByText('BHive', { selector: 'p' })).toBeTruthy()
+    // Mine (private profile) and a public climber's session. `selector: 'span'`
+    // picks the gym cell rather than the gym filter's <option> of the same name.
+    expect(await screen.findByText('Boulder Space', { selector: 'span' })).toBeTruthy()
+    const hiveCell = screen.getByText('BHive', { selector: 'span' })
+    // The cell wears the gym's own colours (BHive: #FAD02C on #162E5A, already AA).
+    expect(hiveCell.getAttribute('style')).toContain('rgb(22, 46, 90)')
+    expect(hiveCell.getAttribute('style')).toContain('rgb(250, 208, 44)')
 
     // …but not another climber's private session.
-    expect(screen.queryByText('Summit Loft', { selector: 'p' })).toBeNull()
+    expect(screen.queryByText('Summit Loft', { selector: 'span' })).toBeNull()
 
     // …and the badge is gone, and the private-profile note now says sessions *are*
     // visible to you, rather than that they are missing.
@@ -206,14 +209,14 @@ describe('<Feed />', () => {
     expect(filter.value).toBe('')
 
     // Default: all of them.
-    expect(await screen.findByText('Boulder Space', { selector: 'p' })).toBeTruthy()
-    expect(screen.getByText('BHive', { selector: 'p' })).toBeTruthy()
+    expect(await screen.findByText('Boulder Space', { selector: 'span' })).toBeTruthy()
+    expect(screen.getByText('BHive', { selector: 'span' })).toBeTruthy()
 
     // A gym that does have sessions…
     fireEvent.change(filter, { target: { value: 'gym-hive' } })
-    expect(screen.getByText('BHive', { selector: 'p' })).toBeTruthy()
-    expect(screen.queryByText('Boulder Space', { selector: 'p' })).toBeNull()
-    expect(screen.queryByText('Boulder World', { selector: 'p' })).toBeNull()
+    expect(screen.getByText('BHive', { selector: 'span' })).toBeTruthy()
+    expect(screen.queryByText('Boulder Space', { selector: 'span' })).toBeNull()
+    expect(screen.queryByText('Boulder World', { selector: 'span' })).toBeNull()
 
     // …and one that does not, which says so instead of looking broken.
     fireEvent.change(filter, { target: { value: 'gym-edge' } })
@@ -221,7 +224,7 @@ describe('<Feed />', () => {
 
     // Back to everything.
     fireEvent.change(filter, { target: { value: '' } })
-    expect(screen.getByText('Boulder Space', { selector: 'p' })).toBeTruthy()
+    expect(screen.getByText('Boulder Space', { selector: 'span' })).toBeTruthy()
   })
 
   it('matches an "either" session on both of its gyms', async () => {
@@ -230,8 +233,8 @@ describe('<Feed />', () => {
     const filter = (await screen.findByLabelText('Filter by gym')) as HTMLSelectElement
     // Wait for the feed's data before poking the filter, or the cards below may
     // not have rendered yet.
-    await screen.findByText('Either Boulder World or BHive', { selector: 'p' })
-    const either = () => screen.getByText('Either Boulder World or BHive', { selector: 'p' })
+    await screen.findByText('Either Boulder World or BHive', { selector: 'span' })
+    const either = () => screen.getByText('Either Boulder World or BHive', { selector: 'span' })
 
     fireEvent.change(filter, { target: { value: 'gym-hive' } })
     expect(either()).toBeTruthy()
