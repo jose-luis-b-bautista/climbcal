@@ -56,6 +56,26 @@
   --color-sky-200: #1e40af;
   --color-sky-900: #bfdbfe;
   --color-sky-950: #eff6ff;
+
+  /* Avatar chips, one pair per hue: `avatar-*` is the chip, `avatar-*-ink` the
+     initials on it. Assigned per climber in src/lib/avatar.ts and contrast-checked
+     in src/theme.test.ts. */
+  --color-avatar-emerald: #d1fae5;
+  --color-avatar-emerald-ink: #065f46;
+  --color-avatar-sky: #bae6fd;
+  --color-avatar-sky-ink: #075985;
+  --color-avatar-violet: #ddd6fe;
+  --color-avatar-violet-ink: #5b21b6;
+  --color-avatar-fuchsia: #fae8ff;
+  --color-avatar-fuchsia-ink: #86198f;
+  --color-avatar-rose: #ffe4e6;
+  --color-avatar-rose-ink: #9f1239;
+  --color-avatar-amber: #fef3c7;
+  --color-avatar-amber-ink: #92400e;
+  --color-avatar-teal: #ccfbf1;
+  --color-avatar-teal-ink: #115e59;
+  --color-avatar-indigo: #e0e7ff;
+  --color-avatar-indigo-ink: #3730a3;
 }
 
 /* dark theme: the palette the app was originally designed in. */
@@ -92,6 +112,23 @@
   --color-sky-200: #bae6fd;
   --color-sky-900: #0c4a6e;
   --color-sky-950: #082f49;
+
+  --color-avatar-emerald: #064e3b;
+  --color-avatar-emerald-ink: #d1fae5;
+  --color-avatar-sky: #0c4a6e;
+  --color-avatar-sky-ink: #bae6fd;
+  --color-avatar-violet: #4c1d95;
+  --color-avatar-violet-ink: #ede9fe;
+  --color-avatar-fuchsia: #701a75;
+  --color-avatar-fuchsia-ink: #fae8ff;
+  --color-avatar-rose: #881337;
+  --color-avatar-rose-ink: #ffe4e6;
+  --color-avatar-amber: #78350f;
+  --color-avatar-amber-ink: #fef3c7;
+  --color-avatar-teal: #134e4a;
+  --color-avatar-teal-ink: #ccfbf1;
+  --color-avatar-indigo: #312e81;
+  --color-avatar-indigo-ink: #e0e7ff;
 
   /* Native widgets (date/time pickers, scrollbars, form controls) follow suit. */
   color-scheme: dark;

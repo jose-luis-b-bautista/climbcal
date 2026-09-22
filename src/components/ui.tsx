@@ -2,6 +2,7 @@
 // Shared design primitives: components plus the class tokens they use, kept
 // together on purpose (this module is not a route/feature component).
 import type { ReactNode, SelectHTMLAttributes } from 'react'
+import { AVATAR_HUE_CLASSES, avatarHueFor } from '../lib/avatar'
 import { initialsOf } from '../lib/format'
 import type { Profile } from '../types'
 
@@ -113,7 +114,9 @@ export function Avatar({ profile, size = 'md' }: { profile: Profile | null | und
     <span
       aria-hidden="true"
       className={cx(
-        'inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-900/70 font-semibold text-emerald-100',
+        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold',
+        // Each climber gets a stable hue off their id, not the same green chip.
+        AVATAR_HUE_CLASSES[avatarHueFor(profile?.id)],
         dimension,
       )}
     >

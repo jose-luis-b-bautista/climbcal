@@ -146,10 +146,16 @@ describe('<Feed />', () => {
     // …but not another climber's private session.
     expect(screen.queryByText('Summit Loft')).toBeNull()
 
-    // The badge is gone, and the private-profile note now says sessions *are*
+    // …and the badge is gone, and the private-profile note now says sessions *are*
     // visible to you, rather than that they are missing.
     expect(screen.queryByText('Public')).toBeNull()
     expect(screen.getByText(/only you can see your sessions here/)).toBeTruthy()
+
+    // Avatar chips are per climber, not the same green for everyone.
+    const mine = screen.getAllByText('LU')[0]
+    const mara = screen.getByText('MA')
+    expect(mara.className).toContain('bg-avatar-')
+    expect(mara.className).not.toBe(mine.className)
   })
 
   it('shows the @handle beside the display name, and alone when there is none', async () => {

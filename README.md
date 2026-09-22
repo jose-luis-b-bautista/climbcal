@@ -224,6 +224,15 @@ Practical consequences when editing UI:
   the CSS and asserts WCAG AA (4.5:1) for body text, and perceivable borders. Change a colour and
   the test tells you if it broke.
 
+### Avatar colours
+
+Each climber's avatar chip takes a **stable** hue from their user id (`src/lib/avatar.ts`), so it
+looks random across a friend group but never changes for one person — a colour picked per render
+would flicker. The hues are not part of the zinc/emerald scales: each one needs a chip *and* an ink
+value **per theme** to stay readable, so they live as `--color-avatar-<hue>` /
+`--color-avatar-<hue>-ink` pairs in `index.css`, and `theme.test.ts` asserts every pair at AA in both
+themes and fails if the CSS and the palette list drift apart.
+
 ## Testing notes
 
 CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push

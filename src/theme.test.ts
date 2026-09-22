@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { THEME_STORAGE_KEY } from './hooks/useTheme'
+import { AVATAR_HUES, AVATAR_HUE_CLASSES } from './lib/avatar'
 
 // Read the sources from disk: Vitest stubs CSS imports, so `import ... from
 // './index.css?raw'` comes back empty here. Paths are relative to the project
@@ -29,8 +30,26 @@ function readTokens(block: string): Record<string, string> {
   return tokens
 }
 
-const lightTokens = readTokens(css.match(/@theme\s*\{([\s\S]*?)\n\}/)?.[1] ?? '')
-const darkTokens = readTokens(css.match(/^\.dark\s*\{([\s\S]*?)\n\}/m)?.[1] ?? '')
+const lightBlock = css.match(/@theme\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+const darkBlock = css.match(/^\.dark\s*\{([\s\S]*?)\n\}/m)?.[1] ?? ''
+
+const lightTokens = readTokens(lightBlock)
+const darkTokens = readTokens(darkBlock)
+
+/** Avatar chip tokens: `--color-avatar-<hue>` (chip) + `-ink` (initials). */
+function readAvatarTokens(block: string): Record<string, { bg: string; ink: string }> {
+  const tokens: Record<string, { bg: string; ink: string }> = {}
+  for (const match of block.matchAll(/--color-avatar-([a-z]+):\s*(#[0-9a-fA-F]{6})/g)) {
+    tokens[match[1]] = { ...(tokens[match[1]] ?? { ink: '' }), bg: match[2].toLowerCase() }
+  }
+  for (const match of block.matchAll(/--color-avatar-([a-z]+)-ink:\s*(#[0-9a-fA-F]{6})/g)) {
+    tokens[match[1]] = { ...(tokens[match[1]] ?? { bg: '' }), ink: match[2].toLowerCase() }
+  }
+  return tokens
+}
+
+const lightAvatar = readAvatarTokens(lightBlock)
+const darkAvatar = readAvatarTokens(darkBlock)
 
 /** `white` is the one literal colour used on top of the accent tokens. */
 const EXTRA_COLORS: Record<string, string> = { white: '#ffffff' }
@@ -129,6 +148,38 @@ describe('dark theme tokens', () => {
     for (const [fg, bg, role] of [...SECONDARY_TEXT, ...SURFACES]) {
       const ratio = contrast(resolve(darkTokens, fg), resolve(darkTokens, bg))
       expect(ratio, `${role}: only ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(1.3)
+    }
+  })
+})
+
+describe('avatar colours', () => {
+  it('defines a chip + ink pair for every hue, in both themes', () => {
+    for (const hue of AVATAR_HUES) {
+      expect(lightAvatar[hue]?.bg, `${hue} chip missing from the light palette`).toBeTruthy()
+      expect(lightAvatar[hue]?.ink, `${hue} ink missing from the light palette`).toBeTruthy()
+      expect(darkAvatar[hue]?.bg, `${hue} chip missing from the dark palette`).toBeTruthy()
+      expect(darkAvatar[hue]?.ink, `${hue} ink missing from the dark palette`).toBeTruthy()
+    }
+
+    // No orphans either: a token the app can never pick is dead weight.
+    const defined = [...AVATAR_HUES].sort()
+    expect(Object.keys(lightAvatar).sort()).toEqual(defined)
+    expect(Object.keys(darkAvatar).sort()).toEqual(defined)
+  })
+
+  it('keeps the initials readable on every chip, in both themes', () => {
+    for (const hue of AVATAR_HUES) {
+      const light = contrast(lightAvatar[hue].ink, lightAvatar[hue].bg)
+      const dark = contrast(darkAvatar[hue].ink, darkAvatar[hue].bg)
+      expect(light, `${hue} light initials: only ${light.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+      expect(dark, `${hue} dark initials: only ${dark.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('points every hue at a token that exists', () => {
+    for (const hue of AVATAR_HUES) {
+      expect(AVATAR_HUE_CLASSES[hue]).toContain(`bg-avatar-${hue}`)
+      expect(AVATAR_HUE_CLASSES[hue]).toContain(`text-avatar-${hue}-ink`)
     }
   })
 })
