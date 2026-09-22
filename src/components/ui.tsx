@@ -152,12 +152,12 @@ export function GymCell({ climb }: { climb: Parameters<typeof gymNameOf>[0] }) {
   return (
     <span
       className={cx(
-        'inline-block max-w-full truncate rounded-md border px-1.5 py-0.5 text-xs font-semibold',
+        'inline-block max-w-full truncate rounded-md px-1.5 py-0.5 text-xs font-semibold',
         palette ? null : 'border-zinc-700 bg-zinc-800/60 text-zinc-300',
       )}
       style={
         palette
-          ? { backgroundColor: palette.fill, borderColor: palette.border, color: palette.text }
+          ? { backgroundColor: palette.fill, color: palette.text }
           : undefined
       }
     >

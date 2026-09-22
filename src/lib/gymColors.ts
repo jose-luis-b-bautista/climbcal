@@ -17,28 +17,24 @@ export interface GymCellColors {
   fill: string
   /** The gym's `background`, used as the label ink. */
   text: string
-  /** The shared black outline. */
-  border: string
 }
 
-/** Every gym cell is outlined in black, so it has an edge on any fill or theme. */
-export const GYM_CELL_BORDER = '#000000'
 
 /** Exactly the gyms seeded by 20260920000000_gym_regions.sql. */
 export const GYM_PALETTES: Record<string, { primary: string; background: string }> = {
   // Luzon
-  'Boulder Space': { primary: '#00A896', background: '#0B132B' },
-  'Climb Central Manila': { primary: '#E75A24', background: '#1A365D' },
-  BHive: { primary: '#FAD02C', background: '#162E5A' },
-  GHive: { primary: '#FAD02C', background: '#162E5A' },
-  'Edge Climb': { primary: '#FF4500', background: '#2C3E50' },
-  'Boulder World': { primary: '#E53E3E', background: '#2D3748' },
-  'Good Climbs PH': { primary: '#2A52BE', background: '#0F172A' },
+  'Boulder Space': { primary: '#0B132B', background: '#00A896' },
+  'Climb Central Manila': { primary: '#f37427', background: '#fbfcf7' },
+  BHive: { primary: '#3174b4', background: '#fbfcf7' },
+  GHive: { primary: '#0c4b7c', background: '#fbfcf7' },
+  'Edge Climb': { primary: '#111135', background: '#fbfcf7' },
+  'Boulder World': { primary: '#1ea18f', background: '#0e606c' },
+  'Good Climbs PH': { primary: '#78bc3f', background: '#f4debe' },
   'Power Up TS': { primary: '#FFC72C', background: '#1A1A1A' },
   'Power Up Centro': { primary: '#FFC72C', background: '#1A1A1A' },
   'Power Up Alabang': { primary: '#FFC72C', background: '#1A1A1A' },
-  'Flow State Bouldering': { primary: '#5B3182', background: '#111827' },
-  'Urban Peak Wall Climbing': { primary: '#FF5722', background: '#1E1E1E' },
+  'Flow State Bouldering': { primary: '#5B3182', background: '#f5c034' },
+  'Urban Peak Wall Climbing': { primary: '#008506', background: '#000000' },
   // Visayas
   'Rock On Boulder': { primary: '#FF007F', background: '#000000' },
   'Vertex Bouldering': { primary: '#4F46E5', background: '#0F172A' },
@@ -62,7 +58,6 @@ export function gymPaletteOf(name: string | null | undefined): GymCellColors | n
   return {
     fill: palette.primary,
     text: palette.background,
-    border: GYM_CELL_BORDER,
   }
 }
 
