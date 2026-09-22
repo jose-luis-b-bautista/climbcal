@@ -1,24 +1,29 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Avatar,
   Card,
   EmptyState,
   ErrorBanner,
+  Field,
   PageLoader,
   SectionHeading,
+  Select,
   ghostButtonClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { useGyms } from '../hooks/useGyms'
 import { groupByDate, useClimbs } from '../hooks/useWeekClimbs'
 import { addDays, formatDuration, formatMediumDate, formatTimeWindow, toISODate } from '../lib/date'
-import { displayNameOf, gymNameOf, usernameOf } from '../lib/format'
+import { climbGymNames, displayNameOf, groupGymsByRegion, gymNameOf, usernameOf } from '../lib/format'
 
 /** Days ahead included in the feed. */
 const FEED_HORIZON_DAYS = 20
 
 export default function Feed() {
   const { userId, profile } = useAuth()
+  const { gyms } = useGyms()
+  const [gymFilter, setGymFilter] = useState('')
 
   const startDate = toISODate(new Date())
   const endDate = toISODate(addDays(new Date(), FEED_HORIZON_DAYS))
@@ -32,15 +37,23 @@ export default function Feed() {
     participantIds: null,
   })
 
-  const feedEntries = useMemo(
-    () =>
-      entries.filter(
-        (entry) => entry.user_id === userId || entry.climber.visibility === 'public',
-      ),
-    [entries, userId],
-  )
+  // `''` is every gym. Matching happens on the name, so a session that typed the
+  // gym name instead of picking it still filters — and an "either" session
+  // matches on both of its slots.
+  const selectedGymName = gymFilter
+    ? gyms.find((gym) => gym.id === gymFilter)?.name
+    : undefined
+
+  const feedEntries = useMemo(() => {
+    const visible = entries.filter(
+      (entry) => entry.user_id === userId || entry.climber.visibility === 'public',
+    )
+    if (!selectedGymName) return visible
+    return visible.filter((entry) => climbGymNames(entry).includes(selectedGymName))
+  }, [entries, userId, selectedGymName])
 
   const groups = useMemo(() => groupByDate(feedEntries), [feedEntries])
+  const gymGroups = groupGymsByRegion(gyms)
 
   return (
     <div className="space-y-4">
@@ -66,12 +79,37 @@ export default function Feed() {
         </p>
       ) : null}
 
+      <div className="max-w-xs">
+        <Field label="Filter by gym" htmlFor="feed-gym">
+          <Select
+            id="feed-gym"
+            value={gymFilter}
+            onChange={(event) => setGymFilter(event.target.value)}
+          >
+            <option value="">All gyms</option>
+            {gymGroups.map((group) => (
+              <optgroup key={group.region} label={group.region}>
+                {group.gyms.map((gym) => (
+                  <option key={gym.id} value={gym.id}>
+                    {gym.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </Select>
+        </Field>
+      </div>
+
       {loading ? (
         <PageLoader label="Loading the feed…" />
       ) : groups.length === 0 ? (
         <EmptyState
-          title="Nothing on the horizon"
-          hint="Your sessions and public climbers' sessions show up here, grouped by day."
+          title={selectedGymName ? `Nobody at ${selectedGymName}` : 'Nothing on the horizon'}
+          hint={
+            selectedGymName
+              ? `No sessions there in the next ${FEED_HORIZON_DAYS} days — try another gym.`
+              : "Your sessions and public climbers' sessions show up here, grouped by day."
+          }
         />
       ) : (
         <div className="space-y-5">

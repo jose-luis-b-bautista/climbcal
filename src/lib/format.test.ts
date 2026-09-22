@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   GYM_REGIONS,
   OTHER_REGION_LABEL,
+  climbGymNames,
   displayNameOf,
   groupGymsByRegion,
   gymNameOf,
@@ -82,6 +83,20 @@ describe('gymNameOf', () => {
   it('falls back to "Not sure yet" when no gym is set', () => {
     expect(gymNameOf({})).toBe('Not sure yet')
     expect(gymNameOf({ gym: null, custom_gym_name: '   ' })).toBe('Not sure yet')
+  })
+})
+
+describe('climbGymNames', () => {
+  it('lists both slots in order, trimming typed names', () => {
+    expect(climbGymNames({ gym: { name: 'BHive' }, gym_2: { name: 'Edge Climb' } })).toEqual([
+      'BHive',
+      'Edge Climb',
+    ])
+    expect(climbGymNames({ custom_gym_name: '  Boulder Barn ', gym_2: { name: 'GHive' } })).toEqual([
+      'Boulder Barn',
+      'GHive',
+    ])
+    expect(climbGymNames({})).toEqual([])
   })
 })
 

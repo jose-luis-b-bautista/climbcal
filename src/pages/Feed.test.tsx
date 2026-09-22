@@ -2,7 +2,7 @@
  * Public feed coverage: public climbers *and* your own sessions (even when your
  * profile is private), no visibility badge, and the @handle beside the name.
  */
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -54,7 +54,12 @@ vi.mock('../lib/supabase', async () => {
     updated_at: stamp,
   }
 
-  const session = (id: string, userId: string, custom_gym_name: string) => ({
+  const session = (
+    id: string,
+    userId: string,
+    custom_gym_name: string,
+    custom_gym_name_2: string | null = null,
+  ) => ({
     id,
     user_id: userId,
     climb_date: TODAY,
@@ -65,7 +70,7 @@ vi.mock('../lib/supabase', async () => {
     gym_id: null,
     custom_gym_name,
     gym_id_2: null,
-    custom_gym_name_2: null,
+    custom_gym_name_2,
     note: null,
     created_at: stamp,
     updated_at: stamp,
@@ -76,10 +81,28 @@ vi.mock('../lib/supabase', async () => {
   const climbs = [
     session('mine', TEST_USER_ID, 'Boulder Space'),
     session('mara', maraId, 'BHive'),
+    // An "either" session: the filter has to match both of its gyms.
+    session('mara-either', maraId, 'Boulder World', 'BHive'),
     session('noor', noorId, 'Boulder World'),
     session('sam', samId, 'Summit Loft'),
   ]
   const profiles = [me, mara, noor, sam]
+
+  const gym = (id: string, name: string) => ({
+    id,
+    name,
+    region: 'Luzon',
+    city: null,
+    created_by: null,
+    created_at: stamp,
+  })
+  // 'BHive' has sessions in the feed, 'Edge Climb' has none — both are options.
+  const gyms = [
+    gym('gym-space', 'Boulder Space'),
+    gym('gym-hive', 'BHive'),
+    gym('gym-world', 'Boulder World'),
+    gym('gym-edge', 'Edge Climb'),
+  ]
 
   return {
     isSupabaseConfigured: true,
@@ -107,6 +130,7 @@ vi.mock('../lib/supabase', async () => {
         }
         return { data: profiles, error: null }
       }
+      if (table === 'gyms') return { data: gyms, error: null }
       if (table === 'friendships') return { data: [], error: null }
       return { data: null, error: null }
     }),
@@ -139,12 +163,13 @@ describe('<Feed />', () => {
   it('shows your own sessions next to public ones, and no visibility badge', async () => {
     renderFeed()
 
-    // Mine (private profile) and a public climber's session…
-    expect(await screen.findByText('Boulder Space')).toBeTruthy()
-    expect(screen.getByText('BHive')).toBeTruthy()
+    // Mine (private profile) and a public climber's session. `selector: 'p'`
+    // picks the card row rather than the gym filter's <option> of the same name.
+    expect(await screen.findByText('Boulder Space', { selector: 'p' })).toBeTruthy()
+    expect(screen.getByText('BHive', { selector: 'p' })).toBeTruthy()
 
     // …but not another climber's private session.
-    expect(screen.queryByText('Summit Loft')).toBeNull()
+    expect(screen.queryByText('Summit Loft', { selector: 'p' })).toBeNull()
 
     // …and the badge is gone, and the private-profile note now says sessions *are*
     // visible to you, rather than that they are missing.
@@ -153,7 +178,7 @@ describe('<Feed />', () => {
 
     // Avatar chips are per climber, not the same green for everyone.
     const mine = screen.getAllByText('LU')[0]
-    const mara = screen.getByText('MA')
+    const mara = screen.getAllByText('MA')[0]
     expect(mara.className).toContain('bg-avatar-')
     expect(mara.className).not.toBe(mine.className)
   })
@@ -161,8 +186,9 @@ describe('<Feed />', () => {
   it('shows the @handle beside the display name, and alone when there is none', async () => {
     renderFeed()
 
-    expect(await screen.findByText('Mara')).toBeTruthy()
-    expect(screen.getByText('@mara')).toBeTruthy()
+    // Mara has two sessions in the fixture, so counts are "at least one".
+    expect((await screen.findAllByText('Mara')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('@mara').length).toBeGreaterThan(0)
 
     // Noor has no display name, so the handle is the name — printed once.
     expect(screen.getByText('@noor')).toBeTruthy()
@@ -171,5 +197,43 @@ describe('<Feed />', () => {
     // The app header prints the signed-in handle too, so Luis/@luis both appear.
     expect(screen.getAllByText('Luis').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('@luis').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('filters by gym, defaulting to every gym', async () => {
+    renderFeed()
+
+    const filter = (await screen.findByLabelText('Filter by gym')) as HTMLSelectElement
+    expect(filter.value).toBe('')
+
+    // Default: all of them.
+    expect(await screen.findByText('Boulder Space', { selector: 'p' })).toBeTruthy()
+    expect(screen.getByText('BHive', { selector: 'p' })).toBeTruthy()
+
+    // A gym that does have sessions…
+    fireEvent.change(filter, { target: { value: 'gym-hive' } })
+    expect(screen.getByText('BHive', { selector: 'p' })).toBeTruthy()
+    expect(screen.queryByText('Boulder Space', { selector: 'p' })).toBeNull()
+    expect(screen.queryByText('Boulder World', { selector: 'p' })).toBeNull()
+
+    // …and one that does not, which says so instead of looking broken.
+    fireEvent.change(filter, { target: { value: 'gym-edge' } })
+    expect(screen.getByText('Nobody at Edge Climb')).toBeTruthy()
+
+    // Back to everything.
+    fireEvent.change(filter, { target: { value: '' } })
+    expect(screen.getByText('Boulder Space', { selector: 'p' })).toBeTruthy()
+  })
+
+  it('matches an "either" session on both of its gyms', async () => {
+    renderFeed()
+
+    const filter = (await screen.findByLabelText('Filter by gym')) as HTMLSelectElement
+    const either = () => screen.getByText('Either Boulder World or BHive', { selector: 'p' })
+
+    fireEvent.change(filter, { target: { value: 'gym-hive' } })
+    expect(either()).toBeTruthy()
+
+    fireEvent.change(filter, { target: { value: 'gym-world' } })
+    expect(either()).toBeTruthy()
   })
 })

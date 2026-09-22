@@ -22,6 +22,19 @@ export function initialsOf(profile: Profile | null | undefined): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
+/** Gym names on a climb, in slot order: a linked gym, else the typed fallback. */
+export function climbGymNames(climb: {
+  custom_gym_name?: string | null
+  gym?: { name: string } | null
+  custom_gym_name_2?: string | null
+  gym_2?: { name: string } | null
+}): string[] {
+  return [
+    climb.gym?.name ?? climb.custom_gym_name?.trim(),
+    climb.gym_2?.name ?? climb.custom_gym_name_2?.trim(),
+  ].filter((name): name is string => Boolean(name))
+}
+
 /** Gym label for a climb: linked gym name, else the free-text fallback. */
 export function gymNameOf(climb: {
   custom_gym_name?: string | null
@@ -29,10 +42,7 @@ export function gymNameOf(climb: {
   custom_gym_name_2?: string | null
   gym_2?: { name: string } | null
 }): string {
-  const names = [
-    climb.gym?.name ?? climb.custom_gym_name?.trim(),
-    climb.gym_2?.name ?? climb.custom_gym_name_2?.trim(),
-  ].filter((name): name is string => Boolean(name))
+  const names = climbGymNames(climb)
 
   if (names.length === 0) return 'Not sure yet'
   if (names.length === 1) return names[0]

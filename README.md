@@ -41,7 +41,8 @@ read or write what.
 - **Friends** — the newest public climbers are listed ready to add (20 at a time, most recently joined
   first), plus a username search; send/accept/decline requests, cancel, unfriend.
 - **Feed** — the next ~3 weeks of sessions grouped by day: public profiles **plus your own**, so your
-  posts are always visible to you. Each card shows the climber's name and `@handle`.
+  posts are always visible to you. Each card shows the climber's name and `@handle`, and the list can
+  be filtered by gym (defaults to all gyms).
 - **Settings** — edit profile, flip public/private. The gym list itself is curated by admins, not in
   the app (see [Data model](#data-model)).
 - **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
