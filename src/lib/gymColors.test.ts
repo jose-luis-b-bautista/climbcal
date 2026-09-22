@@ -10,7 +10,7 @@ import {
   contrastRatio,
   gymPaletteFor,
   gymPaletteOf,
-  readablePrimary,
+  readableInk,
 } from './gymColors'
 
 const migration = readFileSync(
@@ -28,44 +28,73 @@ describe('gym palette', () => {
     expect(Object.keys(GYM_PALETTES).sort()).toEqual([...seeded].sort())
   })
 
-  it('keeps every cell readable (AA) after the primary is lifted', () => {
+  it('paints the primary as the fill and keeps both brand colours verbatim', () => {
     for (const [name, palette] of Object.entries(GYM_PALETTES)) {
-      const resolved = gymPaletteOf(name)
-      expect(resolved).not.toBeNull()
-      const ratio = contrastRatio(resolved?.text ?? '', resolved?.background ?? '')
-      expect(ratio, `${name} cell is only ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
-      // Both brand colours are kept verbatim: background as given, primary as the border.
-      expect(resolved?.background).toBe(palette.background)
-      expect(resolved?.border).toBe(palette.primary)
+      const cell = gymPaletteOf(name)
+      expect(cell).not.toBeNull()
+      // The supplied `primary` is the fill, the supplied `background` the outline.
+      expect(cell?.fill).toBe(palette.primary)
+      expect(cell?.border).toBe(palette.background)
     }
   })
 
-  it('leaves a primary that already clears AA exactly as supplied', () => {
-    expect(readablePrimary('#FAD02C', '#162E5A')).toBe('#FAD02C')
+  it('keeps every label readable (AA) on its fill', () => {
+    for (const name of Object.keys(GYM_PALETTES)) {
+      const cell = gymPaletteOf(name)!
+      const ratio = contrastRatio(cell.text, cell.fill)
+      expect(ratio, `${name} label is only ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('never lets a cell disappear: a fill on the dark theme, an outline on the light one', () => {
+    for (const name of Object.keys(GYM_PALETTES)) {
+      const cell = gymPaletteOf(name)!
+      // No black holes: the fill has to lift off the dark page/card.
+      const onDark = contrastRatio(cell.fill, '#18181b')
+      expect(onDark, `${name} fill vanishes on dark (${onDark.toFixed(2)}:1)`).toBeGreaterThanOrEqual(
+        1.3,
+      )
+      // Some brand fills are pale (the yellows), so in light mode the dark
+      // outline is what defines the cell.
+      const onLight = Math.max(contrastRatio(cell.fill, '#ffffff'), contrastRatio(cell.border, '#ffffff'))
+      expect(onLight, `${name} cell vanishes on light (${onLight.toFixed(2)}:1)`).toBeGreaterThanOrEqual(
+        1.3,
+      )
+    }
+  })
+
+  it('leaves an ink that already clears AA exactly as supplied', () => {
+    expect(readableInk('#162E5A', '#FAD02C')).toBe('#162E5A')
     expect(gymPaletteOf('BHive')).toEqual({
-      text: '#FAD02C',
-      background: '#162E5A',
-      border: '#FAD02C',
+      fill: '#FAD02C',
+      text: '#162E5A',
+      border: '#162E5A',
+    })
+    // Rock On Boulder: primary #FF007F fills the cell, the black becomes the ink.
+    expect(gymPaletteOf('Rock On Boulder')).toEqual({
+      fill: '#FF007F',
+      text: '#000000',
+      border: '#000000',
     })
   })
 
-  it('lifts only the text colour when the primary could not be read', () => {
+  it('lifts only the ink colour when it could not be read on the fill', () => {
     const flowState = gymPaletteOf('Flow State Bouldering')
-    expect(flowState?.text).not.toBe('#5B3182')
-    expect(flowState?.border).toBe('#5B3182')
-    expect(contrastRatio(flowState?.text ?? '', '#111827')).toBeGreaterThanOrEqual(4.5)
+    expect(flowState?.fill).toBe('#5B3182')
+    expect(flowState?.text).not.toBe('#111827')
+    expect(contrastRatio(flowState?.text ?? '', '#5B3182')).toBeGreaterThanOrEqual(4.5)
   })
 
   it('has no palette for a one-off name, and picks the first gym of an "either"', () => {
     expect(gymPaletteOf('Some Hostel Wall')).toBeNull()
     expect(gymPaletteOf(null)).toBeNull()
 
-    expect(gymPaletteFor({ custom_gym_name: 'BHive', custom_gym_name_2: 'Boulder24' })?.background).toBe(
-      '#162E5A',
-    )
-    expect(gymPaletteFor({ custom_gym_name: 'Not Listed', gym_2: { name: 'Boulder24' } })?.background).toBe(
-      '#1E293B',
-    )
+    expect(
+      gymPaletteFor({ custom_gym_name: 'BHive', custom_gym_name_2: 'Boulder24' })?.fill,
+    ).toBe('#FAD02C')
+    expect(
+      gymPaletteFor({ custom_gym_name: 'Not Listed', gym_2: { name: 'Boulder24' } })?.fill,
+    ).toBe('#EF4444')
     expect(gymPaletteFor({})).toBeNull()
   })
 })

@@ -157,11 +157,7 @@ export function GymCell({ climb }: { climb: Parameters<typeof gymNameOf>[0] }) {
       )}
       style={
         palette
-          ? {
-              backgroundColor: palette.background,
-              borderColor: palette.border,
-              color: palette.text,
-            }
+          ? { backgroundColor: palette.fill, borderColor: palette.border, color: palette.text }
           : undefined
       }
     >

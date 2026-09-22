@@ -1,22 +1,25 @@
 import { climbGymNames } from './format'
 
 /**
- * Per-gym brand colours: `primary` is the label text and border, `background`
- * the cell behind it. The values are the gyms' own, supplied as-is.
+ * Per-gym brand colours, straight from the gyms. Each pair is used *swapped*
+ * from how it is named here: `primary` is the vivid brand colour and becomes the
+ * cell's fill, while `background` is the gym's dark tone and becomes the ink —
+ * otherwise cells like Rock On Boulder (background `#000000`) are black holes on
+ * the dark theme.
  *
- * Ten of the supplied pairs are below WCAG AA (4.5:1) for text — two are close
- * to invisible (Good Climbs PH 2.6:1, Flow State Bouldering 1.9:1) — so
- * {@link readablePrimary} derives a readable *text* colour, leaving the brand
- * background and the primary-as-border exactly as supplied.
- * `gymColors.test.ts` asserts every cell clears AA.
+ * Five of the pairs are still below WCAG AA (4.5:1) that way round (Good Climbs
+ * PH 2.6:1, Flow State Bouldering 1.9:1, …), so {@link readableInk} derives a
+ * readable *ink* from the supplied `background`, leaving both brand colours
+ * untouched as the fill and the outline. `gymColors.test.ts` asserts every cell
+ * clears AA, stays visible on both themes, and keeps both colours verbatim.
  */
 /** The colours a gym cell actually renders with. */
 export interface GymCellColors {
-  /** Label text: the brand primary, lightened only if it could not be read. */
+  /** The gym's `primary` — the cell's fill, and its brand colour on screen. */
+  fill: string
+  /** The gym's `background` used as ink, lightened only if it could not be read. */
   text: string
-  /** The brand background, untouched. */
-  background: string
-  /** The brand primary, untouched — the cell's border. */
+  /** The gym's `background`, untouched — the cell's outline. */
   border: string
 }
 
@@ -67,34 +70,45 @@ export function contrastRatio(a: string, b: string): number {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-function mixTowardsWhite(hex: string, amount: number): string {
-  const parts = [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16))
-  const mixed = parts.map((part) => Math.round(part + (255 - part) * amount))
+function mix(from: string, to: string, amount: number): string {
+  const fromParts = [1, 3, 5].map((offset) => parseInt(from.slice(offset, offset + 2), 16))
+  const toParts = [1, 3, 5].map((offset) => parseInt(to.slice(offset, offset + 2), 16))
+  const mixed = fromParts.map((part, index) => Math.round(part + (toParts[index] - part) * amount))
   return `#${mixed.map((part) => part.toString(16).padStart(2, '0')).join('')}`
 }
 
 /**
- * The primary colour, unless it cannot be read on the background — then the
- * same hue lightened in 2% steps until it clears AA.
+ * The ink for a cell: the supplied colour, or — if it cannot be read on that
+ * fill — the same hue moved toward white on a dark fill and toward black on a
+ * light one, in 2% steps, until it clears AA.
+ *
+ * Both directions are needed: a brand fill like Climb Central Manila's
+ * `#E75A24` is light enough that even white only manages 3.4:1, so darkening the
+ * ink is the only way to reach AA there.
  */
-export function readablePrimary(primary: string, background: string): string {
-  if (contrastRatio(primary, background) >= MIN_CONTRAST) return primary
+export function readableInk(ink: string, fill: string): string {
+  if (contrastRatio(ink, fill) >= MIN_CONTRAST) return ink
 
+  const towards = luminance(fill) < 0.18 ? '#ffffff' : '#000000'
   for (let step = 1; step <= 50; step += 1) {
-    const candidate = mixTowardsWhite(primary, step / 50)
-    if (contrastRatio(candidate, background) >= MIN_CONTRAST) return candidate
+    const candidate = mix(ink, towards, step / 50)
+    if (contrastRatio(candidate, fill) >= MIN_CONTRAST) return candidate
   }
-  return '#ffffff'
+  return towards
 }
 
-/** The cell colours for a gym name, or null when the gym has no palette yet. */
+/**
+ * The cell for a gym: its `primary` as the fill, its `background` as the ink and
+ * outline — swapped from the way the pair is named, because in this palette the
+ * primaries are the vivid brand colours and the backgrounds are the dark tones.
+ */
 export function gymPaletteOf(name: string | null | undefined): GymCellColors | null {
   const palette = name ? GYM_PALETTES[name.trim()] : undefined
   if (!palette) return null
   return {
-    text: readablePrimary(palette.primary, palette.background),
-    background: palette.background,
-    border: palette.primary,
+    fill: palette.primary,
+    text: readableInk(palette.background, palette.primary),
+    border: palette.background,
   }
 }
 
