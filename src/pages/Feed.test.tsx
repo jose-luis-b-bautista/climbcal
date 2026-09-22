@@ -228,6 +228,9 @@ describe('<Feed />', () => {
     renderFeed()
 
     const filter = (await screen.findByLabelText('Filter by gym')) as HTMLSelectElement
+    // Wait for the feed's data before poking the filter, or the cards below may
+    // not have rendered yet.
+    await screen.findByText('Either Boulder World or BHive', { selector: 'p' })
     const either = () => screen.getByText('Either Boulder World or BHive', { selector: 'p' })
 
     fireEvent.change(filter, { target: { value: 'gym-hive' } })
