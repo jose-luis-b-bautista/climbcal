@@ -167,9 +167,10 @@ describe('<Feed />', () => {
     // picks the gym cell rather than the gym filter's <option> of the same name.
     expect(await screen.findByText('Boulder Space', { selector: 'span' })).toBeTruthy()
     const hiveCell = screen.getByText('BHive', { selector: 'span' })
-    // The cell takes the gym's primary as its fill, its background as the ink.
+    // Verbatim colours: #FAD02C fills the cell, #162E5A is the ink, black outline.
     expect(hiveCell.getAttribute('style')).toContain('rgb(250, 208, 44)')
     expect(hiveCell.getAttribute('style')).toContain('rgb(22, 46, 90)')
+    expect(hiveCell.getAttribute('style')).toContain('rgb(0, 0, 0)')
 
     // …but not another climber's private session.
     expect(screen.queryByText('Summit Loft', { selector: 'span' })).toBeNull()

@@ -266,21 +266,15 @@ themes and fails if the CSS and the palette list drift apart.
 
 ### Gym cells
 
-Each session's gym is rendered as a small cell (`GymCell`) wearing that gym's own colours, from
-[`src/lib/gymColors.ts`](src/lib/gymColors.ts) — the same list the seed migration creates, and
-`gymColors.test.ts` parses that migration so a new gym without a palette fails CI. One-off names and
-"Not sure yet" get a neutral bordered cell instead, and an "either" session borrows the look of its
-first *known* gym.
+Each session's gym renders as a small cell (`GymCell`) wearing that gym's own two colours, from
+[`src/lib/gymColors.ts`](src/lib/gymColors.ts): `primary` fills the cell, `background` is the label
+ink, and every cell shares a **black outline**. `gymColors.test.ts` parses the seed migration, so a
+new gym without a palette fails CI. One-off names and "Not sure yet" get a neutral bordered cell, and
+an "either" session borrows the look of its first *known* gym.
 
-The pair is used **swapped** from how the gyms name it: the vivid `primary` is the cell's fill, the
-darker `background` the ink and outline. Filling with `background` instead made cells like Rock On
-Boulder (`#000000`) look like holes on the dark theme.
-
-`readableInk()` then moves the ink only as far as it must — toward white on a dark fill, toward black
-on a light one — until it clears 4.5:1. Eleven of the 21 gyms keep their `background` verbatim as
-ink, and no fill is ever near-black. `gymColors.test.ts` asserts AA on every fill, that a cell stays
-visible on *both* themes (several brand fills are pale, so the outline carries them in light mode),
-and that the fill and outline are the supplied colours untouched.
+The colours are used **verbatim** — deliberately not contrast-corrected, so several pairs are
+low-contrast by WCAG (Good Climbs PH is `#0F172A` on `#2A52BE`). Editing a colour in that one file is
+what everybody sees.
 
 ## Testing notes
 
