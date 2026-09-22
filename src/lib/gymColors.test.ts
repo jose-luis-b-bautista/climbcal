@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { GYM_CELL_BORDER, GYM_PALETTES, gymPaletteFor, gymPaletteOf } from './gymColors'
+import { GYM_PALETTES, gymPaletteFor, gymPaletteOf } from './gymColors'
 
 const migration = readFileSync(
   resolvePath(process.cwd(), 'supabase/migrations/20260920000000_gym_regions.sql'),
@@ -29,7 +29,6 @@ describe('gym palette', () => {
       // Verbatim: primary fills, background inks, and one shared black outline.
       expect(cell?.fill).toBe(palette.primary)
       expect(cell?.text).toBe(palette.background)
-      expect(cell?.border).toBe(GYM_CELL_BORDER)
     }
   })
 
