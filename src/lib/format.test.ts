@@ -7,6 +7,7 @@ import {
   gymNameOf,
   initialsOf,
   normaliseUsername,
+  usernameOf,
 } from './format'
 import type { Profile } from '../types'
 
@@ -40,6 +41,14 @@ describe('displayNameOf', () => {
     expect(displayNameOf(makeProfile({ display_name: 'Luis', username: 'luis' }))).toBe('Luis')
     expect(displayNameOf(makeProfile({ username: 'luis' }))).toBe('@luis')
     expect(displayNameOf(null)).toBe('Unknown climber')
+  })
+})
+
+describe('usernameOf', () => {
+  it('gives the @handle when there is one', () => {
+    expect(usernameOf(makeProfile({ username: 'luis' }))).toBe('@luis')
+    expect(usernameOf(makeProfile({ display_name: 'Luis' }))).toBeNull()
+    expect(usernameOf(null)).toBeNull()
   })
 })
 

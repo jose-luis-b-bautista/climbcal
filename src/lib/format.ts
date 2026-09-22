@@ -6,6 +6,12 @@ export function displayNameOf(profile: Profile | null | undefined): string {
   return profile.display_name?.trim() || (profile.username ? `@${profile.username}` : 'Unknown climber')
 }
 
+/** The `@handle` for a profile, or null when it has none. */
+export function usernameOf(profile: Profile | null | undefined): string | null {
+  const username = profile?.username?.trim()
+  return username ? `@${username}` : null
+}
+
 /** Initials for the avatar bubble. */
 export function initialsOf(profile: Profile | null | undefined): string {
   if (!profile) return '?'

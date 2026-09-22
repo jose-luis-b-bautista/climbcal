@@ -39,7 +39,8 @@ read or write what.
   labels such as "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day
   are allowed.
 - **Friends** — search by username, send/accept/decline requests, cancel, unfriend.
-- **Public feed** — the next ~3 weeks of sessions from climbers whose profile is public.
+- **Feed** — the next ~3 weeks of sessions grouped by day: public profiles **plus your own**, so your
+  posts are always visible to you. Each card shows the climber's name and `@handle`.
 - **Settings** — edit profile, flip public/private. The gym list itself is curated by admins, not in
   the app (see [Data model](#data-model)).
 - **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
@@ -202,8 +203,8 @@ supabase/
 
 Queries work in two steps: load the accepted friend ids, then fetch climbs for `self + friends`
 in the selected week (embedded gym name included) and map the climber profiles onto the rows. The
-feed reuses the same hook with no user filter, letting RLS return the visible rows and keeping
-only `visibility = 'public'` profiles.
+feed reuses the same hook with no user filter, letting RLS return the visible rows and keeping only
+`visibility = 'public'` profiles — plus your own rows, whatever your visibility.
 
 ## Theming
 
