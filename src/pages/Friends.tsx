@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import {
   Avatar,
   Card,
@@ -54,6 +54,9 @@ export default function Friends() {
   } = useFriends()
 
   const [term, setTerm] = useState('')
+  // Mirrors `term` so a search that lands *after* the box was cleared cannot put
+  // stale climbers back under an empty field.
+  const latestTerm = useRef('')
   const [results, setResults] = useState<Profile[]>([])
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -79,12 +82,29 @@ export default function Friends() {
     setSearching(true)
     setSearched(true)
     try {
-      setResults(await searchProfiles(term))
+      const found = await searchProfiles(term)
+      // Ignore a result for a search whose term has since been cleared.
+      if (latestTerm.current.trim() !== '') setResults(found)
     } catch (searchFailure) {
       setSearchError(searchFailure instanceof Error ? searchFailure.message : 'Search failed.')
       setResults([])
     } finally {
       setSearching(false)
+    }
+  }
+
+  /**
+   * The search field is `type="search"`, so the browser's own clear (×) just
+   * empties the input. Drop the previous results with it, otherwise stale
+   * climbers stay listed under an empty box.
+   */
+  const handleTermChange = (value: string) => {
+    latestTerm.current = value
+    setTerm(value)
+    if (value.trim() === '') {
+      setResults([])
+      setSearched(false)
+      setSearchError(null)
     }
   }
 
@@ -191,7 +211,7 @@ export default function Friends() {
           <input
             type="search"
             value={term}
-            onChange={(event) => setTerm(event.target.value)}
+            onChange={(event) => handleTermChange(event.target.value)}
             placeholder="@username"
             className={`${inputClass} max-w-xs flex-1`}
             aria-label="Search climbers by username"
@@ -229,16 +249,9 @@ export default function Friends() {
                 ) : relation.status === 'accepted' ? (
                   <span className="text-xs font-medium text-emerald-400">Friends ✓</span>
                 ) : relation.requester_id === userId ? (
-                  <>
-                    <span className="text-xs text-zinc-500">Request sent</span>
-                    <button
-                      type="button"
-                      className={ghostButtonClass}
-                      onClick={() => void run(() => declineRequest(relation.id))}
-                    >
-                      Cancel
-                    </button>
-                  </>
+                  // No cancel here: a pending request is withdrawn from the
+                  // "Sent requests" card below.
+                  <span className="text-xs text-zinc-500">Request sent</span>
                 ) : (
                   <>
                     <span className="text-xs text-zinc-500">Asked you</span>
