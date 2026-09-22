@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useMemo, useState, type ReactNode } from 'react'
 import {
   Avatar,
   Card,
@@ -15,6 +15,7 @@ import {
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
+import { usePublicClimbers } from '../hooks/usePublicClimbers'
 import { displayNameOf } from '../lib/format'
 import type { Profile } from '../types'
 
@@ -65,6 +66,14 @@ export default function Friends() {
 
   const profileFor = (id: string) => profiles[id]
 
+  // What the empty search box offers: public climbers, newest first, minus the
+  // ones there is already a friendship or request row for.
+  const { climbers: publicClimbers, loading: climbersLoading } = usePublicClimbers()
+  const suggestions = useMemo(
+    () => publicClimbers.filter((profile) => !relationFor(profile.id)),
+    [publicClimbers, relationFor],
+  )
+
   const run = async (action: () => Promise<void>) => {
     setActionError(null)
     try {
@@ -106,6 +115,49 @@ export default function Friends() {
       setSearched(false)
       setSearchError(null)
     }
+  }
+
+  /** One row of either list; the action follows the existing relationship. */
+  const renderClimberRow = (profile: Profile) => {
+    const relation = relationFor(profile.id)
+    const isSelf = profile.id === userId
+
+    return (
+      <FriendRow
+        key={profile.id}
+        profile={profile}
+        action={
+          isSelf ? (
+            <span className="text-xs text-zinc-500">That's you</span>
+          ) : !relation ? (
+            <button
+              type="button"
+              className={primaryButtonClass}
+              onClick={() => void run(() => sendRequest(profile.id))}
+            >
+              Add friend
+            </button>
+          ) : relation.status === 'accepted' ? (
+            <span className="text-xs font-medium text-emerald-400">Friends ✓</span>
+          ) : relation.requester_id === userId ? (
+            // No cancel here: a pending request is withdrawn from the
+            // "Sent requests" card below.
+            <span className="text-xs text-zinc-500">Request sent</span>
+          ) : (
+            <>
+              <span className="text-xs text-zinc-500">Asked you</span>
+              <button
+                type="button"
+                className={primaryButtonClass}
+                onClick={() => void run(() => acceptRequest(relation.id))}
+              >
+                Accept
+              </button>
+            </>
+          )
+        }
+      />
+    )
   }
 
   return (
@@ -205,7 +257,10 @@ export default function Friends() {
       )}
 
       <Card>
-        <SectionHeading title="Find climbers" hint="Search by username (at least 2 characters)." />
+        <SectionHeading
+          title="Find climbers"
+          hint="Search by username (at least 2 characters), or add someone from the list."
+        />
 
         <form onSubmit={handleSearch} className="mb-3 flex flex-wrap items-center gap-2">
           <input
@@ -223,51 +278,27 @@ export default function Friends() {
 
         {searchError ? <ErrorBanner message={searchError} /> : null}
 
-        {searched && results.length === 0 && !searching ? (
-          <p className="text-sm text-zinc-500">No climbers matched that username.</p>
-        ) : null}
-
-        {results.map((result) => {
-          const relation = relationFor(result.id)
-          const isSelf = result.id === userId
-
-          return (
-            <FriendRow
-              key={result.id}
-              profile={result}
-              action={
-                isSelf ? (
-                  <span className="text-xs text-zinc-500">That's you</span>
-                ) : !relation ? (
-                  <button
-                    type="button"
-                    className={primaryButtonClass}
-                    onClick={() => void run(() => sendRequest(result.id))}
-                  >
-                    Add friend
-                  </button>
-                ) : relation.status === 'accepted' ? (
-                  <span className="text-xs font-medium text-emerald-400">Friends ✓</span>
-                ) : relation.requester_id === userId ? (
-                  // No cancel here: a pending request is withdrawn from the
-                  // "Sent requests" card below.
-                  <span className="text-xs text-zinc-500">Request sent</span>
-                ) : (
-                  <>
-                    <span className="text-xs text-zinc-500">Asked you</span>
-                    <button
-                      type="button"
-                      className={primaryButtonClass}
-                      onClick={() => void run(() => acceptRequest(relation.id))}
-                    >
-                      Accept
-                    </button>
-                  </>
-                )
-              }
-            />
-          )
-        })}
+        {searched ? (
+          <>
+            {results.length === 0 && !searching ? (
+              <p className="text-sm text-zinc-500">No climbers matched that username.</p>
+            ) : null}
+            {results.map(renderClimberRow)}
+          </>
+        ) : (
+          <>
+            <p className="mb-2 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+              Newest climbers to add
+            </p>
+            {loading || climbersLoading ? (
+              <p className="text-sm text-zinc-500">Loading climbers…</p>
+            ) : suggestions.length === 0 ? (
+              <p className="text-sm text-zinc-500">No public climbers to add right now.</p>
+            ) : (
+              suggestions.map(renderClimberRow)
+            )}
+          </>
+        )}
       </Card>
 
       {outgoing.length > 0 ? (

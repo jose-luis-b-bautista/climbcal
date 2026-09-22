@@ -38,7 +38,8 @@ read or write what.
   **"Not sure yet"** when the venue isn't decided; a time window (exact clock times **or** flexible
   labels such as "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day
   are allowed.
-- **Friends** — search by username, send/accept/decline requests, cancel, unfriend.
+- **Friends** — the newest public climbers are listed ready to add (20 at a time, most recently joined
+  first), plus a username search; send/accept/decline requests, cancel, unfriend.
 - **Feed** — the next ~3 weeks of sessions grouped by day: public profiles **plus your own**, so your
   posts are always visible to you. Each card shows the climber's name and `@handle`.
 - **Settings** — edit profile, flip public/private. The gym list itself is curated by admins, not in
@@ -186,7 +187,7 @@ src/
                 SessionFormModal, SessionCard + DaySessions (day summaries),
                 ThemeToggle, ui.tsx (shared primitives + class tokens)
   hooks/        useAuth (session + profile context), useTheme (light/dark),
-                useWeekClimbs (range queries), useFriends, useGyms
+                useWeekClimbs (range queries), useFriends, usePublicClimbers, useGyms
   lib/          supabase (client), date (week math, window helpers),
                 format (names/usernames, gym-by-region grouping),
                 slots (the eight time-of-day window labels)
