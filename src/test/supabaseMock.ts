@@ -18,12 +18,14 @@ export interface MockQueryContext {
 export interface MockResult {
   data: unknown
   error: { message: string; code?: string } | null
+  /** Present for `head`/`count` queries, mirroring PostgREST. */
+  count?: number
 }
 
 export type MockResolver = (context: MockQueryContext) => MockResult
 
 interface QueryBuilder {
-  select: (columns?: string) => QueryBuilder
+  select: (columns?: string, options?: { head?: boolean; count?: string }) => QueryBuilder
   insert: (values: unknown) => QueryBuilder
   update: (values: unknown) => QueryBuilder
   upsert: (values: unknown, options?: unknown) => QueryBuilder
@@ -83,11 +85,27 @@ export function createSupabaseMock(
   const buildQuery = (table: string): QueryBuilder => {
     const filters: Record<string, unknown> = {}
     let op: MockQueryOp = 'select'
+    let selectOptions: { head?: boolean; count?: string } | undefined
 
     const context = (): MockQueryContext => ({ table, filters, op })
 
+    /**
+     * PostgREST with `head: true` returns no rows, just a count — the dashboard
+     * stats rely on that, so the mock answers the same way.
+     */
+    const resolve = (): MockResult => {
+      const result = resolver(context())
+      if (selectOptions?.head && Array.isArray(result.data)) {
+        return { data: null, count: result.data.length, error: result.error }
+      }
+      return result
+    }
+
     const builder: QueryBuilder = {
-      select: () => builder,
+      select: (_columns, options) => {
+        selectOptions = options
+        return builder
+      },
       insert: (values) => {
         op = 'insert'
         filters.__values = values
@@ -147,10 +165,9 @@ export function createSupabaseMock(
         filters.__limit = count
         return builder
       },
-      single: async () => resolver(context()),
-      maybeSingle: async () => resolver(context()),
-      then: (onFulfilled, onRejected) =>
-        Promise.resolve(resolver(context())).then(onFulfilled, onRejected),
+      single: async () => resolve(),
+      maybeSingle: async () => resolve(),
+      then: (onFulfilled, onRejected) => Promise.resolve(resolve()).then(onFulfilled, onRejected),
     }
 
     return builder

@@ -43,8 +43,8 @@ read or write what.
 - **Feed** — the next ~3 weeks of sessions grouped by day: public profiles **plus your own**, so your
   posts are always visible to you. Each card shows the climber's name and `@handle`, and the list can
   be filtered by gym (defaults to all gyms).
-- **Settings** — edit profile, flip public/private. The gym list itself is curated by admins, not in
-  the app (see [Data model](#data-model)).
+- **Settings** — edit profile, flip public/private. The gym list itself is curated by admins (see
+  [Admin dashboard](#admin-dashboard)).
 - **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
   choice per browser and falls back to your OS setting. No flash on load: a tiny inline script in
   `index.html` sets the theme before first paint.
@@ -65,7 +65,9 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      [`20260920000200_gyms_admin_only.sql`](supabase/migrations/20260920000200_gyms_admin_only.sql)
      (the gym list becomes read-only for users), then
      [`20260920000300_second_gym.sql`](supabase/migrations/20260920000300_second_gym.sql) (the
-     optional second gym and "Not sure yet").
+     optional second gym and "Not sure yet"), then
+     [`20260920000400_admin.sql`](supabase/migrations/20260920000400_admin.sql) (the admin flag and
+     admin-only gym writes).
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -77,14 +79,15 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   All six files are idempotent, so re-running is safe.
+   All seven files are idempotent, so re-running is safe.
    > Already set the project up earlier? Just run the migrations you haven't:
    > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
    > (keeping sessions that referenced them as free-text names) and seeds the regional list;
    > `20260920000100_session_windows.sql` adds the flexible `start_slot` / `end_slot` windows and
    > leaves existing clock-time sessions untouched; `20260920000200_gyms_admin_only.sql` makes the
    > gym list read-only for users; `20260920000300_second_gym.sql` adds the optional second gym and
-   > relaxes the old "a gym is required" rule. Running `db push` does all of them for you.
+   > relaxes the old "a gym is required" rule; `20260920000400_admin.sql` adds `profiles.is_admin`
+   > and lets admins write the gym list. Running `db push` does all of them for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
      "check your inbox" notice.
@@ -173,12 +176,37 @@ auth.users ──n:n── friendships (requester_id, addressee_id, status[pendi
 | Table         | Read                                                               | Write                                                                                  |
 | ------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
 | `profiles`    | any signed-in user (needed for username search + feed attribution)  | owner only                                                                             |
-| `gyms`        | any signed-in user                                                  | **admin only** — read-only in the app (SQL editor / migrations)                          |
+| `gyms`        | any signed-in user                                                  | **admins only** (the `/admin` dashboard), or the SQL editor                            |
 | `climbs`      | owner, **accepted friends**, or everyone when the owner is `public` | owner only                                                                             |
 | `friendships` | only the two participants                                           | insert self as requester; **only the addressee can accept**; either side can delete      |
 
 Nothing is granted to the `anon` role, so there is no anonymous browsing: every surface except
 `/login` requires a session.
+
+## Admin dashboard
+
+There is a second, deliberately unlinked surface at **`/admin`**: nothing in the UI points at it, so
+it is only reachable by typing the URL (`vercel.json` keeps the SPA rewrite working on refresh).
+
+1. **Promote yourself once**, in the SQL editor:
+
+   ```sql
+   update public.profiles set is_admin = true where username = '<you>';
+   ```
+
+2. Open `/admin` and enter the shared password — **`ilikepie`** (`ADMIN_PASSWORD` in
+   [`src/lib/admin.ts`](src/lib/admin.ts), change it there).
+
+It shows a few counts (climbers, public climbers, gyms, sessions in the next three weeks) and manages
+the shared gym list: add, edit, delete — the only way to change gyms in the app.
+
+**What actually protects it.** The password is a *convenience lock*: the bundle is public, so anyone
+can read it out of the JavaScript, and an unlinked route is only obscurity. The real gate is
+`profiles.is_admin` + RLS. Verified against Postgres: a signed-in non-admin who unlocks the UI has
+every write refused (`new row violates row-level security policy`), the promoted admin's write is
+accepted, a non-admin still reads the gym list, and `is_admin` additionally grants read access to all
+sessions — which is what makes the dashboard's counts real rather than "whatever this account is
+allowed to see".
 
 ## Project layout
 
@@ -192,14 +220,15 @@ src/
   lib/          supabase (client), date (week math, window helpers),
                 format (names/usernames, gym-by-region grouping),
                 slots (the eight time-of-day window labels)
-  pages/        Login, Onboarding, Week, Friends, Feed, Settings
+  pages/        Login, Onboarding, Week, Friends, Feed, Settings, Admin (hidden route)
   test/         Supabase client mock + fixtures for the integration render test
 supabase/
   migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
                 gym_regions: real gym list grouped by region,
                 session_windows: flexible window columns + constraints,
                 gyms_admin_only: gyms read-only for users,
-                second_gym: optional "either" gym + "not sure yet"
+                second_gym: optional "either" gym + "not sure yet",
+                admin: is_admin flag + admin-only gym writes
   config.toml   minimal CLI config (link / db push)
 ```
 

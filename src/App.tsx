@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { RequireAuth, RequireProfile } from './components/ProtectedRoute'
+import Admin from './pages/Admin'
 import Feed from './pages/Feed'
 import Friends from './pages/Friends'
 import Login from './pages/Login'
@@ -26,6 +27,8 @@ export default function App() {
           <Route path="/friends" element={<Friends />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/settings" element={<Settings />} />
+          {/* Deliberately unlinked: reachable only by typing /admin. */}
+          <Route path="/admin" element={<Admin />} />
         </Route>
       </Route>
 

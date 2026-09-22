@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Gym } from '../types'
 
@@ -6,19 +6,25 @@ interface UseGymsResult {
   gyms: Gym[]
   loading: boolean
   error: string | null
+  /** Re-reads the list, for callers that write to it (the admin dashboard). */
+  reload: () => void
 }
 
 /**
  * Loads the shared gym list.
  *
- * Read-only on purpose: gyms are curated reference data (see
+ * Read-only for normal users: gyms are curated reference data (see
  * `supabase/migrations/20260920000200_gyms_admin_only.sql`), and a one-off gym
- * goes in a session's free-text `custom_gym_name` instead of a new row.
+ * goes in a session's free-text `custom_gym_name` instead of a new row. Only the
+ * admin dashboard writes to it, and only for accounts with `is_admin`.
  */
 export function useGyms(enabled = true): UseGymsResult {
   const [gyms, setGyms] = useState<Gym[]>([])
   const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState<string | null>(null)
+  const [nonce, setNonce] = useState(0)
+
+  const reload = useCallback(() => setNonce((value) => value + 1), [])
 
   useEffect(() => {
     if (!enabled) return
@@ -52,7 +58,7 @@ export function useGyms(enabled = true): UseGymsResult {
     return () => {
       active = false
     }
-  }, [enabled])
+  }, [enabled, nonce])
 
-  return { gyms, loading: enabled ? loading : false, error }
+  return { gyms, loading: enabled ? loading : false, error, reload }
 }
