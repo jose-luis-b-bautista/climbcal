@@ -4,7 +4,7 @@
 import type { ReactNode, SelectHTMLAttributes } from 'react'
 import { AVATAR_HUE_CLASSES, avatarHueFor } from '../lib/avatar'
 import { initialsOf, gymNameOf } from '../lib/format'
-import { gymPaletteFor } from '../lib/gymColors'
+import { gymPaletteOf } from '../lib/gymColors'
 import type { Profile } from '../types'
 
 /** Tiny classname joiner (avoids pulling in clsx for a handful of cases). */
@@ -158,15 +158,19 @@ export function VisibilityBadge({ visibility }: { visibility: Profile['visibilit
 /**
  * The gym label as a cell: the gym's own colours when it has a palette, and a
  * neutral bordered cell for one-off names and "Not sure yet".
+ *
+ * `className` is additive, so a caller can place the chip (the session card's top
+ * margin, a list row's own spacing) without a wrapper element.
  */
-export function GymCell({ climb }: { climb: Parameters<typeof gymNameOf>[0] }) {
-  const palette = gymPaletteFor(climb)
+export function GymNameChip({ name, className }: { name: string; className?: string }) {
+  const palette = gymPaletteOf(name)
 
   return (
     <span
       className={cx(
-        'inline-block max-w-full truncate mt-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold',
+        'inline-block max-w-full truncate rounded-md px-1.5 py-0.5 text-xs font-semibold',
         palette ? null : 'border-zinc-700 bg-zinc-800/60 text-zinc-300',
+        className,
       )}
       style={
         palette
@@ -174,9 +178,14 @@ export function GymCell({ climb }: { climb: Parameters<typeof gymNameOf>[0] }) {
           : undefined
       }
     >
-      {gymNameOf(climb)}
+      {name}
     </span>
   )
+}
+
+/** {@link GymNameChip} for a climb, with the session card's own top margin. */
+export function GymCell({ climb }: { climb: Parameters<typeof gymNameOf>[0] }) {
+  return <GymNameChip name={gymNameOf(climb)} className="mt-0.5" />
 }
 
 /** Form field wrapper with a consistent label/input look. */

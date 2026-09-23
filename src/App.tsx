@@ -7,6 +7,7 @@ import Friends from './pages/Friends'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import Settings from './pages/Settings'
+import Stats from './pages/Stats'
 import Week from './pages/Week'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/week" replace />} />
           <Route path="/week" element={<Week />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/settings" element={<Settings />} />

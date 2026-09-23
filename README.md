@@ -50,6 +50,14 @@ read or write what.
     and month live in the URL (`/feed?view=calendar&month=2026-09`), so a view is linkable.
 
   Both layouts respect the gym filter (defaults to all gyms).
+- **Stats** — a tab for your own climbing, and for a friend's from the climber picker: sessions posted
+  and active days, time on the wall, gyms visited and notes written; a half-year **activity heatmap**
+  of daily sessions (dashed cells are still to come); and a **"where I climb"** breakdown, each gym in
+  its own colours. It reads the `security_invoker` views from
+  [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql), so RLS
+  decides what a friend's page can show, and `?climber=<id>` makes one linkable. A session is a posted
+  *plan*, so nothing pretends to be a logged send: slot-only windows ("Opening" – "Closing") are never
+  counted as time on the wall.
 - **Settings** — edit profile, flip public/private. The gym list itself is curated by admins (see
   [Admin dashboard](#admin-dashboard)).
 - **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
@@ -228,13 +236,16 @@ src/
                 SessionFormModal, SessionCard + DaySessions (day summaries),
                 ThemeToggle, ui.tsx (shared primitives + class tokens)
   hooks/        useAuth (session + profile context), useTheme (light/dark),
-                useWeekClimbs (range queries), useFriends, usePublicClimbers, useGyms
+                useWeekClimbs (range queries), useClimberStats (the stats views),
+                useFriends, usePublicClimbers, useGyms
   lib/          supabase (client), date (week + month math, window helpers),
                 format (names/usernames, gym-by-region grouping),
                 group (feed grouping: per gym, per date, unique climbers),
+                stats (heatmap grid + gym-breakdown ordering),
                 avatar + gymColors (per-climber / per-gym colours),
                 slots (the eight time-of-day window labels), admin
-  pages/        Login, Onboarding, Week, Friends, Feed, Settings, Admin (hidden route)
+  pages/        Login, Onboarding, Week, Stats, Friends, Feed, Settings,
+                Admin (hidden route)
   test/         Supabase client mock + fixtures for the integration render test
 supabase/
   migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
