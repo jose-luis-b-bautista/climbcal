@@ -304,6 +304,18 @@ describe('<Feed />', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sep 25/ }))
     expect(screen.getByText('Nobody yet')).toBeTruthy()
 
+    // Month navigation re-queries the range (the fixture is all in September),
+    // and drops the day that belonged to the month we just left.
+    fireEvent.click(screen.getByRole('button', { name: 'Previous month' }))
+    expect(await screen.findByText(/August 2026/)).toBeTruthy()
+    expect(screen.getByText('Tap a day to see who is climbing.')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: /Aug 20/ }).getAttribute('aria-label'),
+    ).toContain('no sessions yet')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
+    expect(await screen.findByText(/September 2026/)).toBeTruthy()
+
     // …and the toggle goes back to the list.
     fireEvent.click(screen.getByRole('button', { name: 'List' }))
     expect(await screen.findByText('Boulder Space', { selector: 'span' })).toBeTruthy()

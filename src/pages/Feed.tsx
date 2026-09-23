@@ -41,6 +41,7 @@ import {
   isSameMonth,
   isToday,
   monthDays,
+  parseISODate,
   parseISOMonth,
   startOfMonth,
   toISODate,
@@ -312,11 +313,16 @@ export default function Feed() {
       }
     })
 
-  const goToMonth = (offset: number) =>
+  const goToMonth = (offset: number) => {
+    const nextMonth = addMonths(monthStart, offset)
+    // A day picked in another month would leave a stale list on screen.
+    if (selectedDay && !isSameMonth(parseISODate(selectedDay), nextMonth)) setSelectedDay(null)
+
     withParams((params) => {
       params.set('view', 'calendar')
-      params.set('month', toISOMonth(addMonths(monthStart, offset)))
+      params.set('month', toISOMonth(nextMonth))
     })
+  }
 
   const goToThisMonth = () =>
     withParams((params) => {
