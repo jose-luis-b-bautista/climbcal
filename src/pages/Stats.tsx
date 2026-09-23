@@ -326,11 +326,6 @@ export default function Stats() {
             />
             <Heatmap weeks={weeks} />
             <HeatmapLegend />
-            <p className="mt-3 text-xs text-zinc-500">
-              Each cell is a day: shaded means you posted a session, dashed means the day has not
-              happened yet — a plan already posted for one still counts, and its label says how many
-              sessions.
-            </p>
           </Card>
 
           <Card>
@@ -343,10 +338,6 @@ export default function Stats() {
             ) : (
               <GymBreakdown rows={rankedGyms} />
             )}
-            <p className="mt-3 text-xs text-zinc-500">
-              A session that offered two gyms counts under both, so the bars can add up to more than
-              your session total. Minutes count only the sessions with exact clock times.
-            </p>
           </Card>
 
           {totalRow.first_session && totalRow.last_session ? (
