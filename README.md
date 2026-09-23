@@ -74,7 +74,10 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      [`20260920000300_second_gym.sql`](supabase/migrations/20260920000300_second_gym.sql) (the
      optional second gym and "Not sure yet"), then
      [`20260920000400_admin.sql`](supabase/migrations/20260920000400_admin.sql) (the admin flag and
-     admin-only gym writes).
+     admin-only gym writes), then
+     [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql) (the five
+     read-only stats views — `climb_sessions`, `climb_gyms`, `climber_daily_activity`,
+     `climber_totals`, `climber_gym_stats`).
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -86,7 +89,7 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   All seven files are idempotent, so re-running is safe.
+   All eight files are idempotent, so re-running is safe.
    > Already set the project up earlier? Just run the migrations you haven't:
    > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
    > (keeping sessions that referenced them as free-text names) and seeds the regional list;
@@ -94,7 +97,9 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
    > leaves existing clock-time sessions untouched; `20260920000200_gyms_admin_only.sql` makes the
    > gym list read-only for users; `20260920000300_second_gym.sql` adds the optional second gym and
    > relaxes the old "a gym is required" rule; `20260920000400_admin.sql` adds `profiles.is_admin`
-   > and lets admins write the gym list. Running `db push` does all of them for you.
+   > and lets admins write the gym list; `20260923000000_stats_views.sql` adds the five read-only
+   > stats views (they need Postgres 15+ for `security_invoker`). Running `db push` does all of them
+   > for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
      "check your inbox" notice.
@@ -237,7 +242,8 @@ supabase/
                 session_windows: flexible window columns + constraints,
                 gyms_admin_only: gyms read-only for users,
                 second_gym: optional "either" gym + "not sure yet",
-                admin: is_admin flag + admin-only gym writes
+                admin: is_admin flag + admin-only gym writes,
+                stats_views: read-only stats views (security_invoker, PG15+)
   config.toml   minimal CLI config (link / db push)
 ```
 
@@ -285,6 +291,38 @@ The colours are used **verbatim** — deliberately not contrast-corrected, so se
 low-contrast by WCAG (Good Climbs PH is `#0F172A` on `#2A52BE`). Editing a colour in that one file is
 what everybody sees.
 
+## Stats views
+
+[`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql) adds five
+read-only views for a climber stats page. Every one is `security_invoker`, so a reader sees exactly
+the climbs their RLS allows — their own, accepted friends', and anyone's public ones:
+
+| View | Grain | For |
+| --- | --- | --- |
+| `climb_sessions` | one climb | the window normalised onto one scale — `duration_minutes`, `is_exact_window`, `week_start`, `iso_dow` |
+| `climb_gyms` | one climb per named gym | a two-gym session counts under both; an unnamed one keeps a `'Not sure yet'` row with `is_named_gym = false` |
+| `climber_daily_activity` | climber × day | the heatmap |
+| `climber_totals` | climber | the headline cards (past/upcoming split at `current_date`; minutes are past-only and count exact clock windows) |
+| `climber_gym_stats` | climber × gym | the "where I climb" breakdown, untagged gyms bucketed as `'Other'` |
+
+```ts
+const { data: totals } = await supabase
+  .from('climber_totals')
+  .select('*')
+  .eq('user_id', userId)
+  .maybeSingle()
+const { data: heatmap } = await supabase
+  .from('climber_daily_activity')
+  .select('climb_date, sessions, exact_minutes')
+```
+
+A slot-only window ("Opening"…"Closing") gives a *notional* `duration_minutes`, so read it only when
+`is_exact_window` is true — `window_minutes` exists to order windows, not to describe them. The row
+types live in `src/types.ts`, and [`src/lib/statsViews.test.ts`](src/lib/statsViews.test.ts) reads
+both it and the migration, failing if the view names, the `security_invoker` opt-in, the grants, or
+the two labels shared with the app (`'Not sure yet'` from `gymNameOf`, `'Other'` from
+`OTHER_REGION_LABEL`) ever drift apart.
+
 ## Testing notes
 
 CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push
@@ -294,7 +332,9 @@ to `main` and on pull requests — no secrets required.
 mocked Supabase client (`src/test/`), which verifies the auth gate, friend lookup, climb query
 and gym join end to end. The SQL was validated against a local Postgres with a stubbed `auth`
 schema: signup trigger, check constraints, per-visibility read rules, the one-row-per-pair
-constraint, "only the addressee accepts", and the denial of `anon` access.
+constraint, "only the addressee accepts", and the denial of `anon` access. The stats views were
+checked the same way, against fixture rows with hand-computed rollups (the `security_invoker` opt-in
+itself needs the Postgres 15+ the project runs on).
 
 Curating gyms: add, rename or retire rows in the SQL editor or a migration (users have no write
 access to the table). Retiring a gym leaves its sessions intact — they fall back to the session's
