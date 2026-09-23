@@ -9,8 +9,8 @@
 import type { ClimberDailyActivityRow, ClimberGymStatsRow } from '../types'
 import { addDays, startOfWeek, toISODate } from './date'
 
-/** Heatmap columns: half a year of weeks, ending with the current one. */
-export const HEATMAP_WEEKS = 26
+/** Heatmap columns: fourth a year of weeks, ending with the current one. */
+export const HEATMAP_WEEKS = 13
 
 /**
  * Binary, on purpose: two sessions in one day are rare here, so a graduated scale
