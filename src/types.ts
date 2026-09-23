@@ -64,6 +64,109 @@ export type FriendshipRow = {
   updated_at: string
 }
 
+/**
+ * Row of the `climb_sessions` view: one climb with its window flattened onto the
+ * canonical minutes-past-midnight scale (`public.window_minutes`).
+ * `duration_minutes` is notional for a slot-only window — show it only when
+ * `is_exact_window` is true.
+ */
+export type ClimbSessionRow = {
+  id: string
+  user_id: string
+  climb_date: string
+  /** Monday of the week containing `climb_date` (matches `lib/date.startOfWeek`). */
+  week_start: string
+  /** 1 = Monday … 7 = Sunday (`isodow`) — the `DAY_NAMES_SHORT` order. */
+  iso_dow: number
+  start_time: string | null
+  end_time: string | null
+  start_slot: string | null
+  end_slot: string | null
+  start_minutes: number
+  end_minutes: number
+  duration_minutes: number
+  /** Both ends are clock times, so `duration_minutes` is a real reading. */
+  is_exact_window: boolean
+  has_note: boolean
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Row of the `climb_gyms` view: one climb per *named* gym. A session listing two
+ * gyms has two rows ("Either X or Y"); a session that named no gym keeps a single
+ * synthetic `gym_name = 'Not sure yet'` row with `is_named_gym = false`.
+ */
+export type ClimbGymRow = {
+  climb_id: string
+  user_id: string
+  climb_date: string
+  /** 1 = the primary slot, 2 = the optional "either" slot. */
+  slot: number
+  gym_id: string | null
+  /** Linked gym name, else the typed one-off name. Never blank. */
+  gym_name: string
+  /** From `gyms.region`; null for typed names. `'Other'` is applied by the rollups. */
+  region: string | null
+  is_named_gym: boolean
+}
+
+/** Row of the `climber_daily_activity` view: heatmap data, one row per day. */
+export type ClimberDailyActivityRow = {
+  user_id: string
+  climb_date: string
+  week_start: string
+  iso_dow: number
+  /** Sessions planned that day (two sessions in one day count twice). */
+  sessions: number
+  exact_sessions: number
+  duration_minutes: number
+  /** Minutes from exact clock windows only. */
+  exact_minutes: number
+  notes: number
+}
+
+/** Row of the `climber_totals` view: the headline card numbers. */
+export type ClimberTotalsRow = {
+  user_id: string
+  sessions: number
+  /** Sessions on or before today. */
+  sessions_past: number
+  /** Sessions after today — a climb row is a plan, so this is normal. */
+  sessions_upcoming: number
+  active_days: number
+  active_weeks: number
+  active_months: number
+  first_session: string | null
+  last_session: string | null
+  /** Minutes from exact clock windows only, past sessions only. */
+  exact_minutes: number
+  /** Mean exact-window minutes per past session, rounded. */
+  avg_exact_minutes: number | null
+  /** Exact-window minutes still to come (planned sessions). */
+  exact_minutes_upcoming: number
+  sessions_with_note: number
+  /** Distinct named gyms — the 'Not sure yet' bucket is excluded. */
+  gyms_visited: number
+  regions_visited: number
+}
+
+/** Row of the `climber_gym_stats` view: the "where I climb" breakdown. */
+export type ClimberGymStatsRow = {
+  user_id: string
+  gym_name: string
+  /** `gyms.region`, with untagged gyms (and typed names) folded into `'Other'`. */
+  region: string
+  /** False on the 'Not sure yet' bucket — filter it out for a gyms-only chart. */
+  is_named_gym: boolean
+  sessions: number
+  days: number
+  first_visit: string
+  last_visit: string
+  duration_minutes: number
+  exact_minutes: number
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -217,7 +320,33 @@ export interface Database {
         ]
       }
     }
-    Views: Record<string, never>
+    Views: {
+      /** One row per climb, window normalised (see `ClimbSessionRow`). */
+      climb_sessions: {
+        Row: ClimbSessionRow
+        Relationships: []
+      }
+      /** One row per climb per named gym (see `ClimbGymRow`). */
+      climb_gyms: {
+        Row: ClimbGymRow
+        Relationships: []
+      }
+      /** Heatmap grain: one row per climber per day. */
+      climber_daily_activity: {
+        Row: ClimberDailyActivityRow
+        Relationships: []
+      }
+      /** Headline card numbers per climber. */
+      climber_totals: {
+        Row: ClimberTotalsRow
+        Relationships: []
+      }
+      /** "Where I climb" per climber per gym. */
+      climber_gym_stats: {
+        Row: ClimberGymStatsRow
+        Relationships: []
+      }
+    }
     Functions: {
       are_friends: {
         Args: { a: string; b: string }
