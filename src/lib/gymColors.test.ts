@@ -32,17 +32,9 @@ describe('gym palette', () => {
     }
   })
 
-  it('maps a couple of gyms exactly, black outline included', () => {
-    expect(gymPaletteOf('BHive')).toEqual({
-      fill: '#FAD02C',
-      text: '#162E5A',
-      border: '#000000',
-    })
-    expect(gymPaletteOf('Rock On Boulder')).toEqual({
-      fill: '#FF007F',
-      text: '#000000',
-      border: '#000000',
-    })
+  it('maps a couple of gyms exactly, verbatim and with no border', () => {
+    expect(gymPaletteOf('BHive')).toEqual({ fill: '#3174b4', text: '#fbfcf7' })
+    expect(gymPaletteOf('Rock On Boulder')).toEqual({ fill: '#FF007F', text: '#000000' })
   })
 
   it('has no palette for a one-off name, and picks the first gym of an "either"', () => {
@@ -51,7 +43,7 @@ describe('gym palette', () => {
 
     expect(
       gymPaletteFor({ custom_gym_name: 'BHive', custom_gym_name_2: 'Boulder24' })?.fill,
-    ).toBe('#FAD02C')
+    ).toBe('#3174b4')
     expect(
       gymPaletteFor({ custom_gym_name: 'Not Listed', gym_2: { name: 'Boulder24' } })?.fill,
     ).toBe('#EF4444')
