@@ -217,3 +217,66 @@ export function sessionTiming(
   }
   return { state: 'done', label: 'Finished' }
 }
+
+/* ------------------------------------------------------------------ months --
+   The feed's calendar view needs month-sized ranges and a Mon-first grid; the
+   week helpers above are deliberately unaware of months.
+--------------------------------------------------------------------------- */
+
+/** `YYYY-MM` key for the month containing `date`, e.g. "2026-09". */
+export function toISOMonth(date: Date): string {
+  return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}`
+}
+
+/** Parse `YYYY-MM` into local midnight on the 1st, or null when unparseable. */
+export function parseISOMonth(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(value.trim())
+  if (!match) return null
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  if (month < 1 || month > 12) return null
+
+  return new Date(year, month - 1, 1)
+}
+
+/** First day of the month containing `date`, at local midnight. */
+export function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+/** Last day of the month containing `date`, at local midnight. */
+export function endOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0)
+}
+
+/** Shifts by whole months, clamping the day (Jan 31 + 1 month → Feb 28/29). */
+export function addMonths(date: Date, months: number): Date {
+  const target = new Date(date.getFullYear(), date.getMonth() + months, 1)
+  const lastDay = endOfMonth(target).getDate()
+  return new Date(target.getFullYear(), target.getMonth(), Math.min(date.getDate(), lastDay))
+}
+
+/** True when both dates fall in the same calendar month. */
+export function isSameMonth(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()
+}
+
+/**
+ * The calendar grid for the month containing `date`: complete Mon–Sun weeks from
+ * the Monday on/before the 1st to the Sunday on/after the last day (28–42 days),
+ * so the grid never has ragged edges.
+ */
+export function monthDays(date: Date): Date[] {
+  const first = startOfWeek(startOfMonth(date))
+  const last = addDays(startOfWeek(endOfMonth(date)), 6)
+
+  const days: Date[] = []
+  for (let day = first; day <= last; day = addDays(day, 1)) days.push(day)
+  return days
+}
+
+/** e.g. "September 2026". */
+export function formatMonthLabel(date: Date): string {
+  return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+}

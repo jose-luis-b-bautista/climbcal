@@ -40,9 +40,16 @@ read or write what.
   are allowed.
 - **Friends** — the newest public climbers are listed ready to add (20 at a time, most recently joined
   first), plus a username search; send/accept/decline requests, cancel, unfriend.
-- **Feed** — the next ~3 weeks of sessions grouped by day: public profiles **plus your own**, so your
-  posts are always visible to you. Each card shows the climber's name and `@handle`, and the list can
-  be filtered by gym (defaults to all gyms).
+- **Feed** — public profiles **plus your own** sessions, so your posts are always visible to you,
+  with two layouts switched from the header:
+  - **List** — the next ~3 weeks, grouped by day and then **by gym** ("who is going where"), each
+    gym showing its own colours and how many distinct climbers are heading there. A session that
+    offers two gyms ("Either X or Y") is listed under both.
+  - **Calendar** — a month of days carrying one avatar dot per climber; tapping a day opens that
+    day's sessions underneath, so the grid stays scannable. Tapping again collapses it. The layout
+    and month live in the URL (`/feed?view=calendar&month=2026-09`), so a view is linkable.
+
+  Both layouts respect the gym filter (defaults to all gyms).
 - **Settings** — edit profile, flip public/private. The gym list itself is curated by admins (see
   [Admin dashboard](#admin-dashboard)).
 - **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
@@ -217,9 +224,11 @@ src/
                 ThemeToggle, ui.tsx (shared primitives + class tokens)
   hooks/        useAuth (session + profile context), useTheme (light/dark),
                 useWeekClimbs (range queries), useFriends, usePublicClimbers, useGyms
-  lib/          supabase (client), date (week math, window helpers),
+  lib/          supabase (client), date (week + month math, window helpers),
                 format (names/usernames, gym-by-region grouping),
-                slots (the eight time-of-day window labels)
+                group (feed grouping: per gym, per date, unique climbers),
+                avatar + gymColors (per-climber / per-gym colours),
+                slots (the eight time-of-day window labels), admin
   pages/        Login, Onboarding, Week, Friends, Feed, Settings, Admin (hidden route)
   test/         Supabase client mock + fixtures for the integration render test
 supabase/

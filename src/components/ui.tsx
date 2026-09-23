@@ -109,8 +109,21 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
   )
 }
 
-export function Avatar({ profile, size = 'md' }: { profile: Profile | null | undefined; size?: 'sm' | 'md' }) {
-  const dimension = size === 'sm' ? 'h-7 w-7 text-[11px]' : 'h-9 w-9 text-xs'
+/** Avatar sizes: `xs` is the calendar-cell dot, `sm` the chip inside a card. */
+const AVATAR_SIZES = {
+  xs: 'h-5 w-5 text-[9px]',
+  sm: 'h-7 w-7 text-[11px]',
+  md: 'h-9 w-9 text-xs',
+} as const
+
+export function Avatar({
+  profile,
+  size = 'md',
+}: {
+  profile: Profile | null | undefined
+  size?: keyof typeof AVATAR_SIZES
+}) {
+  const dimension = AVATAR_SIZES[size]
   return (
     <span
       aria-hidden="true"

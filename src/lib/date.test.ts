@@ -1,16 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays,
+  addMonths,
   addWeeks,
   clockMinutes,
   compareClimbsByTime,
+  endOfMonth,
   formatDuration,
+  formatMonthLabel,
   formatTimeWindow,
   formatWeekRange,
+  isSameMonth,
   isToday,
+  monthDays,
   parseISODate,
+  parseISOMonth,
+  startOfMonth,
   startOfWeek,
   toISODate,
+  toISOMonth,
   trimTime,
   weekDays,
   windowMinutes,
@@ -155,5 +163,54 @@ describe('isToday', () => {
     expect(isToday(today)).toBe(true)
     expect(isToday(toISODate(today))).toBe(true)
     expect(isToday(addDays(today, 1))).toBe(false)
+  })
+})
+
+describe('month helpers', () => {
+  it('keys a month as YYYY-MM and parses it back', () => {
+    expect(toISOMonth(new Date(2026, 8, 20))).toBe('2026-09')
+    expect(toISOMonth(new Date(2026, 11, 1))).toBe('2026-12')
+
+    const september = parseISOMonth('2026-09')
+    expect(september && toISODate(september)).toBe('2026-09-01')
+    expect(parseISOMonth('nope')).toBeNull()
+    expect(parseISOMonth('2026-13')).toBeNull()
+  })
+
+  it('finds the first and last day of the month', () => {
+    expect(toISODate(startOfMonth(new Date(2026, 8, 20)))).toBe('2026-09-01')
+    expect(toISODate(endOfMonth(new Date(2026, 8, 20)))).toBe('2026-09-30')
+    // February in a leap year.
+    expect(toISODate(endOfMonth(new Date(2028, 1, 5)))).toBe('2028-02-29')
+  })
+
+  it('shifts whole months and clamps the day', () => {
+    expect(toISODate(addMonths(new Date(2026, 8, 20), 1))).toBe('2026-10-20')
+    expect(toISODate(addMonths(new Date(2026, 0, 15), -1))).toBe('2025-12-15')
+    expect(toISODate(addMonths(new Date(2026, 0, 31), 1))).toBe('2026-02-28')
+  })
+
+  it('builds a complete Mon-first grid for the month', () => {
+    const days = monthDays(new Date(2026, 8, 20)).map(toISODate)
+
+    // Whole weeks only: Sep 1 2026 is a Tuesday, so the grid starts on Aug 31
+    // and ends on Oct 4.
+    expect(days.length % 7).toBe(0)
+    expect(days[0]).toBe('2026-08-31')
+    expect(days[days.length - 1]).toBe('2026-10-04')
+
+    // Every day of the month appears exactly once.
+    expect(new Set(days).size).toBe(days.length)
+    expect(days).toContain('2026-09-01')
+    expect(days).toContain('2026-09-30')
+  })
+
+  it('labels a month and compares months', () => {
+    const label = formatMonthLabel(new Date(2026, 8, 1))
+    expect(label).toContain('2026')
+    expect(label.length).toBeGreaterThan('2026'.length)
+
+    expect(isSameMonth(new Date(2026, 8, 1), new Date(2026, 8, 30))).toBe(true)
+    expect(isSameMonth(new Date(2026, 8, 30), new Date(2026, 9, 1))).toBe(false)
   })
 })

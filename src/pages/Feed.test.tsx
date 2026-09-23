@@ -2,7 +2,7 @@
  * Public feed coverage: public climbers *and* your own sessions (even when your
  * profile is private), no visibility badge, and the @handle beside the name.
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -167,10 +167,9 @@ describe('<Feed />', () => {
     // picks the gym cell rather than the gym filter's <option> of the same name.
     expect(await screen.findByText('Boulder Space', { selector: 'span' })).toBeTruthy()
     const hiveCell = screen.getByText('BHive', { selector: 'span' })
-    // Verbatim colours: #FAD02C fills the cell, #162E5A is the ink, black outline.
-    expect(hiveCell.getAttribute('style')).toContain('rgb(250, 208, 44)')
-    expect(hiveCell.getAttribute('style')).toContain('rgb(22, 46, 90)')
-    expect(hiveCell.getAttribute('style')).toContain('rgb(0, 0, 0)')
+    // Verbatim colours: #3174b4 fills the cell, #fbfcf7 is the ink — no border.
+    expect(hiveCell.getAttribute('style')).toContain('rgb(49, 116, 180)')
+    expect(hiveCell.getAttribute('style')).toContain('rgb(251, 252, 247)')
 
     // …but not another climber's private session.
     expect(screen.queryByText('Summit Loft', { selector: 'span' })).toBeNull()
@@ -228,19 +227,87 @@ describe('<Feed />', () => {
     expect(screen.getByText('Boulder Space', { selector: 'span' })).toBeTruthy()
   })
 
-  it('matches an "either" session on both of its gyms', async () => {
+  it('files an "either" session under both of its gyms, once each', async () => {
     renderFeed()
 
-    const filter = (await screen.findByLabelText('Filter by gym')) as HTMLSelectElement
-    // Wait for the feed's data before poking the filter, or the cards below may
-    // not have rendered yet.
-    await screen.findByText('Either Boulder World or BHive', { selector: 'span' })
-    const either = () => screen.getByText('Either Boulder World or BHive', { selector: 'span' })
+    // Grouping by gym means the session shows up under both gyms it offers…
+    // (wait for the feed's data before touching the filter).
+    expect(
+      (await screen.findAllByText('Either Boulder World or BHive', { selector: 'span' })).length,
+    ).toBe(2)
 
+    // …and filtering to one of them keeps a single copy.
+    const filter = (await screen.findByLabelText('Filter by gym')) as HTMLSelectElement
     fireEvent.change(filter, { target: { value: 'gym-hive' } })
-    expect(either()).toBeTruthy()
+    expect(screen.getAllByText('Either Boulder World or BHive', { selector: 'span' }).length).toBe(1)
 
     fireEvent.change(filter, { target: { value: 'gym-world' } })
-    expect(either()).toBeTruthy()
+    expect(screen.getAllByText('Either Boulder World or BHive', { selector: 'span' }).length).toBe(1)
   })
+
+  it('groups climbers per gym inside a day', async () => {
+    renderFeed()
+
+    // Wait for data (my own session's gym heading).
+    await screen.findByText('Boulder Space', { selector: 'span' })
+
+    // My session is filed under its gym, with the climber count beside it.
+    const space = screen.getByRole('group', { name: 'Boulder Space' })
+    expect(within(space).getByText('Luis')).toBeTruthy()
+    expect(within(space).getByText('1 climber')).toBeTruthy()
+
+    // Mara has two sessions at BHive, both listed under that gym.
+    const hive = screen.getByRole('group', { name: 'BHive' })
+    expect(within(hive).getAllByText('Mara').length).toBe(2)
+    expect(within(hive).getByText('1 climber')).toBeTruthy()
+
+    // Boulder World holds Noor *and* the flexible session, so two distinct
+    // climbers — the count is climbers, not sessions.
+    const world = screen.getByRole('group', { name: 'Boulder World' })
+    expect(within(world).getByText('@noor')).toBeTruthy()
+    expect(within(world).getByText('2 climbers')).toBeTruthy()
+
+    // A private climber's session is in no group at all.
+    expect(screen.queryByRole('group', { name: 'Summit Loft' })).toBeNull()
+  })
+
+  it('switches to a calendar of avatar dots and opens a day on tap', async () => {
+    renderFeed()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Calendar' }))
+
+    // Pinned "today" is 2026-09-20, so the calendar opens on September 2026.
+    expect(await screen.findByText(/September 2026/)).toBeTruthy()
+    expect(screen.getByText('Tap a day to see who is climbing.')).toBeTruthy()
+
+    // The 20th carries me, Mara and Noor as dots — not as cards.
+    const day = screen.getByRole('button', { name: /Sep 20/ })
+    expect(day.getAttribute('aria-label')).toContain('3 climbing')
+    expect(within(day).getAllByText(/^(LU|MA|NO)$/).length).toBe(3)
+    expect(day.querySelectorAll('.rounded-full').length).toBe(3)
+    expect(screen.queryByRole('group', { name: 'BHive' })).toBeNull()
+
+    // Tapping the day opens its list underneath, grouped per gym.
+    fireEvent.click(day)
+    expect(screen.getByText(/3 climbing at 3 gyms/)).toBeTruthy()
+    expect(within(screen.getByRole('group', { name: 'BHive' })).getAllByText('Mara').length).toBe(2)
+    expect(
+      within(screen.getByRole('group', { name: 'Boulder Space' })).getByText('Luis'),
+    ).toBeTruthy()
+
+    // Tapping the same day collapses it again.
+    fireEvent.click(screen.getByRole('button', { name: /Sep 20/ }))
+    expect(screen.queryByRole('group', { name: 'BHive' })).toBeNull()
+    expect(screen.getByText('Tap a day to see who is climbing.')).toBeTruthy()
+
+    // A day with nothing posted says so instead of looking broken.
+    fireEvent.click(screen.getByRole('button', { name: /Sep 25/ }))
+    expect(screen.getByText('Nobody yet')).toBeTruthy()
+
+    // …and the toggle goes back to the list.
+    fireEvent.click(screen.getByRole('button', { name: 'List' }))
+    expect(await screen.findByText('Boulder Space', { selector: 'span' })).toBeTruthy()
+    expect(screen.queryByText(/September 2026/)).toBeNull()
+  })
+
 })
