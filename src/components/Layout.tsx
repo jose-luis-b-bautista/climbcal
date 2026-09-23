@@ -6,9 +6,9 @@ import { Avatar, cx, ghostButtonClass } from './ui'
 
 const NAV_ITEMS = [
   { to: '/week', label: 'Week' },
-  { to: '/stats', label: 'Stats' },
   { to: '/friends', label: 'Friends' },
   { to: '/feed', label: 'Feed' },
+  { to: '/stats', label: 'Stats' },
   { to: '/settings', label: 'Settings' },
 ]
 
