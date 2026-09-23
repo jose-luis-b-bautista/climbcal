@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   GYM_REGIONS,
   OTHER_REGION_LABEL,
   climbGymNames,
   displayNameOf,
+  graphemes,
   groupGymsByRegion,
   gymNameOf,
   initialsOf,
@@ -23,6 +24,9 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     ...overrides,
   }
 }
+
+/** A high surrogate or low surrogate that lost its partner — the "�" symptom. */
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
 
 describe('normaliseUsername', () => {
   it('lowercases, trims and strips a leading @', () => {
@@ -59,6 +63,73 @@ describe('initialsOf', () => {
     expect(initialsOf(makeProfile({ display_name: 'Ana Maria' }))).toBe('AM')
     expect(initialsOf(makeProfile({ username: 'mara' }))).toBe('MA')
     expect(initialsOf(makeProfile())).toBe('?')
+  })
+
+  it('keeps an emoji whole instead of cutting its surrogate pair', () => {
+    // Regression: "Sam 🧗" used to render as "S�", because JS string indexing is
+    // by UTF-16 code unit, so the second word contributed half a surrogate pair.
+    expect(initialsOf(makeProfile({ display_name: 'Sam 🧗' }))).toBe('S🧗')
+    expect(initialsOf(makeProfile({ display_name: '🧗 Luis' }))).toBe('🧗L')
+  })
+
+  it('keeps emoji that span several code points intact', () => {
+    // Flag, skin tone and ZWJ family sequences are 4–7 code units each.
+    expect(initialsOf(makeProfile({ display_name: '🇵🇭 Pia' }))).toBe('🇵🇭P')
+    expect(initialsOf(makeProfile({ display_name: '🧗🏽' }))).toBe('🧗🏽')
+    expect(initialsOf(makeProfile({ display_name: '👨‍👩‍👧 Family' }))).toBe('👨‍👩‍👧F')
+    expect(initialsOf(makeProfile({ display_name: '🏔️ Ridge' }))).toBe('🏔️R')
+    // The climber + gender sign ZWJ sequence, which is the obvious one for here.
+    expect(initialsOf(makeProfile({ display_name: '🧗‍♀️ Ana' }))).toBe('🧗‍♀️A')
+    // Keycap sequences (digit + variation selector + enclosing key).
+    expect(initialsOf(makeProfile({ display_name: '1️⃣ One' }))).toBe('1️⃣O')
+  })
+
+  it('pairs two letters, but stands alone for anything else', () => {
+    expect(initialsOf(makeProfile({ display_name: 'A.' }))).toBe('A')
+    // Non-Latin letters still pair up; the check is "letter or digit".
+    expect(initialsOf(makeProfile({ display_name: '李 明' }))).toBe('李明')
+    expect(initialsOf(makeProfile({ display_name: '7 8' }))).toBe('78')
+  })
+
+  it('never emits a lone surrogate or a replacement character', () => {
+    const names = ['Sam 🧗', '🧗🏽', '🇵🇭', '👨‍👩‍👧', 'Luis', 'Ana Maria 🧗🏽', '🏔️ Ridge', 'A.']
+
+    for (const name of names) {
+      const initials = initialsOf(makeProfile({ display_name: name }))
+      expect(LONE_SURROGATE.test(initials)).toBe(false)
+      expect(initials).not.toContain('\uFFFD')
+    }
+  })
+})
+
+describe('graphemes', () => {
+  it('splits on user-perceived characters', () => {
+    expect(graphemes('ab')).toEqual(['a', 'b'])
+    expect(graphemes('🧗')).toEqual(['🧗'])
+    expect(graphemes('🧗🏽')).toEqual(['🧗🏽'])
+    expect(graphemes('🇵🇭')).toEqual(['🇵🇭'])
+    expect(graphemes('👨‍👩‍👧')).toEqual(['👨‍👩‍👧'])
+  })
+
+  it('falls back to whole code points without Intl.Segmenter', async () => {
+    // Simulates an older browser against a *fresh* copy of the module: the
+    // segmenter is cached per module instance, so reset before importing.
+    const mutableIntl = Intl as unknown as { Segmenter?: unknown }
+    const original = mutableIntl.Segmenter
+    vi.resetModules()
+    delete mutableIntl.Segmenter
+
+    try {
+      const fresh = await import('./format')
+      const parts = fresh.graphemes('a🧗b')
+
+      // The fallback is code points, so the skin-tone case degrades — but no
+      // surrogate half is ever handed to the browser.
+      expect(parts).toEqual(['a', '🧗', 'b'])
+      expect(LONE_SURROGATE.test(parts.join(''))).toBe(false)
+    } finally {
+      mutableIntl.Segmenter = original
+    }
   })
 })
 

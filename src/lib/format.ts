@@ -12,14 +12,55 @@ export function usernameOf(profile: Profile | null | undefined): string | null {
   return username ? `@${username}` : null
 }
 
-/** Initials for the avatar bubble. */
+/**
+ * Text split into user-perceived characters.
+ *
+ * Indexing a string by code unit is what breaks emoji: they occupy two code
+ * units (a surrogate pair), so `name[0]` can return half of one and the browser
+ * paints the "�" replacement box. `Intl.Segmenter` keeps flags ("🇵🇭"),
+ * skin-tone variants ("🧗🏽") and ZWJ families ("👨‍👩‍👧") in one piece; the
+ * `Array.from` fallback (Safari before 16.4) at least keeps whole code points.
+ */
+let graphemeSegmenter: Intl.Segmenter | null | undefined
+
+export function graphemes(value: string): string[] {
+  if (graphemeSegmenter === undefined) {
+    graphemeSegmenter =
+      typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function'
+        ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+        : null
+  }
+
+  if (!graphemeSegmenter) return Array.from(value)
+  return [...graphemeSegmenter.segment(value)].map((piece) => piece.segment)
+}
+
+/** A letter or a digit — the only characters worth pairing up into initials. */
+const INITIAL_LETTER = /[\p{L}\p{N}]/u
+
+/**
+ * Initials for the avatar bubble, cut on grapheme boundaries so emoji survive.
+ *
+ * - one word → its first two characters ("Luis" → "LU"), or the emoji alone when
+ *   the word *is* an emoji ("🧗🏽" → "🧗🏽")
+ * - several words → first character of the first and last word ("Ana Maria" →
+ *   "AM", "Sam 🧗" → "S🧗")
+ */
 export function initialsOf(profile: Profile | null | undefined): string {
   if (!profile) return '?'
   const source = profile.display_name?.trim() || profile.username?.trim() || ''
   if (!source) return '?'
-  const parts = source.split(/\s+/).filter(Boolean)
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+
+  const words = source.split(/\s+/).filter(Boolean).map(graphemes)
+
+  if (words.length === 1) {
+    const [first, second] = words[0]
+    // Pair up two letters/digits only, so an emoji is never joined to a stub.
+    const pair = second && INITIAL_LETTER.test(first) && INITIAL_LETTER.test(second)
+    return (pair ? `${first}${second}` : first).toUpperCase()
+  }
+
+  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
 }
 
 /** Gym names on a climb, in slot order: a linked gym, else the typed fallback. */
