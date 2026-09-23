@@ -54,16 +54,16 @@ function gymRow(overrides: Partial<ClimberGymStatsRow>): ClimberGymStatsRow {
 }
 
 describe('heatLevel', () => {
-  it('steps 0…4 with the session count, saturating at four', () => {
-    expect([0, 1, 2, 3, 4, 9].map(heatLevel)).toEqual([0, 1, 2, 3, 4, 4])
+  it('is binary: any sessions at all is the one shaded state', () => {
+    // Two sessions in one day are rare, so the grid answers "did I climb that
+    // day?" — the exact count lives in the day's label, not in the shade.
+    expect([0, 1, 2, 5, 9].map(heatLevel)).toEqual([0, 1, 1, 1, 1])
     expect(heatLevel(-1)).toBe(0)
   })
 
-  it('has one distinct class per level, so two levels never look alike', () => {
-    // The light theme collapses several emerald shades onto each other, which is
-    // why the ramp is 900 → 600; a repeated class would make levels invisible.
-    expect(HEAT_LEVEL_CLASSES).toHaveLength(5)
-    expect(new Set(HEAT_LEVEL_CLASSES).size).toBe(5)
+  it('has a distinct class per state, so shaded never looks empty', () => {
+    expect(HEAT_LEVEL_CLASSES).toHaveLength(2)
+    expect(new Set(HEAT_LEVEL_CLASSES).size).toBe(2)
   })
 })
 

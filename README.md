@@ -52,8 +52,8 @@ read or write what.
   Both layouts respect the gym filter (defaults to all gyms).
 - **Stats** — a tab for your own climbing, and for a friend's from the climber picker: sessions posted
   and active days, time on the wall, gyms visited and notes written; a half-year **activity heatmap**
-  of daily sessions (dashed cells are still to come); and a **"where I climb"** breakdown, each gym in
-  its own colours. It reads the `security_invoker` views from
+  where a day is shaded if you climbed it and dashed if it has not happened yet; and a **"where I
+  climb"** breakdown, each gym in its own colours. It reads the `security_invoker` views from
   [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql), so RLS
   decides what a friend's page can show, and `?climber=<id>` makes one linkable. A session is a posted
   *plan*, so nothing pretends to be a logged send: slot-only windows ("Opening" – "Closing") are never

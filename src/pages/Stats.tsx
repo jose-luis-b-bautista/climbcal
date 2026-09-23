@@ -115,11 +115,12 @@ function HeatmapLegend() {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-500">
       <span className="flex items-center gap-1">
-        Less
-        {HEAT_LEVEL_CLASSES.map((className) => (
-          <span key={className} className={cx('h-3 w-3 rounded-sm', className)} />
-        ))}
-        More
+        <span className={cx('h-3 w-3 rounded-sm', HEAT_LEVEL_CLASSES[0])} />
+        no session
+      </span>
+      <span className="flex items-center gap-1">
+        <span className={cx('h-3 w-3 rounded-sm', HEAT_LEVEL_CLASSES[1])} />
+        climbed
       </span>
       <span className="flex items-center gap-1">
         <span className={cx('h-3 w-3 rounded-sm', HEAT_PLANNED_CLASS)} />
@@ -326,8 +327,9 @@ export default function Stats() {
             <Heatmap weeks={weeks} />
             <HeatmapLegend />
             <p className="mt-3 text-xs text-zinc-500">
-              Each cell is a day, shaded by how many sessions you posted. Dashed cells are still to
-              come.
+              Each cell is a day: shaded means you posted a session, dashed means the day has not
+              happened yet — a plan already posted for one still counts, and its label says how many
+              sessions.
             </p>
           </Card>
 

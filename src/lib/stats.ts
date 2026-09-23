@@ -12,34 +12,24 @@ import { addDays, startOfWeek, toISODate } from './date'
 /** Heatmap columns: half a year of weeks, ending with the current one. */
 export const HEATMAP_WEEKS = 26
 
-/** Sessions in a day → heat level. */
-export type HeatLevel = 0 | 1 | 2 | 3 | 4
-
 /**
- * The level comes from the session count rather than minutes: a slot-only plan
- * ("Opening" – "Closing") has no real duration, but every row has a count.
+ * Binary, on purpose: two sessions in one day are rare here, so a graduated scale
+ * would collapse into a single shade in practice while making the legend harder to
+ * read than the data deserves. The grid answers "did I climb that day?"; the exact
+ * count stays in the cell's label.
  */
+export type HeatLevel = 0 | 1
+
+/** Any session at all → the one shaded state. */
 export function heatLevel(sessions: number): HeatLevel {
-  if (sessions <= 0) return 0
-  if (sessions === 1) return 1
-  if (sessions === 2) return 2
-  if (sessions === 3) return 3
-  return 4
+  return sessions > 0 ? 1 : 0
 }
 
 /**
- * One class per level, darkest-first for an empty day. The four emerald steps are
- * `900 → 600`, which is the one ramp in `index.css` that stays monotone and
- * distinguishable in *both* themes (in the light theme `emerald-400` collapses
- * onto `emerald-600`).
+ * Empty, then climbed. `emerald-700` stays clearly distinct from the empty cell in
+ * both themes (the light theme redefines that shade to a mint).
  */
-export const HEAT_LEVEL_CLASSES = [
-  'bg-zinc-800/70',
-  'bg-emerald-900',
-  'bg-emerald-800',
-  'bg-emerald-700',
-  'bg-emerald-600',
-] as const
+export const HEAT_LEVEL_CLASSES = ['bg-zinc-800/70', 'bg-emerald-700'] as const
 
 /** A day still to come: a plan, so it reads as an outline rather than a level. */
 export const HEAT_PLANNED_CLASS = 'border border-dashed border-sky-900/60 bg-sky-950/40'

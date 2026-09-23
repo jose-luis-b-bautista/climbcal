@@ -215,17 +215,21 @@ describe('<Stats />', () => {
     expect(footer).toContain('Sep 16')
   })
 
-  it('shades one cell per day, and dashes the days still to come', async () => {
+  it('shades a day when you climbed, and dashes the days still to come', async () => {
     renderStats()
     await screen.findByText('Where I climb')
 
     // 26 Monday-first weeks × 7 days.
     expect(document.querySelectorAll('[role="img"]').length).toBe(182)
 
-    // Two sessions on the 16th → the third emerald step.
-    expect(screen.getByLabelText(/Sep 16: 2 sessions, 1h$/).className).toContain('bg-emerald-800')
-    // One session → the first step; a quiet day → the empty shade.
-    expect(screen.getByLabelText(/Sep 9: 1 session, 2h$/).className).toContain('bg-emerald-900')
+    // Shaded or not, with nothing in between: a two-session day and a one-session
+    // day look identical, because the grid answers "did I climb that day?".
+    const busy = screen.getByLabelText(/Sep 16: 2 sessions, 1h$/)
+    const single = screen.getByLabelText(/Sep 9: 1 session, 2h$/)
+    expect(busy.className).toContain('bg-emerald-700')
+    expect(single.className).toBe(busy.className)
+
+    // …while a day with nothing is the empty shade.
     expect(screen.getByLabelText(/Sep 15: no sessions$/).className).toContain('bg-zinc-800/70')
 
     // Friday and Saturday are still to come, so they read as plans, not levels.
@@ -239,7 +243,7 @@ describe('<Stats />', () => {
     )
 
     // Today's own cell is not marked planned.
-    expect(screen.getByLabelText(/Sep 16: 2 sessions, 1h$/).className).not.toContain('border-dashed')
+    expect(busy.className).not.toContain('border-dashed')
   })
 
   it('ranks gyms by sessions, keeps the unnamed bucket last, and uses the palette', async () => {
