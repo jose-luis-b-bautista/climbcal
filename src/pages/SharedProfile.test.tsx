@@ -110,6 +110,12 @@ describe('<SharedProfile />', () => {
     expect(screen.getAllByText(/Sep 14/).length).toBeGreaterThan(0)
     expect(screen.getAllByText('Nothing planned')).toHaveLength(6)
 
+    // The week is a day list, not the Week page's seven narrow columns: seven
+    // list items, each labelled with its full weekday so the details have room.
+    expect(screen.getAllByRole('listitem')).toHaveLength(7)
+    expect(screen.getByRole('heading', { name: /^Monday Sep 14$/ })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: /^Wednesday Sep 16$/ })).toBeTruthy()
+
     // The app shell is not mounted: this page lives outside the auth gates.
     expect(screen.queryByRole('link', { name: 'Feed' })).toBeNull()
 
@@ -117,6 +123,17 @@ describe('<SharedProfile />', () => {
     const createAccount = screen.getByRole('link', { name: 'Create a free account' })
     expect(createAccount.getAttribute('href')).toBe('/login?next=%2Fu%2Fmara')
     expect(screen.queryByRole('link', { name: 'Go to Friends' })).toBeNull()
+  })
+
+  it('flags a session that is on right now', async () => {
+    // Mid-window for the fixture session (07:00–09:00 on Wed 2026-09-16).
+    vi.setSystemTime(new Date('2026-09-16T08:00:00'))
+    renderSharePage()
+
+    // The day is marked, and the card carries the relative badge a visitor cares
+    // about most: "is she climbing right now?".
+    expect(await screen.findByText('On now')).toBeTruthy()
+    expect(screen.getByText('Today')).toBeTruthy()
   })
 
   it('treats a private or unknown username as “not shared”', async () => {

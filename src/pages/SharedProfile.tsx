@@ -40,12 +40,13 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { useSharedProfile } from '../hooks/useSharedProfile'
 import {
-  DAY_NAMES_SHORT,
+  DAY_NAMES,
   addWeeks,
   formatShortDate,
   formatWeekRange,
   isToday,
   resolveWeekStart,
+  sessionTiming,
   startOfWeek,
   toISODate,
   weekDays,
@@ -57,7 +58,7 @@ import { profileSharePath } from '../lib/routes'
 /** Header + spacing for the public page, which renders outside the app shell. */
 function PublicShell({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 pb-12 pt-5 sm:px-6">
+    <div className="mx-auto w-full max-w-5xl px-4 pb-12 pt-5 sm:px-6">
       <header className="mb-6 flex items-center justify-between gap-3">
         <span className="flex items-center gap-2">
           <span className="text-xl" aria-hidden="true">
@@ -98,6 +99,9 @@ export default function SharedProfile() {
 
   const { profile, entries, loading, notFound, error } = useSharedProfile(username, weekStartISO)
   const byDate = useMemo(() => indexByDate(entries), [entries])
+
+  // Captured once: the "On now" badges are a snapshot, not a ticking clock.
+  const now = useMemo(() => new Date(), [])
 
   const sharePath = username ? profileSharePath(username) : '/'
   // Where the auth flow should return to once they have an account.
@@ -215,55 +219,79 @@ export default function SharedProfile() {
           }
         />
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
-          {days.map((day, index) => {
-            const dateISO = toISODate(day)
-            const dayEntries = byDate.get(dateISO) ?? []
-
-            return (
-              <div
-                key={dateISO}
-                className={cx(
-                  'rounded-xl border p-3',
-                  isToday(day)
-                    ? 'border-emerald-800/70 bg-emerald-950/20'
-                    : 'border-zinc-800 bg-zinc-900/30',
-                )}
-              >
-                <p className="mb-2 text-sm font-semibold text-zinc-100">
-                  {DAY_NAMES_SHORT[index]}{' '}
-                  <span className="font-normal text-zinc-500">{formatShortDate(day)}</span>
-                </p>
-
-                {dayEntries.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-zinc-800 px-2 py-4 text-center text-xs text-zinc-500">
-                    Nothing planned
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {dayEntries.map((entry) => (
-                      <SessionCard
-                        key={entry.id}
-                        entry={entry}
-                        isOwn={false}
-                        onEdit={() => undefined}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
         {entries.length === 0 ? (
-          <div className="mt-3">
-            <EmptyState
-              title="Nothing planned this week"
-              hint="Try another week, or start your own climbing calendar."
-            />
-          </div>
-        ) : null}
+          <EmptyState
+            title="Nothing planned this week"
+            hint="Try another week, or start your own climbing calendar."
+          />
+        ) : (
+          // A day list rather than the Week page's seven columns: those columns
+          // are a group overview, and at one seventh of the width a session card
+          // has to truncate the gym name and wrap its time window.
+          <ol className="space-y-3">
+            {days.map((day, index) => {
+              const dateISO = toISODate(day)
+              const dayEntries = byDate.get(dateISO) ?? []
+
+              return (
+                <li
+                  key={dateISO}
+                  className={cx(
+                    'rounded-xl border p-3 sm:p-4',
+                    isToday(day)
+                      ? 'border-emerald-800/70 bg-emerald-950/20'
+                      : 'border-zinc-800 bg-zinc-900/30',
+                  )}
+                >
+                  <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h3 className="text-sm font-semibold text-zinc-100">
+                      {DAY_NAMES[index]}{' '}
+                      <span className="font-normal text-zinc-500">{formatShortDate(day)}</span>
+                    </h3>
+                    {isToday(day) ? (
+                      <span className="rounded-full border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-300">
+                        Today
+                      </span>
+                    ) : null}
+                    {dayEntries.length > 1 ? (
+                      <span className="text-xs text-zinc-500">{dayEntries.length} sessions</span>
+                    ) : null}
+                  </div>
+
+                  {dayEntries.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-zinc-800 px-3 py-2 text-sm text-zinc-500">
+                      Nothing planned
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {dayEntries.map((entry) => (
+                        <SessionCard
+                          key={entry.id}
+                          entry={entry}
+                          isOwn={false}
+                          // "On now" / "Starts in 45m" only make sense for today.
+                          timing={
+                            isToday(day)
+                              ? sessionTiming(
+                                  entry.climb_date,
+                                  entry.start_time,
+                                  entry.end_time,
+                                  now,
+                                  entry.start_slot,
+                                  entry.end_slot,
+                                )
+                              : null
+                          }
+                          onEdit={() => undefined}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        )}
       </Card>
 
       {isOwner ? null : ownProfile ? (
