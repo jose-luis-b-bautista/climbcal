@@ -24,6 +24,14 @@ export interface MockResult {
 
 export type MockResolver = (context: MockQueryContext) => MockResult
 
+export interface MockRpcContext {
+  fn: string
+  args: Record<string, unknown>
+}
+
+/** Answers `supabase.rpc(name, args)`; defaults to `{ data: null }`. */
+export type MockRpcResolver = (context: MockRpcContext) => MockResult
+
 interface QueryBuilder {
   select: (columns?: string, options?: { head?: boolean; count?: string }) => QueryBuilder
   insert: (values: unknown) => QueryBuilder
@@ -55,6 +63,7 @@ export interface MockSupabaseClient {
     signOut: () => Promise<{ error: null }>
   }
   from: (table: string) => QueryBuilder
+  rpc: (fn: string, args?: Record<string, unknown>) => Promise<MockResult>
 }
 
 export const TEST_USER_ID = '11111111-1111-1111-1111-111111111111'
@@ -80,8 +89,15 @@ export function makeTestSession(): Session {
 
 export function createSupabaseMock(
   resolver: MockResolver,
-  session: Session | null = makeTestSession(),
+  /**
+   * The session `getSession()` reports. A getter lets one mock serve several
+   * tests — a share page is rendered for a signed-out visitor and for an owner
+   * from the same module, so the value has to be readable per test.
+   */
+  session: Session | null | (() => Session | null) = makeTestSession(),
+  rpcResolver: MockRpcResolver = () => ({ data: null, error: null }),
 ): MockSupabaseClient {
+  const readSession = typeof session === 'function' ? session : () => session
   const buildQuery = (table: string): QueryBuilder => {
     const filters: Record<string, unknown> = {}
     let op: MockQueryOp = 'select'
@@ -175,12 +191,13 @@ export function createSupabaseMock(
 
   return {
     auth: {
-      getSession: async () => ({ data: { session }, error: null }),
+      getSession: async () => ({ data: { session: readSession() }, error: null }),
       onAuthStateChange: () => ({
         data: { subscription: { unsubscribe: () => undefined } },
       }),
       signOut: async () => ({ error: null }),
     },
     from: (table: string) => buildQuery(table),
+    rpc: async (fn, args) => rpcResolver({ fn, args: args ?? {} }),
   }
 }

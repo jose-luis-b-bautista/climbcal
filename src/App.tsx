@@ -7,12 +7,17 @@ import Friends from './pages/Friends'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import Settings from './pages/Settings'
+import SharedProfile from './pages/SharedProfile'
 import Stats from './pages/Stats'
 import Week from './pages/Week'
 
 export default function App() {
   return (
     <Routes>
+      {/* Public on purpose: a share link has to open for someone who has not
+          signed up, so this route sits outside both auth gates. */}
+      <Route path="/u/:username" element={<SharedProfile />} />
+
       <Route path="/login" element={<Login />} />
 
       {/* Session required, but onboarding is still allowed to run. */}

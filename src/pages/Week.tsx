@@ -26,20 +26,12 @@ import {
   formatShortDate,
   formatWeekRange,
   isToday,
-  parseISODate,
+  resolveWeekStart,
   startOfWeek,
   toISODate,
   weekDays,
 } from '../lib/date'
 import type { Climb, ClimbEntry } from '../types'
-
-/** Resolves the `?week=YYYY-MM-DD` param into a Monday, defaulting to this week. */
-function resolveWeekStart(param: string | null): Date {
-  if (!param) return startOfWeek(new Date())
-  const parsed = parseISODate(param)
-  if (Number.isNaN(parsed.getTime())) return startOfWeek(new Date())
-  return startOfWeek(parsed)
-}
 
 export default function Week() {
   const { userId } = useAuth()

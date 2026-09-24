@@ -6,7 +6,8 @@ A small web app for answering one question: **who is climbing, where, and when �
 
 Open the week view, see your friends' sessions as cards (name, gym, time window), and add your
 own. Profiles are public or private: private schedules are only visible to accepted friends,
-public profiles additionally appear on a public climbers feed. Built for a friend group
+public profiles additionally appear on a public climbers feed — and can be handed out as a share
+link (`/u/<username>`) that opens even for someone without an account. Built for a friend group
 (~50–75 users) entirely on free tiers.
 
 ## Stack
@@ -51,7 +52,7 @@ read or write what.
 
   Both layouts respect the gym filter (defaults to all gyms).
 - **Stats** — a tab for your own climbing, and for a friend's from the climber picker: sessions posted
-  and active days, time on the wall, gyms visited and notes written; a half-year **activity heatmap**
+  and active days, time on the wall, gyms visited and notes written; a 13-week **activity heatmap**
   where a day is shaded if you climbed it and dashed if it has not happened yet; and a **"where I
   climb"** breakdown, each gym in its own colours. It reads the `security_invoker` views from
   [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql), so RLS
@@ -60,6 +61,13 @@ read or write what.
   counted as time on the wall.
 - **Settings** — edit profile, flip public/private. The gym list itself is curated by admins (see
   [Admin dashboard](#admin-dashboard)).
+- **Share** — Settings (and your own public page) carry a **Share link** built from your username,
+  `/u/<username>`. It opens for someone who has *not* signed up, which is the point: the page renders
+  the week as a read-only snapshot and offers a **create an account** link that brings them straight
+  back to that profile afterwards (via `?next=`, kept across the email-confirmation round trip). What
+  it shows is deliberately narrow — the **time and gym** of each session for one week, never the
+  session notes — and only profiles set to **Public** answer at all. A private profile and an unknown
+  username give the same "not shared" page, so a link cannot be used to probe for accounts.
 - **Light / dark mode** — a toggle in the header (and on the auth screens) that remembers your
   choice per browser and falls back to your OS setting. No flash on load: a tiny inline script in
   `index.html` sets the theme before first paint.
@@ -85,7 +93,10 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      admin-only gym writes), then
      [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql) (the five
      read-only stats views — `climb_sessions`, `climb_gyms`, `climber_daily_activity`,
-     `climber_totals`, `climber_gym_stats`).
+     `climber_totals`, `climber_gym_stats`), then
+     [`20260924000000_public_profile_share.sql`](supabase/migrations/20260924000000_public_profile_share.sql)
+     (the `shared_profile` function behind `/u/<username>` share links — the one thing `anon` may
+     execute).
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -97,7 +108,7 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* — safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   All eight files are idempotent, so re-running is safe.
+   All nine files are idempotent, so re-running is safe.
    > Already set the project up earlier? Just run the migrations you haven't:
    > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
    > (keeping sessions that referenced them as free-text names) and seeds the regional list;
@@ -106,7 +117,9 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
    > gym list read-only for users; `20260920000300_second_gym.sql` adds the optional second gym and
    > relaxes the old "a gym is required" rule; `20260920000400_admin.sql` adds `profiles.is_admin`
    > and lets admins write the gym list; `20260923000000_stats_views.sql` adds the five read-only
-   > stats views (they need Postgres 15+ for `security_invoker`). Running `db push` does all of them
+   > stats views (they need Postgres 15+ for `security_invoker`);
+   > `20260924000000_public_profile_share.sql` adds the `shared_profile` function behind share links
+   > and lets `anon` execute it (it still gets no table access). Running `db push` does all of them
    > for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
@@ -151,8 +164,8 @@ npm run lint       # oxlint
    automatically (`npm run build`, output `dist/`).
 3. **Settings → Environment Variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
    (the Project URL + publishable key) for Production *and* Preview. Redeploy after adding them.
-4. `vercel.json` rewrites every path to `index.html` so client-side routes such as `/friends`
-   work on refresh.
+4. `vercel.json` rewrites every path to `index.html` so client-side routes such as `/friends` — and a
+   shared `/u/<username>` link — work on refresh.
 5. Go back to Supabase → Auth → URL Configuration and set the Site URL to the Vercel domain.
 6. **Analytics** (optional): Project → **Analytics → Enable Web Analytics**. Nothing is collected
    until that toggle is on — the app already reports cookieless pageviews (initial load plus
@@ -200,8 +213,10 @@ auth.users ──n:n── friendships (requester_id, addressee_id, status[pendi
 | `climbs`      | owner, **accepted friends**, or everyone when the owner is `public` | owner only                                                                             |
 | `friendships` | only the two participants                                           | insert self as requester; **only the addressee can accept**; either side can delete      |
 
-Nothing is granted to the `anon` role, so there is no anonymous browsing: every surface except
-`/login` requires a session.
+Nothing is granted to the `anon` role for the tables, so there is no anonymous browsing: every
+surface except `/login` and `/u/<username>` requires a session. The share page is the single
+exception and it is deliberately narrow — `anon` may execute `public.shared_profile(text, date)` and
+nothing else (see [Share links](#share-links)).
 
 ## Admin dashboard
 
@@ -234,19 +249,22 @@ allowed to see".
 src/
   components/   Layout (nav shell), ProtectedRoute (session/onboarding gates),
                 SessionFormModal, SessionCard + DaySessions (day summaries),
-                ThemeToggle, ui.tsx (shared primitives + class tokens)
+                ShareLink (copy/share a profile URL), ThemeToggle,
+                ui.tsx (shared primitives + class tokens)
   hooks/        useAuth (session + profile context), useTheme (light/dark),
                 useWeekClimbs (range queries), useClimberStats (the stats views),
-                useFriends, usePublicClimbers, useGyms
+                useSharedProfile (the public /u/<username> RPC), useFriends,
+                usePublicClimbers, useGyms
   lib/          supabase (client), date (week + month math, window helpers),
                 format (names/usernames, gym-by-region grouping),
                 group (feed grouping: per gym, per date, unique climbers),
                 stats (heatmap grid + gym-breakdown ordering),
                 avatar + gymColors (per-climber / per-gym colours),
-                slots (the eight time-of-day window labels), admin
+                slots (the eight time-of-day window labels), admin,
+                routes (share paths + safe post-login redirect targets)
   pages/        Login, Onboarding, Week, Stats, Friends, Feed, Settings,
-                Admin (hidden route)
-  test/         Supabase client mock + fixtures for the integration render test
+                SharedProfile (public /u/<username>), Admin (hidden route)
+  test/         Supabase client mock (tables + `rpc`) + fixtures
 supabase/
   migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
                 gym_regions: real gym list grouped by region,
@@ -254,7 +272,8 @@ supabase/
                 gyms_admin_only: gyms read-only for users,
                 second_gym: optional "either" gym + "not sure yet",
                 admin: is_admin flag + admin-only gym writes,
-                stats_views: read-only stats views (security_invoker, PG15+)
+                stats_views: read-only stats views (security_invoker, PG15+),
+                public_profile_share: shared_profile() RPC + anon execute
   config.toml   minimal CLI config (link / db push)
 ```
 
@@ -334,16 +353,65 @@ both it and the migration, failing if the view names, the `security_invoker` opt
 the two labels shared with the app (`'Not sure yet'` from `gymNameOf`, `'Other'` from
 `OTHER_REGION_LABEL`) ever drift apart.
 
+## Share links
+
+A **Share link** (`/u/<username>`) is the one page that works without a session, so it is the only
+route outside `RequireAuth` / `RequireProfile`:
+
+```tsx
+<Route path="/u/:username" element={<SharedProfile />} />   {/* public on purpose */}
+```
+
+Its data does **not** come from the tables. Anonymous visitors have no table grants, so the page calls
+one `security definer` function,
+[`public.shared_profile(p_username, p_week_start)`](supabase/migrations/20260924000000_public_profile_share.sql),
+which answers `jsonb`:
+
+```ts
+const { data } = await supabase.rpc('shared_profile', {
+  p_username: 'mara',
+  p_week_start: '2026-09-14', // the visitor's own Monday, so both sides agree on the week
+})
+// → { profile, week_start, sessions: [{ id, climb_date, start_time, end_time,
+//                                       start_slot, end_slot, gym_name, gym_name_2 }] }
+// → null when the username is unknown *or* the profile is private
+```
+
+Why a function rather than an RLS policy on `profiles` / `climbs`:
+
+- **Only public profiles answer**, matched on `lower(username)`, so a private week stays exactly as
+  private as it was.
+- **Notes never leave the database.** RLS is row-level, so a policy would hand the `note` column to
+  anyone who asked for it; the function builds the payload, so the column is not in it at all.
+- **Nothing to scrape.** `anon` cannot enumerate `profiles`, read `climbs` or walk the site — it can
+  ask one question about one username at a time.
+- **A private profile and a typo look identical** (`null` either way), so a share link cannot be used
+  to find out whether an account exists.
+
+`?next=` is what carries a visitor back: the page links to `/login?next=%2Fu%2Fmara`, `Login` sends
+them on once they have a session (and passes the same URL as `emailRedirectTo`, so the
+email-confirmation round trip lands back on the profile too). `loginRedirectPath` / `safeRedirectPath`
+in [`src/lib/routes.ts`](src/lib/routes.ts) keep that to same-origin paths only — `?next=` comes from
+the URL, so it would otherwise be an open redirect.
+
+With Supabase's *Confirm email* switched on, the confirmation link is what returns the visitor to
+that URL, so the deployed origin (and `http://localhost:5173` while developing) has to be listed under
+**Auth → URL Configuration → Redirect URLs** — see [step 1.4](#1-create-the-supabase-project).
+
 ## Testing notes
 
 CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push
 to `main` and on pull requests — no secrets required.
 
-`npm test` covers the date/format helpers plus one integration render of the week view against a
-mocked Supabase client (`src/test/`), which verifies the auth gate, friend lookup, climb query
-and gym join end to end. The SQL was validated against a local Postgres with a stubbed `auth`
-schema: signup trigger, check constraints, per-visibility read rules, the one-row-per-pair
-constraint, "only the addressee accepts", and the denial of `anon` access. The stats views were
+`npm test` covers the date/format helpers plus two integration renders against a mocked Supabase
+client (`src/test/`): the week view, which verifies the auth gate, friend lookup, climb query and gym
+join end to end, and the share page, which verifies it renders for a **signed-out** visitor, that a
+private/unknown username reads as "not shared", and that its `rpc('shared_profile')` call and
+`?next=` sign-up link are wired up. The SQL was validated against a local Postgres with a stubbed
+`auth` schema: signup trigger, check constraints, per-visibility read rules, the one-row-per-pair
+constraint, "only the addressee accepts", and the `anon` posture (no table access at all, with only
+`shared_profile` executable — public profile answered, private profile and unknown username both
+`null`, note column absent from the payload). The stats views were
 checked the same way, against fixture rows with hand-computed rollups (the `security_invoker` opt-in
 itself needs the Postgres 15+ the project runs on).
 

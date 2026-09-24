@@ -15,6 +15,7 @@ import {
   monthDays,
   parseISODate,
   parseISOMonth,
+  resolveWeekStart,
   startOfMonth,
   startOfWeek,
   toISODate,
@@ -212,5 +213,19 @@ describe('month helpers', () => {
 
     expect(isSameMonth(new Date(2026, 8, 1), new Date(2026, 8, 30))).toBe(true)
     expect(isSameMonth(new Date(2026, 8, 30), new Date(2026, 9, 1))).toBe(false)
+  })
+})
+
+describe('resolveWeekStart', () => {
+  it('resolves a ?week= param to the Monday of the week it belongs to', () => {
+    expect(toISODate(resolveWeekStart('2026-09-16'))).toBe('2026-09-14')
+    // Already a Monday stays put.
+    expect(toISODate(resolveWeekStart('2026-09-14'))).toBe('2026-09-14')
+  })
+
+  it('falls back to the week containing the given day', () => {
+    // 2026-09-20 is a Sunday, so its week starts on the 14th.
+    expect(toISODate(resolveWeekStart(null, new Date(2026, 8, 20)))).toBe('2026-09-14')
+    expect(toISODate(resolveWeekStart('not-a-date', new Date(2026, 8, 20)))).toBe('2026-09-14')
   })
 })

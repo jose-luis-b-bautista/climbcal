@@ -57,6 +57,21 @@ export function weekDays(weekStart: Date): Date[] {
   return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index))
 }
 
+/**
+ * Resolves a `?week=YYYY-MM-DD` search param into the Monday of the week it
+ * belongs to, falling back to the week containing `fallback` (today) when the
+ * param is missing or unparseable.
+ *
+ * Shared by the calendar and the public share page so a shared `/u/<username>`
+ * link and the app itself always agree on what "a week" is.
+ */
+export function resolveWeekStart(param: string | null, fallback: Date = new Date()): Date {
+  if (!param) return startOfWeek(fallback)
+  const parsed = parseISODate(param)
+  if (Number.isNaN(parsed.getTime())) return startOfWeek(fallback)
+  return startOfWeek(parsed)
+}
+
 export function isSameDate(a: Date, b: Date): boolean {
   return toISODate(a) === toISODate(b)
 }

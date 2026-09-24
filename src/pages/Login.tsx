@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { SetupRequired } from '../components/ProtectedRoute'
 import { ThemeToggle } from '../components/ThemeToggle'
 import {
@@ -12,6 +12,7 @@ import {
   secondaryButtonClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { loginRedirectPath, safeRedirectPath } from '../lib/routes'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 type Mode = 'signin' | 'signup'
@@ -19,6 +20,11 @@ type Mode = 'signin' | 'signup'
 export default function Login() {
   const { session, loading } = useAuth()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
+  // A share link (`/u/<username>`) sends visitors here with `?next=` so they can
+  // come back to it, and the email-confirmation round trip returns to this same
+  // URL — which is why the param is read from the query, not from router state.
+  const nextParam = searchParams.get('next')
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,7 +35,10 @@ export default function Login() {
   if (!isSupabaseConfigured) return <SetupRequired />
   if (loading) return <PageLoader label="Checking your session…" />
   if (session) {
-    const redirectTo = (location.state as { from?: string } | null)?.from ?? '/week'
+    const redirectTo = loginRedirectPath({
+      next: nextParam,
+      from: (location.state as { from?: string } | null)?.from,
+    })
     return <Navigate to={redirectTo} replace />
   }
 
@@ -39,7 +48,18 @@ export default function Login() {
     setBusy(true)
 
     if (mode === 'signup') {
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      const next = safeRedirectPath(nextParam)
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        // With "Confirm email" on the visitor leaves the app for their inbox, so
+        // this is what brings them back to the page that sent them here.
+        options: next
+          ? {
+              emailRedirectTo: `${window.location.origin}/login?next=${encodeURIComponent(next)}`,
+            }
+          : undefined,
+      })
       setBusy(false)
       if (signUpError) {
         setError(signUpError.message)

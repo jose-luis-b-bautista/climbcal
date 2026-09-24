@@ -167,6 +167,38 @@ export type ClimberGymStatsRow = {
   exact_minutes: number
 }
 
+/**
+ * One session on a shared (`/u/<username>`) profile.
+ *
+ * The gyms arrive pre-resolved as names — the public payload never exposes
+ * `gym_id`s — and there is deliberately **no note**: the share link shows time
+ * and place only (see `20260924000000_public_profile_share.sql`).
+ */
+export type SharedProfileSession = {
+  id: string
+  climb_date: string
+  start_time: string | null
+  end_time: string | null
+  start_slot: string | null
+  end_slot: string | null
+  /** A listed gym name, else the free-text name on the session. Null when unnamed. */
+  gym_name: string | null
+  /** The optional "either" gym, same rules as `gym_name`. */
+  gym_name_2: string | null
+}
+
+/**
+ * Payload of the `shared_profile` RPC: the public face of one climber's week.
+ * Only ever produced for `visibility = 'public'` profiles, so `profile` needs no
+ * extra narrowing.
+ */
+export type SharedProfilePayload = {
+  profile: ProfileRow
+  /** Monday of the week the sessions belong to (`YYYY-MM-DD`). */
+  week_start: string
+  sessions: SharedProfileSession[]
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -355,6 +387,14 @@ export interface Database {
       profile_is_public: {
         Args: { target: string }
         Returns: boolean
+      }
+      /**
+       * Public snapshot for a `/u/<username>` share link. `null` when the
+       * username is unknown *or* the profile is private.
+       */
+      shared_profile: {
+        Args: { p_username: string; p_week_start?: string | null }
+        Returns: SharedProfilePayload | null
       }
     }
     Enums: {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ShareLink } from '../components/ShareLink'
 import {
   Card,
   ErrorBanner,
@@ -11,6 +12,7 @@ import {
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { normaliseUsername } from '../lib/format'
+import { profileSharePath } from '../lib/routes'
 import { supabase } from '../lib/supabase'
 import type { Visibility } from '../types'
 
@@ -144,6 +146,34 @@ export default function Settings() {
             {saving ? 'Saving…' : 'Save profile'}
           </button>
         </form>
+      </Card>
+
+      <Card>
+        <SectionHeading
+          title="Share"
+          hint="A link to your climbing week that works for people without an account."
+        />
+
+        {profile?.username ? (
+          <>
+            <ShareLink path={profileSharePath(profile.username)} />
+            <p className="mt-2 text-sm text-zinc-400">
+              {profile.visibility === 'public' ? (
+                <>
+                  Anyone with this link sees the time and gym of each session — never your notes.
+                  You can stop sharing by switching to Private.
+                </>
+              ) : (
+                <>
+                  Only public profiles are shared. Switch to <strong>Public</strong> above and save
+                  to make this link work for visitors who are not signed in.
+                </>
+              )}
+            </p>
+          </>
+        ) : (
+          <Notice>Choose a username first — your link is built from it.</Notice>
+        )}
       </Card>
 
       <Card>
