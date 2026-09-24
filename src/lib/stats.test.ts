@@ -2,7 +2,7 @@
  * The stats page's non-React half: the heatmap grid, the heat levels, and the gym
  * breakdown's ordering and scaling.
  *
- * Dates are fixed literals rather than "now", so the 26-week window is asserted
+ * Dates are fixed literals rather than "now", so the 13-week window is asserted
  * exactly. 2026-09-16 is a Wednesday, so the current column (Mon 14 – Sun 20)
  * still contains days that are "planned" — the window always ends with the week
  * holding today, which is why a Sunday pin would show nothing ahead.
@@ -88,14 +88,14 @@ describe('buildHeatmap', () => {
   ])
   const weeks = buildHeatmap(today, map)
 
-  it('ends with the current week and starts 26 weeks earlier', () => {
-    expect(heatmapStartDate(today)).toBe('2026-03-23')
-    expect(weeks).toHaveLength(26)
-    expect(weeks[0].weekStart).toBe('2026-03-23')
+  it('ends with the current week and starts 13 weeks earlier', () => {
+    expect(heatmapStartDate(today)).toBe('2026-06-22')
+    expect(weeks).toHaveLength(13)
+    expect(weeks[0].weekStart).toBe('2026-06-22')
     expect(weeks[weeks.length - 1].weekStart).toBe('2026-09-14')
     // Every column is a Monday-first week of seven days.
     expect(weeks.every((week) => week.days.length === 7)).toBe(true)
-    expect(weeks[0].days[0].date).toBe('2026-03-23')
+    expect(weeks[0].days[0].date).toBe('2026-06-22')
     expect(weeks[weeks.length - 1].days[6].date).toBe('2026-09-20')
   })
 

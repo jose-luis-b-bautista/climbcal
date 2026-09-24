@@ -9,7 +9,7 @@
 import type { ClimberDailyActivityRow, ClimberGymStatsRow } from '../types'
 import { addDays, startOfWeek, toISODate } from './date'
 
-/** Heatmap columns: fourth a year of weeks, ending with the current one. */
+/** Heatmap columns: 13 weeks — a quarter of a year — ending with the current one. */
 export const HEATMAP_WEEKS = 13
 
 /**

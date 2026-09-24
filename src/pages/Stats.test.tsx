@@ -177,7 +177,7 @@ function statCard(label: string): string {
 describe('<Stats />', () => {
   beforeEach(() => {
     state.missingViews = false
-    // Pinned midweek, so the 26-week window, "today" and the planned days are
+    // Pinned midweek, so the 13-week window, "today" and the planned days are
     // all fixed (a Sunday pin would leave nothing ahead in the current column).
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(new Date('2026-09-16T12:00:00'))
@@ -219,8 +219,8 @@ describe('<Stats />', () => {
     renderStats()
     await screen.findByText('Where I climb')
 
-    // 26 Monday-first weeks × 7 days.
-    expect(document.querySelectorAll('[role="img"]').length).toBe(182)
+    // 13 Monday-first weeks × 7 days.
+    expect(document.querySelectorAll('[role="img"]').length).toBe(91)
 
     // Shaded or not, with nothing in between: a two-session day and a one-session
     // day look identical, because the grid answers "did I climb that day?".

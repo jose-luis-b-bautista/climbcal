@@ -70,9 +70,9 @@ function dayLabel(week: HeatmapWeek, index: number): string {
 }
 
 /**
- * Half a year of days as Monday-first columns. A future day is drawn as an
- * outline: a climb row is a plan, so next week's sessions are real data and must
- * not read as "nothing yet".
+ * 13 weeks of days (a quarter of a year) as Monday-first columns. A future day is
+ * drawn as an outline: a climb row is a plan, so next week's sessions are real
+ * data and must not read as "nothing yet".
  */
 function Heatmap({ weeks }: { weeks: HeatmapWeek[] }) {
   return (
