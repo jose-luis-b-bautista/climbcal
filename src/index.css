@@ -142,6 +142,27 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* ---------------------------------------------------------------------------
+   Form controls on touch devices
+
+   iOS Safari zooms the whole page in whenever the focused field renders below
+   16px, then leaves it stuck zoomed with the layout pushed sideways. The shared
+   `inputClass` (and therefore the search bar on Friends, the session form and
+   the auth fields) uses `text-sm` = 14px, so every tap zoomed the app.
+
+   Touch devices get a hard 16px inside form controls instead. This rule is
+   deliberately unlayered so it beats Tailwind's `text-sm` utility, and it keys
+   off the pointer rather than a width breakpoint, because a phone in landscape
+   is wider than `sm` but still zooms. Mouse/trackpad users keep the 14px scale.
+--------------------------------------------------------------------------- */
+@media (hover: none) and (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 body {
   margin: 0;
   min-height: 100svh;
