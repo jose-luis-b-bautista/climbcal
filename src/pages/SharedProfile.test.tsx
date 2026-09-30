@@ -117,7 +117,7 @@ describe('<SharedProfile />', () => {
     expect(screen.getByRole('heading', { name: /^Wednesday Sep 16$/ })).toBeTruthy()
 
     // The app shell is not mounted: this page lives outside the auth gates.
-    expect(screen.queryByRole('link', { name: 'Feed' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Public Feed' })).toBeNull()
 
     // The call to action carries them back here once they have an account.
     const createAccount = screen.getByRole('link', { name: 'Create a free account' })

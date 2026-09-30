@@ -73,7 +73,7 @@ describe('<Week />', () => {
     expect(screen.queryByText('Bone dry week')).toBeNull()
 
     // Signed-in navigation, not the login screen.
-    expect(screen.getByRole('link', { name: 'Feed' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Public Feed' })).toBeTruthy()
 
     // The theme switch is available in the app shell.
     expect(screen.getByRole('button', { name: /switch to .* mode/i })).toBeTruthy()
