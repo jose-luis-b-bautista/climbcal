@@ -30,6 +30,7 @@ export const GYM_PALETTES: Record<string, { primary: string; background: string 
   'Edge Climb': { primary: '#111135', background: '#fbfcf7' },
   'Boulder World': { primary: '#1ea18f', background: '#0e606c' },
   'Good Climbs PH': { primary: '#78bc3f', background: '#f4debe' },
+  'Grava': { primary: '#113621', background: '#e1d8c0' },
   'Power Up TS': { primary: '#FFC72C', background: '#1A1A1A' },
   'Power Up Centro': { primary: '#FFC72C', background: '#1A1A1A' },
   'Power Up Alabang': { primary: '#FFC72C', background: '#1A1A1A' },
