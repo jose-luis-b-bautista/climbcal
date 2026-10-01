@@ -10,7 +10,11 @@ import { AuthProvider } from '../hooks/useAuth'
 import { ThemeProvider } from '../hooks/useTheme'
 
 // Hoisted with the log: the `vi.mock` factory runs before module-level consts.
-const { TODAY } = vi.hoisted(() => ({ TODAY: '2026-09-20' }))
+const { TODAY, climbRanges } = vi.hoisted(() => ({
+  TODAY: '2026-09-20',
+  /** Every `climb_date` window the feed has asked for, as `from..to`. */
+  climbRanges: [] as string[],
+}))
 
 vi.mock('../lib/supabase', async () => {
   const { TEST_USER_ID, createSupabaseMock } = await import('../test/supabaseMock')
@@ -110,6 +114,7 @@ vi.mock('../lib/supabase', async () => {
       if (table === 'climbs') {
         const from = filters['gte.climb_date']
         const to = filters['lte.climb_date']
+        climbRanges.push(`${String(from)}..${String(to)}`)
         return {
           data: climbs.filter(
             (row) =>
@@ -151,9 +156,21 @@ function renderFeed() {
 
 describe('<Feed />', () => {
   beforeEach(() => {
-    // Pinned so "today" and the 20-day horizon are deterministic.
+    // Pinned so "today" and the 7-day horizon are deterministic.
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(new Date('2026-09-20T12:00:00'))
+    climbRanges.length = 0
+  })
+
+  it('asks for a rolling week from today, not a calendar week', async () => {
+    renderFeed()
+
+    // Wait for the list to load, so the query has been made.
+    await screen.findByRole('heading', { level: 3 })
+
+    // 2026-09-20 is the pinned today: the window runs from the current day, so
+    // it is today + 7 days rather than Monday to Sunday.
+    expect(climbRanges).toEqual(['2026-09-20..2026-09-27'])
   })
 
   afterEach(() => {
@@ -248,8 +265,9 @@ describe('<Feed />', () => {
   it('groups climbers per gym inside a day', async () => {
     renderFeed()
 
-    // Wait for data (my own session's gym heading).
-    await screen.findByText('Boulder Space', { selector: 'span' })
+    // Days start folded, so open the day the fixture fills to reach its groups.
+    const dayHeading = await screen.findByRole('heading', { level: 3 })
+    fireEvent.click(within(dayHeading).getByRole('button'))
 
     // My session is filed under its gym, with the climber count beside it.
     const space = screen.getByRole('group', { name: 'Boulder Space' })
@@ -269,6 +287,42 @@ describe('<Feed />', () => {
 
     // A private climber's session is in no group at all.
     expect(screen.queryByRole('group', { name: 'Summit Loft' })).toBeNull()
+  })
+
+  it('opens a folded day and folds it back, closed by default', async () => {
+    renderFeed()
+
+    // The fixture is all on the pinned today, so the list view has one day.
+    const dayHeading = await screen.findByRole('heading', { level: 3 })
+    const dayLabel = dayHeading.textContent
+    const toggle = within(dayHeading).getByRole('button')
+    const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '') as HTMLElement
+
+    // Closed by default: the date and the count are the summary, and the gym
+    // groups are not reachable yet.
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(panel.hasAttribute('hidden')).toBe(true)
+    expect(screen.queryByRole('group', { name: 'BHive' })).toBeNull()
+
+    // The session count sits outside the panel, so a folded day still reports it.
+    const root = panel?.parentElement as HTMLElement
+    expect(within(panel as HTMLElement).queryByText(/\d+ sessions?$/)).toBeNull()
+    expect(within(root).getByText(/\d+ sessions?$/)).toBeTruthy()
+
+    fireEvent.click(toggle)
+
+    // Open: roles respect `hidden`, so the gym groups arrive with the body…
+    expect(panel.hasAttribute('hidden')).toBe(false)
+    expect(screen.getByRole('group', { name: 'BHive' })).toBeTruthy()
+    // …while the day's label and its count stay readable.
+    expect(screen.getByRole('heading', { level: 3 }).textContent).toBe(dayLabel)
+    expect(within(root).getByText(/\d+ sessions?$/)).toBeTruthy()
+
+    // The whole header row is the target, not just the label: clicking the count
+    // (which sits outside the button) folds it again.
+    fireEvent.click(within(root).getByText(/\d+ sessions?$/))
+    expect(panel.hasAttribute('hidden')).toBe(true)
+    expect(screen.queryByRole('group', { name: 'BHive' })).toBeNull()
   })
 
   it('switches to a calendar of avatar dots and opens a day on tap', async () => {

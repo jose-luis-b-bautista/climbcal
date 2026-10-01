@@ -3,7 +3,7 @@
  * to add, the username search (clearing the box drops the results) and how a
  * sent request reads in both.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -179,5 +179,32 @@ describe('<Friends /> find climbers', () => {
     // Exactly one Cancel on the page: the one under "Sent requests".
     expect(screen.getByRole('heading', { name: 'Sent requests' })).toBeTruthy()
     expect(screen.getAllByRole('button', { name: 'Cancel' })).toHaveLength(1)
+  })
+
+  it('opens "Your climber friends" and folds it back, closed by default', async () => {
+    renderFriends()
+
+    // The label stays a heading; the toggle lives inside it, like the other
+    // disclosures in the app.
+    const heading = await screen.findByRole('heading', { name: 'Your climber friends' })
+    const toggle = within(heading).getByRole('button')
+    const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '')
+
+    // Closed by default — and with no friendships in this fixture the body is the
+    // empty state rather than rows.
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(panel?.hasAttribute('hidden')).toBe(true)
+    expect(screen.getByText(/No friends yet — search below to add someone/)).toBeTruthy()
+
+    fireEvent.click(toggle)
+
+    // Open: the body arrives, and the label and count were never hidden.
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(panel?.hasAttribute('hidden')).toBe(false)
+    expect(within(panel as HTMLElement).getByText('No friends yet')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Your climber friends' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Your climber friends' }))
+    expect(panel?.hasAttribute('hidden')).toBe(true)
   })
 })

@@ -1,7 +1,7 @@
 /* oxlint-disable react/only-export-components, react-refresh/only-export-components */
 // Shared design primitives: components plus the class tokens they use, kept
 // together on purpose (this module is not a route/feature component).
-import type { ReactNode, SelectHTMLAttributes } from 'react'
+import { useId, useState, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { AVATAR_HUE_CLASSES, avatarHueFor } from '../lib/avatar'
 import { initialsOf, gymNameOf } from '../lib/format'
 import { gymPaletteOf } from '../lib/gymColors'
@@ -63,6 +63,95 @@ export function SectionHeading({
         {hint ? <p className="text-sm text-zinc-400">{hint}</p> : null}
       </div>
       {action}
+    </div>
+  )
+}
+
+/**
+ * A section whose body folds away: the header toggles it, and it starts
+ * **closed**, so a long page opens compact and each section is one click away.
+ *
+ * The label stays a real heading at the level the page needs, and the toggle is
+ * a real `<button>` carrying `aria-expanded` / `aria-controls`, so it is
+ * keyboard-reachable and announced as expanded. The whole header row is the
+ * click target — the date, the hint and the count toggle it too. The `hint` and
+ * `action` sit outside the panel on purpose: they stay on screen when the body
+ * is folded, so a closed section still says what it is and how much it holds.
+ */
+export function Disclosure({
+  title,
+  meta,
+  hint,
+  action,
+  defaultOpen = false,
+  headingLevel = 2,
+  className,
+  panelClassName,
+  children,
+}: {
+  title: ReactNode
+  /**
+   * Sits on the label's baseline, but *outside* the heading, so the heading
+   * still reads as just the label (a date beside "Today", say).
+   */
+  meta?: ReactNode
+  /** Line under the label — kept visible while the body is folded. */
+  hint?: ReactNode
+  /** Right-hand control in the header row, e.g. a count. */
+  action?: ReactNode
+  /** Start folded; the reader opens it. */
+  defaultOpen?: boolean
+  /** Keeps the page outline: 3 for a heading nested under a section. */
+  headingLevel?: 2 | 3
+  className?: string
+  panelClassName?: string
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const panelId = useId()
+  const Heading = headingLevel === 3 ? 'h3' : 'h2'
+
+  return (
+    <div className={className}>
+      {/* The whole header row toggles, not just the label — the date, the hint
+          and the count are all part of the target. The <button> stays the
+          accessible control (keyboard + screen reader); its activation bubbles
+          up to this handler. Anything interactive added to `action` later would
+          need its own `stopPropagation`. */}
+      <div
+        className="mb-3 flex cursor-pointer flex-wrap items-end justify-between gap-2"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <Heading
+              className={
+                headingLevel === 3
+                  ? 'text-sm font-semibold text-zinc-200'
+                  : 'text-lg font-semibold text-zinc-100'
+              }
+            >
+              <button
+                type="button"
+                aria-expanded={open}
+                aria-controls={panelId}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md text-left transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600"
+              >
+                <ChevronDownIcon
+                  className={cx('h-4 w-4 shrink-0 transition-transform', !open && '-rotate-90')}
+                />
+                {title}
+              </button>
+            </Heading>
+            {meta}
+          </div>
+          {hint ? <div className="mt-1 text-sm text-zinc-400">{hint}</div> : null}
+        </div>
+        {action}
+      </div>
+      <div id={panelId} hidden={!open} className={panelClassName}>
+        {children}
+      </div>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { formatDayLabel, sessionTiming, toISODate } from '../lib/date'
 import type { Climb, ClimbEntry } from '../types'
 import { SessionCard } from './SessionCard'
-import { Card, cx, ghostButtonClass, subTextClass } from './ui'
+import { Card, Disclosure, cx, ghostButtonClass, subTextClass } from './ui'
 
 interface DaySessionsProps {
   kind: 'today' | 'tomorrow'
@@ -16,7 +16,11 @@ interface DaySessionsProps {
   onEdit: (climb: Climb) => void
 }
 
-/** Single-day summary; the calendar page stacks Today and Tomorrow over the week. */
+/**
+ * Single-day summary; the calendar page stacks Today and Tomorrow over the week.
+ * Each card folds away on its own and starts closed, so the week grid leads and
+ * a day opens on demand — the label, the date and the summary stay either way.
+ */
 export function DaySessions({
   kind,
   date,
@@ -58,14 +62,18 @@ export function DaySessions({
 
   return (
     <Card>
-      <div className="flex flex-wrap items-baseline gap-2">
-        <h2 className="text-lg font-semibold text-zinc-100">{label}</h2>
-        <p className="text-sm text-zinc-500">{formatDayLabel(date)}</p>
-      </div>
-      <p className="mt-1 text-sm text-zinc-400">{summary}</p>
-      {nudge ? <p className={cx('mt-1', subTextClass)}>{nudge}</p> : null}
-
-      <div className="mt-4">
+      <Disclosure
+        title={label}
+        // The date rides on the label's baseline; the heading stays just "Today".
+        meta={<p className="text-sm text-zinc-500">{formatDayLabel(date)}</p>}
+        hint={
+          <>
+            <p>{summary}</p>
+            {nudge ? <p className={cx('mt-1', subTextClass)}>{nudge}</p> : null}
+          </>
+        }
+        panelClassName="mt-4"
+      >
         {loading ? null : entries.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center">
             <p className="text-sm font-medium text-zinc-300">
@@ -106,7 +114,7 @@ export function DaySessions({
             ))}
           </div>
         )}
-      </div>
+      </Disclosure>
     </Card>
   )
 }

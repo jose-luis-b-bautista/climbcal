@@ -20,7 +20,7 @@ export interface GymCellColors {
 }
 
 
-/** Exactly the gyms seeded by 20260920000000_gym_regions.sql. */
+/** Exactly the gyms the seed migrations define (see `gymColors.test.ts`). */
 export const GYM_PALETTES: Record<string, { primary: string; background: string }> = {
   // Luzon
   'Boulder Space': { primary: '#0B132B', background: '#00A896' },

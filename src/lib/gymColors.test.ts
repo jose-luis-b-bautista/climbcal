@@ -1,24 +1,30 @@
 /**
  * The gym palette is display data that has to match the *seeded* gyms, so the
- * migration is parsed rather than duplicated (same trick as slots/theme tests).
+ * migrations are parsed rather than duplicated (same trick as slots/theme tests).
  */
 import { readFileSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { GYM_PALETTES, gymPaletteFor, gymPaletteOf } from './gymColors'
 
-const migration = readFileSync(
-  resolvePath(process.cwd(), 'supabase/migrations/20260920000000_gym_regions.sql'),
-  'utf8',
-)
+/** The regional seed list, then the later one-off additions to it. */
+const SEED_MIGRATIONS = [
+  'supabase/migrations/20260920000000_gym_regions.sql',
+  'supabase/migrations/20260929000000_grava_gym.sql',
+]
+
+// Read as one script, so the scan below covers the whole seeded list.
+const migration = SEED_MIGRATIONS.map((file) =>
+  readFileSync(resolvePath(process.cwd(), file), 'utf8'),
+).join('\n')
 
 describe('gym palette', () => {
-  it('covers exactly the gyms the seed migration defines', () => {
+  it('covers exactly the gyms the seed migrations define', () => {
     const seeded = [...migration.matchAll(/\('([^']+)',\s*'(Luzon|Visayas|Mindanao)'\)/g)].map(
       (match) => match[1],
     )
 
-    expect(seeded.length).toBe(21)
+    expect(seeded.length).toBe(22)
     expect(Object.keys(GYM_PALETTES).sort()).toEqual([...seeded].sort())
   })
 

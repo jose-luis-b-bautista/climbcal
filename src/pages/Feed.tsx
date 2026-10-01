@@ -3,7 +3,9 @@
  *
  * Two ways to read the same sessions:
  * - **List** — the next few weeks, grouped by day and then by gym ("who is going
- *   where"), so a gym with several climbers reads as one block.
+ *   where"), so a gym with several climbers reads as one block. Each day is a
+ *   disclosure that starts closed: the date and the session count are the
+ *   summary, and one click opens the climbers for that day.
  * - **Calendar** — a month of avatar dots; tapping a day opens that day's list
  *   underneath, so the grid stays scannable instead of carrying every card.
  *
@@ -15,6 +17,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import {
   Avatar,
   Card,
+  Disclosure,
   EmptyState,
   ErrorBanner,
   Field,
@@ -54,8 +57,11 @@ import type { ClimbEntry } from '../types'
 
 type FeedView = 'list' | 'calendar'
 
-/** Days ahead covered by the list view. */
-const FEED_HORIZON_DAYS = 20
+/**
+ * Days ahead covered by the list view — a rolling window from today, not a
+ * calendar week, so the feed always starts at the current day.
+ */
+const FEED_HORIZON_DAYS = 7
 
 /** How many avatar dots a calendar day shows before it counts the rest. */
 const CALENDAR_DOTS = 4
@@ -401,15 +407,18 @@ export default function Feed() {
           <div className="space-y-5">
             {dayGroups.map((group) => (
               <section key={group.date}>
-                <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-zinc-200">
-                    {formatMediumDate(group.date)}
-                  </h3>
-                  <span className="text-xs text-zinc-500">
-                    {group.entries.length} session{group.entries.length === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <GymGroupList groups={groupByGym(group.entries, groupOptions)} />
+                <Disclosure
+                  headingLevel={3}
+                  title={formatMediumDate(group.date)}
+                  // The session count stays on screen when the day is folded.
+                  action={
+                    <span className="text-xs text-zinc-500">
+                      {group.entries.length} session{group.entries.length === 1 ? '' : 's'}
+                    </span>
+                  }
+                >
+                  <GymGroupList groups={groupByGym(group.entries, groupOptions)} />
+                </Disclosure>
               </section>
             ))}
           </div>

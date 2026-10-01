@@ -6,7 +6,7 @@
  * around that pinned day: a session spanning the whole day, a slot-based one,
  * a finished one, one starting in an hour, and one tomorrow.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -229,8 +229,13 @@ describe('<Week /> day views', () => {
     // is gone entirely.
     expect(screen.getAllByRole('button', { name: /^Add a session on / })).toHaveLength(7)
     expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Today' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Tomorrow' })).toBeNull()
+
+    // Not a tab switcher either: each day card carries its own disclosure,
+    // closed by default so the week grid leads.
+    expect(screen.getByRole('button', { name: 'Today' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getByRole('button', { name: 'Tomorrow' }).getAttribute('aria-expanded')).toBe(
+      'false',
+    )
 
     // Two ranges: the day cards always ask for the real today → tomorrow, the
     // grid asks for the week being browsed.
@@ -269,5 +274,42 @@ describe('<Week /> day views', () => {
     // The day cards were never re-scoped by either move.
     expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy()
     expect(screen.getAllByText('Vertical Hub').length).toBeGreaterThan(0)
+  })
+
+  it('opens a folded day card and folds it back, closed by default', async () => {
+    renderApp('/week')
+    expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
+
+    const toggles = () => screen.getByRole('button', { name: 'Today' })
+    /** The panel a toggle points at, via the id in its `aria-controls`. */
+    const panelOf = (toggle: HTMLElement) =>
+      document.getElementById(toggle.getAttribute('aria-controls') ?? '') as HTMLElement
+
+    // Closed by default: today's cards are behind the toggle, so only the week
+    // grid's own copy of my session is reachable. (Roles respect `hidden`.)
+    expect(toggles().getAttribute('aria-expanded')).toBe('false')
+    expect(panelOf(toggles()).hasAttribute('hidden')).toBe(true)
+    expect(within(panelOf(toggles())).queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeTruthy()
+
+    fireEvent.click(toggles())
+
+    // Open: the label and its aria state follow, and the cards arrive. (`find*`
+    // because the two-day query is still in flight when the card first paints.)
+    expect(toggles().getAttribute('aria-expanded')).toBe('true')
+    expect(panelOf(toggles()).hasAttribute('hidden')).toBe(false)
+    expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy()
+    expect(await within(panelOf(toggles())).findByRole('button', { name: 'Edit' })).toBeTruthy()
+
+    // Tomorrow folds independently of today.
+    expect(screen.getByRole('button', { name: 'Tomorrow' }).getAttribute('aria-expanded')).toBe(
+      'false',
+    )
+
+    // The header row is the target, not just the label: clicking the row itself
+    // (the date sits beside the label) folds it again.
+    fireEvent.click(panelOf(toggles()).previousElementSibling as HTMLElement)
+    expect(toggles().getAttribute('aria-expanded')).toBe('false')
+    expect(within(panelOf(toggles())).queryByRole('button', { name: 'Edit' })).toBeNull()
   })
 })

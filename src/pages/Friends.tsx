@@ -2,6 +2,7 @@ import { useRef, useMemo, useState, type ReactNode } from 'react'
 import {
   Avatar,
   Card,
+  Disclosure,
   EmptyState,
   ErrorBanner,
   PageLoader,
@@ -220,38 +221,39 @@ export default function Friends() {
           </Card>
 
           <Card>
-            <SectionHeading
-              title="Your climbers"
+            <Disclosure
+              title="Your climber friends"
               hint={
                 friends.length === 0
                   ? 'No friends yet — search below to add someone.'
                   : `${friends.length} friend${friends.length === 1 ? '' : 's'}.`
               }
-            />
-            {friends.length === 0 ? (
-              <EmptyState title="No friends yet" hint="Use the search below to send a request." />
-            ) : (
-              friends.map((friend) => {
-                const relation = relationFor(friend.id)
-                return (
-                  <FriendRow
-                    key={friend.id}
-                    profile={friend}
-                    action={
-                      relation ? (
-                        <button
-                          type="button"
-                          className={dangerButtonClass}
-                          onClick={() => void run(() => removeFriend(relation.id))}
-                        >
-                          Unfriend
-                        </button>
-                      ) : null
-                    }
-                  />
-                )
-              })
-            )}
+            >
+              {friends.length === 0 ? (
+                <EmptyState title="No friends yet" hint="Use the search below to send a request." />
+              ) : (
+                friends.map((friend) => {
+                  const relation = relationFor(friend.id)
+                  return (
+                    <FriendRow
+                      key={friend.id}
+                      profile={friend}
+                      action={
+                        relation ? (
+                          <button
+                            type="button"
+                            className={dangerButtonClass}
+                            onClick={() => void run(() => removeFriend(relation.id))}
+                          >
+                            Unfriend
+                          </button>
+                        ) : null
+                      }
+                    />
+                  )
+                })
+              )}
+            </Disclosure>
           </Card>
         </>
       )}
