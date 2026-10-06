@@ -63,10 +63,11 @@ vi.mock('../lib/supabase', async () => {
     userId: string,
     custom_gym_name: string,
     custom_gym_name_2: string | null = null,
+    climb_date: string = TODAY,
   ) => ({
     id,
     user_id: userId,
-    climb_date: TODAY,
+    climb_date,
     start_time: '18:00:00',
     end_time: '20:00:00',
     start_slot: null,
@@ -89,6 +90,8 @@ vi.mock('../lib/supabase', async () => {
     session('mara-either', maraId, 'Boulder World', 'BHive'),
     session('noor', noorId, 'Boulder World'),
     session('sam', samId, 'Summit Loft'),
+    // A later day, so "today opens by default" has a counterpart to compare with.
+    session('mara-later', maraId, 'Future Wall', null, '2026-09-24'),
   ]
   const profiles = [me, mara, noor, sam]
 
@@ -165,8 +168,9 @@ describe('<Feed />', () => {
   it('asks for a rolling week from today, not a calendar week', async () => {
     renderFeed()
 
-    // Wait for the list to load, so the query has been made.
-    await screen.findByRole('heading', { level: 3 })
+    // Wait for the list to load, so the query has been made. (Two days are on
+    // the horizon now: today and a later one.)
+    await screen.findAllByRole('heading', { level: 3 })
 
     // 2026-09-20 is the pinned today: the window runs from the current day, so
     // it is today + 7 days rather than Monday to Sunday.
@@ -265,12 +269,9 @@ describe('<Feed />', () => {
   it('groups climbers per gym inside a day', async () => {
     renderFeed()
 
-    // Days start folded, so open the day the fixture fills to reach its groups.
-    const dayHeading = await screen.findByRole('heading', { level: 3 })
-    fireEvent.click(within(dayHeading).getByRole('button'))
-
-    // My session is filed under its gym, with the climber count beside it.
-    const space = screen.getByRole('group', { name: 'Boulder Space' })
+    // Today is open by default, so its groups are reachable right away; the later
+    // day stays folded and contributes nothing to the role tree.
+    const space = await screen.findByRole('group', { name: 'Boulder Space' })
     expect(within(space).getByText('Luis')).toBeTruthy()
     expect(within(space).getByText('1 climber')).toBeTruthy()
 
@@ -285,44 +286,60 @@ describe('<Feed />', () => {
     expect(within(world).getByText('@noor')).toBeTruthy()
     expect(within(world).getByText('2 climbers')).toBeTruthy()
 
-    // A private climber's session is in no group at all.
+    // A private climber's session is in no group at all, and the folded later day
+    // keeps its own group out of reach until it is opened.
     expect(screen.queryByRole('group', { name: 'Summit Loft' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Future Wall' })).toBeNull()
   })
 
-  it('opens a folded day and folds it back, closed by default', async () => {
+  it('opens today by default and leaves the later days folded', async () => {
     renderFeed()
 
-    // The fixture is all on the pinned today, so the list view has one day.
-    const dayHeading = await screen.findByRole('heading', { level: 3 })
-    const dayLabel = dayHeading.textContent
-    const toggle = within(dayHeading).getByRole('button')
-    const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '') as HTMLElement
+    // Two days on the horizon: the pinned today, and a later one.
+    const [todayHeading, laterHeading] = await screen.findAllByRole('heading', { level: 3 })
+    const toggleOf = (heading: HTMLElement) => within(heading).getByRole('button')
+    const panelOf = (heading: HTMLElement) =>
+      document.getElementById(toggleOf(heading).getAttribute('aria-controls') ?? '') as HTMLElement
+    /** A day's header row: the sibling just above its panel. */
+    const rowOf = (heading: HTMLElement) => panelOf(heading).previousElementSibling as HTMLElement
+    const todayLabel = todayHeading.textContent
 
-    // Closed by default: the date and the count are the summary, and the gym
-    // groups are not reachable yet.
-    expect(toggle.getAttribute('aria-expanded')).toBe('false')
-    expect(panel.hasAttribute('hidden')).toBe(true)
-    expect(screen.queryByRole('group', { name: 'BHive' })).toBeNull()
+    // The current day is open, so its gym groups are reachable…
+    expect(toggleOf(todayHeading).getAttribute('aria-expanded')).toBe('true')
+    expect(panelOf(todayHeading).hasAttribute('hidden')).toBe(false)
+    expect(screen.getByRole('group', { name: 'BHive' })).toBeTruthy()
 
-    // The session count sits outside the panel, so a folded day still reports it.
-    const root = panel?.parentElement as HTMLElement
+    // …while the later day stays folded and contributes nothing.
+    expect(toggleOf(laterHeading).getAttribute('aria-expanded')).toBe('false')
+    expect(panelOf(laterHeading).hasAttribute('hidden')).toBe(true)
+    expect(screen.queryByRole('group', { name: 'Future Wall' })).toBeNull()
+
+    // Each day's count sits outside its panel, so a folded day still reports it —
+    // here for the later day, which is the one still shut.
+    const panel = panelOf(laterHeading)
+    const root = panel.previousElementSibling as HTMLElement
     expect(within(panel as HTMLElement).queryByText(/\d+ sessions?$/)).toBeNull()
     expect(within(root).getByText(/\d+ sessions?$/)).toBeTruthy()
 
-    fireEvent.click(toggle)
-
-    // Open: roles respect `hidden`, so the gym groups arrive with the body…
+    // The whole header row is the target, not just the label: the later day's row
+    // opens it too.
+    fireEvent.click(rowOf(laterHeading))
     expect(panel.hasAttribute('hidden')).toBe(false)
-    expect(screen.getByRole('group', { name: 'BHive' })).toBeTruthy()
-    // …while the day's label and its count stay readable.
-    expect(screen.getByRole('heading', { level: 3 }).textContent).toBe(dayLabel)
+    expect(screen.getByRole('group', { name: 'Future Wall' })).toBeTruthy()
     expect(within(root).getByText(/\d+ sessions?$/)).toBeTruthy()
 
     // The whole header row is the target, not just the label: clicking the count
     // (which sits outside the button) folds it again.
     fireEvent.click(within(root).getByText(/\d+ sessions?$/))
     expect(panel.hasAttribute('hidden')).toBe(true)
+    expect(screen.queryByRole('group', { name: 'Future Wall' })).toBeNull()
+
+    // Folding today by its own row leaves the day and its count readable.
+    fireEvent.click(rowOf(todayHeading))
+    expect(toggleOf(todayHeading).getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('group', { name: 'BHive' })).toBeNull()
+    expect(within(rowOf(todayHeading)).getByText('4 sessions')).toBeTruthy()
+    expect(todayHeading.textContent).toBe(todayLabel)
   })
 
   it('switches to a calendar of avatar dots and opens a day on tap', async () => {

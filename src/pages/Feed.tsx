@@ -4,8 +4,8 @@
  * Two ways to read the same sessions:
  * - **List** — the next few weeks, grouped by day and then by gym ("who is going
  *   where"), so a gym with several climbers reads as one block. Each day is a
- *   disclosure that starts closed: the date and the session count are the
- *   summary, and one click opens the climbers for that day.
+ *   disclosure — today's starts open, the rest folded — with the date and the
+ *   session count as the summary and one click opening a day.
  * - **Calendar** — a month of avatar dots; tapping a day opens that day's list
  *   underneath, so the grid stays scannable instead of carrying every card.
  *
@@ -257,6 +257,7 @@ export default function Feed() {
 
   // Captured once, so "today" and the horizon do not drift while you browse.
   const today = useMemo(() => new Date(), [])
+  const todayISO = toISODate(today)
   const view: FeedView = searchParams.get('view') === 'calendar' ? 'calendar' : 'list'
   const monthStart = useMemo(
     () => resolveMonthStart(searchParams.get('month'), today),
@@ -409,6 +410,9 @@ export default function Feed() {
               <section key={group.date}>
                 <Disclosure
                   headingLevel={3}
+                  // Today is the day you came to look at, so it starts open; the
+                  // rest of the horizon stays folded until asked for.
+                  defaultOpen={group.date === todayISO}
                   title={formatMediumDate(group.date)}
                   // The session count stays on screen when the day is folded.
                   action={
