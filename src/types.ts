@@ -14,6 +14,7 @@ export type Json =
 
 export type Visibility = 'public' | 'private'
 export type FriendshipStatus = 'pending' | 'accepted'
+export type FeedbackStatus = 'new' | 'in_progress' | 'resolved' | 'dismissed'
 
 export type ProfileRow = {
   id: string
@@ -37,12 +38,12 @@ export type GymRow = {
 export type FeedbackRow = {
   id: string
   user_id: string
-  feedback_type: string
+  feedback_type: string | null
   message: string
   created_at: string
-  status: 'new' | 'in_progress' | 'resolved' | 'dismissed'
-  admin_notes: string
-};
+  status: FeedbackStatus
+  admin_notes: string | null
+}
 
 export type ClimbRow = {
   id: string
@@ -361,6 +362,36 @@ export interface Database {
           },
         ]
       }
+      feedback: {
+        Row: FeedbackRow
+        Insert: {
+          id?: string
+          user_id: string
+          feedback_type?: string | null
+          message: string
+          created_at?: string
+          status?: FeedbackStatus
+          admin_notes?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          feedback_type?: string | null
+          message?: string
+          created_at?: string
+          status?: FeedbackStatus
+          admin_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'feedback_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       /** One row per climb, window normalised (see `ClimbSessionRow`). */
@@ -410,6 +441,7 @@ export interface Database {
     Enums: {
       visibility: Visibility
       friendship_status: FriendshipStatus
+      feedback_status: FeedbackStatus
     }
     CompositeTypes: Record<string, never>
   }
