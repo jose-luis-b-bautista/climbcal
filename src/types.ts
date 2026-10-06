@@ -34,6 +34,16 @@ export type GymRow = {
   created_at: string
 }
 
+export type FeedbackRow = {
+  id: string
+  user_id: string
+  feedback_type: string
+  message: string
+  created_at: string
+  status: 'new' | 'in_progress' | 'resolved' | 'dismissed'
+  admin_notes: string
+};
+
 export type ClimbRow = {
   id: string
   user_id: string

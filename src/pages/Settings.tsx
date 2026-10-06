@@ -9,6 +9,7 @@ import {
   inputClass,
   primaryButtonClass,
   secondaryButtonClass,
+  textareaClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { normaliseUsername } from '../lib/format'
@@ -27,6 +28,13 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+
+    // Feedback form state
+  const [feedbackType, setFeedbackType] = useState('')
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+  const [submittingFeedback, setSubmittingFeedback] = useState(false)
+  const [feedbackError, setFeedbackError] = useState<string | null>(null)
+  const [feedbackSent, setFeedbackSent] = useState(false)
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -66,6 +74,40 @@ export default function Settings() {
 
     await refreshProfile()
     setSaved(true)
+  }
+
+  const handleFeedbackSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setFeedbackError(null)
+
+    if (!userId) {
+      setFeedbackError('You need to be signed in.')
+      return
+    }
+
+    if (!feedbackMessage.trim()) {
+      setFeedbackError('Please write something before submitting.')
+      return
+    }
+
+    setSubmittingFeedback(true)
+    const { error: feedbackError } = await supabase.from('feedback').insert({
+      user_id: userId,
+      feedback_type: feedbackType || null,
+      message: feedbackMessage.trim(),
+      status: 'new',
+      admin_notes: null,
+    })
+    setSubmittingFeedback(false)
+
+    if (feedbackError) {
+      setFeedbackError(feedbackError.message)
+      return
+    }
+
+    setFeedbackMessage('')
+    setFeedbackType('')
+    setFeedbackSent(true)
   }
 
   return (
@@ -174,6 +216,48 @@ export default function Settings() {
         ) : (
           <Notice>Choose a username first — your link is built from it.</Notice>
         )}
+      </Card>
+
+      <Card>
+        <SectionHeading
+          title="Feedback"
+          hint="Help us improve climbcal — send us your thoughts, bug reports, or feature ideas."
+        />
+
+        {feedbackError ? <ErrorBanner message={feedbackError} onDismiss={() => setFeedbackError(null)} /> : null}
+        {feedbackSent ? <Notice tone="success">Thanks — we'll get back to you.</Notice> : null}
+
+        <form onSubmit={handleFeedbackSubmit} className="mt-3 space-y-4">
+          <Field label="Category" htmlFor="settings-feedback-type">
+            <select
+              id="settings-feedback-type"
+              value={feedbackType}
+              onChange={(event) => setFeedbackType(event.target.value)}
+              className={inputClass}
+            >
+              <option value="">General</option>
+              <option value="bug">Bug</option>
+              <option value="feature">Feature request</option>
+              <option value="ux">UX / usability</option>
+            </select>
+          </Field>
+
+          <Field label="Message" htmlFor="settings-feedback-message">
+            <textarea
+              id="settings-feedback-message"
+              rows={4}
+              required
+              value={feedbackMessage}
+              onChange={(event) => setFeedbackMessage(event.target.value)}
+              placeholder="Tell us what's on your mind…"
+              className={textareaClass}
+            />
+          </Field>
+
+          <button type="submit" disabled={submittingFeedback || !feedbackMessage.trim()} className={primaryButtonClass}>
+            {submittingFeedback ? 'Sending…' : 'Send feedback'}
+          </button>
+        </form>
       </Card>
 
       <Card>

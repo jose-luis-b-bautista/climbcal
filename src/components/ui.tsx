@@ -301,8 +301,8 @@ export function Field({
 export const inputClass =
   'w-full rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-900/50'
 
-/** `<select>` flavour of {@link inputClass}: the browser arrow is turned off (it
- * sits hard against the right edge), so `Select` can place its own chevron. */
+export const textareaClass = 'w-full rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-900/50'
+
 export const selectClass = cx(inputClass, 'appearance-none pr-9')
 
 /**

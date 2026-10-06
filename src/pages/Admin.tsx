@@ -26,7 +26,7 @@ import { ADMIN_PASSWORD, isAdminUnlocked, lockAdmin, unlockAdmin } from '../lib/
 import { addDays, toISODate } from '../lib/date'
 import { GYM_REGIONS, groupGymsByRegion } from '../lib/format'
 import { supabase } from '../lib/supabase'
-import type { Gym } from '../types'
+import type { FeedbackRow, Gym } from '../types'
 
 /** How far ahead the "coming up" stat looks. */
 const HORIZON_DAYS = 21
@@ -296,6 +296,141 @@ function GymManager() {
   )
 }
 
+/**
+ * Feedback manager: list all submissions, filter by status,
+ * and update status / add admin notes.
+ */
+function FeedbackManager() {
+  const [items, setItems] = useState<FeedbackRow[]>([])
+  const [filter, setFilter] = useState<FeedbackRow['status'] | 'all'>('all')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    const load = async () => {
+      const { data, error: err } = await supabase
+        .from('feedback')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!active) return
+
+      if (err) {
+        setError(err.message)
+        setLoading(false)
+        return
+      }
+
+      setItems((data ?? []) as FeedbackRow[])
+      setLoading(false)
+    }
+
+    void load()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const updateStatus = async (id: string, status: FeedbackRow['status']) => {
+    const { error: err } = await supabase.from('feedback').update({ status }).eq('id', id)
+    if (err) {
+      setError(err.message)
+      return
+    }
+    setItems(prev => prev.map(item => (item.id === id ? { ...item, status } : item)))
+  }
+
+  const filtered = filter === 'all' ? items : items.filter(item => item.status === filter)
+
+  const statusLabel: Record<FeedbackRow['status'], string> = {
+    new: 'New',
+    in_progress: 'In progress',
+    resolved: 'Resolved',
+    dismissed: 'Dismissed',
+  }
+
+  const statusOptions: Array<FeedbackRow['status'] | 'all'> = [
+    'all', 'new', 'in_progress', 'resolved', 'dismissed',
+  ]
+
+  return (
+    <Card>
+      <SectionHeading
+        title="Feedback"
+        hint="User-submitted feedback — sorted newest first."
+      />
+
+      {error ? <ErrorBanner message={error} /> : null}
+
+      <div className="mb-3 flex items-center gap-3">
+        <label className="text-sm font-medium text-zinc-300" htmlFor="admin-feedback-filter">
+          Status
+        </label>
+        <select
+          id="admin-feedback-filter"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value as FeedbackRow['status'] | 'all')}
+          className={inputClass}
+        >
+          {statusOptions.map(option => (
+            <option key={option} value={option}>
+              {option === 'all' ? 'All' : statusLabel[option]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loading ? (
+        <p className="py-4 text-sm text-zinc-400">Loading feedback…</p>
+      ) : filtered.length === 0 ? (
+        <p className="py-4 text-sm text-zinc-400">No feedback to show.</p>
+      ) : (
+        <ul className="divide-y divide-zinc-800/80">
+          {filtered.map(item => (
+            <li key={item.id} className="space-y-2 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-zinc-200">
+                  {item.feedback_type ? `#${item.feedback_type}` : 'General'}
+                </span>
+                <span className="text-xs text-zinc-500">
+                  {new Date(item.created_at).toLocaleString()}
+                </span>
+              </div>
+
+              <p className="text-sm text-zinc-300">{item.message}</p>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs font-medium text-zinc-400" htmlFor={`feedback-status-${item.id}`}>
+                  Status
+                </label>
+                <select
+                  id={`feedback-status-${item.id}`}
+                  value={item.status}
+                  onChange={(event) => void updateStatus(item.id, event.target.value as FeedbackRow['status'])}
+                  className={inputClass}
+                >
+                  {statusOptions.filter(o => o !== 'all').map(option => (
+                    <option key={option} value={option}>
+                      {statusLabel[option]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {item.admin_notes ? (
+                <p className="text-xs text-zinc-500">Admin notes: {item.admin_notes}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(isAdminUnlocked)
   const [password, setPassword] = useState('')
@@ -366,6 +501,7 @@ export default function Admin() {
       </Notice>
 
       <AdminStats />
+      <FeedbackManager />
       <GymManager />
     </div>
   )
