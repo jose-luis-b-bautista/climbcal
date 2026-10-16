@@ -2,12 +2,12 @@
  * Guards the mobile behaviour that lives in the markup and the stylesheet:
  *
  *  1. iOS Safari zooms the page whenever a focused form control renders below
- *     16px — tapping the search bar (or any session field) blew the layout up.
+ *     16px - tapping the search bar (or any session field) blew the layout up.
  *     index.css sizes form controls at a hard 16px for touch pointers.
  *  2. The viewport meta must keep letting people pinch-zoom; `maximum-scale`
  *     would be the wrong way to stop the focus zoom.
  *
- * Vitest stubs CSS imports, so the sources are read from disk — the same trick
+ * Vitest stubs CSS imports, so the sources are read from disk - the same trick
  * as in theme.test.ts.
  */
 import { readFileSync } from 'node:fs'

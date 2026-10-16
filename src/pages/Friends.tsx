@@ -225,7 +225,7 @@ export default function Friends() {
               title="Your climber friends"
               hint={
                 friends.length === 0
-                  ? 'No friends yet — search below to add someone.'
+                  ? 'No friends yet - search below to add someone.'
                   : `${friends.length} friend${friends.length === 1 ? '' : 's'}.`
               }
             >

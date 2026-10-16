@@ -58,7 +58,7 @@ export type ClimbRow = {
   /** Gym slot 1: a listed gym or a typed `custom_gym_name`; both may be null. */
   gym_id: string | null
   custom_gym_name: string | null
-  /** Optional alternative gym slot 2 — rendered as "Either X or Y". */
+  /** Optional alternative gym slot 2 - rendered as "Either X or Y". */
   gym_id_2: string | null
   custom_gym_name_2: string | null
   note: string | null
@@ -78,7 +78,7 @@ export type FriendshipRow = {
 /**
  * Row of the `climb_sessions` view: one climb with its window flattened onto the
  * canonical minutes-past-midnight scale (`public.window_minutes`).
- * `duration_minutes` is notional for a slot-only window — show it only when
+ * `duration_minutes` is notional for a slot-only window - show it only when
  * `is_exact_window` is true.
  */
 export type ClimbSessionRow = {
@@ -87,7 +87,7 @@ export type ClimbSessionRow = {
   climb_date: string
   /** Monday of the week containing `climb_date` (matches `lib/date.startOfWeek`). */
   week_start: string
-  /** 1 = Monday … 7 = Sunday (`isodow`) — the `DAY_NAMES_SHORT` order. */
+  /** 1 = Monday … 7 = Sunday (`isodow`) - the `DAY_NAMES_SHORT` order. */
   iso_dow: number
   start_time: string | null
   end_time: string | null
@@ -143,7 +143,7 @@ export type ClimberTotalsRow = {
   sessions: number
   /** Sessions on or before today. */
   sessions_past: number
-  /** Sessions after today — a climb row is a plan, so this is normal. */
+  /** Sessions after today - a climb row is a plan, so this is normal. */
   sessions_upcoming: number
   active_days: number
   active_weeks: number
@@ -157,7 +157,7 @@ export type ClimberTotalsRow = {
   /** Exact-window minutes still to come (planned sessions). */
   exact_minutes_upcoming: number
   sessions_with_note: number
-  /** Distinct named gyms — the 'Not sure yet' bucket is excluded. */
+  /** Distinct named gyms - the 'Not sure yet' bucket is excluded. */
   gyms_visited: number
   regions_visited: number
 }
@@ -168,7 +168,7 @@ export type ClimberGymStatsRow = {
   gym_name: string
   /** `gyms.region`, with untagged gyms (and typed names) folded into `'Other'`. */
   region: string
-  /** False on the 'Not sure yet' bucket — filter it out for a gyms-only chart. */
+  /** False on the 'Not sure yet' bucket - filter it out for a gyms-only chart. */
   is_named_gym: boolean
   sessions: number
   days: number
@@ -181,8 +181,8 @@ export type ClimberGymStatsRow = {
 /**
  * One session on a shared (`/u/<username>`) profile.
  *
- * The gyms arrive pre-resolved as names — the public payload never exposes
- * `gym_id`s — and there is deliberately **no note**: the share link shows time
+ * The gyms arrive pre-resolved as names - the public payload never exposes
+ * `gym_id`s - and there is deliberately **no note**: the share link shows time
  * and place only (see `20260924000000_public_profile_share.sql`).
  */
 export type SharedProfileSession = {

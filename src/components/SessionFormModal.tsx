@@ -77,7 +77,7 @@ export function SessionFormModal({
           {group.gyms.map((gym) => (
             <option key={gym.id} value={gym.id}>
               {gym.name}
-              {gym.city ? ` — ${gym.city}` : ''}
+              {gym.city ? ` - ${gym.city}` : ''}
             </option>
           ))}
           {group.region === OTHER_REGION_LABEL ? (
@@ -265,7 +265,7 @@ export function SessionFormModal({
             <Field
               label="Gym name"
               htmlFor="session-custom-gym"
-              hint="No need to add it to the list — a one-off name is fine."
+              hint="No need to add it to the list - a one-off name is fine."
             >
               <input
                 id="session-custom-gym"
@@ -315,7 +315,7 @@ export function SessionFormModal({
             </div>
           ) : (
             <button type="button" className={ghostButtonClass} onClick={() => setSecondGymOpen(true)}>
-              + Add a second gym — show it as “either”
+              + Add a second gym - show it as “either”
             </button>
           )}
 

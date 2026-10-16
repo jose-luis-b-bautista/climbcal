@@ -6,7 +6,7 @@ import { Card, Disclosure, cx, ghostButtonClass, subTextClass } from './ui'
 
 interface DaySessionsProps {
   kind: 'today' | 'tomorrow'
-  /** The day being shown — already resolved to today or tomorrow. */
+  /** The day being shown - already resolved to today or tomorrow. */
   date: Date
   entries: ClimbEntry[]
   userId: string | null
@@ -19,7 +19,7 @@ interface DaySessionsProps {
 /**
  * Single-day summary; the calendar page stacks Today and Tomorrow over the week.
  * Each card folds away on its own and starts closed, so the week grid leads and
- * a day opens on demand — the label, the date and the summary stay either way.
+ * a day opens on demand - the label, the date and the summary stay either way.
  */
 export function DaySessions({
   kind,
@@ -55,7 +55,7 @@ export function DaySessions({
     loading || entries.length === 0
       ? null
       : ownCount === 0
-        ? 'Your friends are out — add your own session to join them.'
+        ? 'Your friends are out - add your own session to join them.'
         : friendCount === 0
           ? 'No friends have posted anything, so this one is all yours.'
           : null

@@ -35,7 +35,7 @@ export function graphemes(value: string): string[] {
   return [...graphemeSegmenter.segment(value)].map((piece) => piece.segment)
 }
 
-/** A letter or a digit — the only characters worth pairing up into initials. */
+/** A letter or a digit - the only characters worth pairing up into initials. */
 const INITIAL_LETTER = /[\p{L}\p{N}]/u
 
 /**

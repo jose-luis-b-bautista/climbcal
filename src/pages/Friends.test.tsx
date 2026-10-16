@@ -1,5 +1,5 @@
 /**
- * Friends page — the "Find climbers" section: the list of newest public climbers
+ * Friends page - the "Find climbers" section: the list of newest public climbers
  * to add, the username search (clearing the box drops the results) and how a
  * sent request reads in both.
  */
@@ -148,14 +148,14 @@ describe('<Friends /> find climbers', () => {
   it('clears the previous results when the search box is emptied', async () => {
     renderFriends()
 
-    // 'sam' is private, so he can only be found by searching — which is what
+    // 'sam' is private, so he can only be found by searching - which is what
     // tells the results apart from the suggestions list.
     await searchFor('sam')
     expect(await screen.findByText('@sam')).toBeTruthy()
     expect(screen.queryByText('Newest climbers to add')).toBeNull()
 
     // The field's own clear (×) only empties the input, so the stale climber
-    // has to go with it — and no "no climbers matched" note either.
+    // has to go with it - and no "no climbers matched" note either.
     fireEvent.change(screen.getByLabelText('Search climbers by username'), {
       target: { value: '' },
     })
@@ -190,11 +190,11 @@ describe('<Friends /> find climbers', () => {
     const toggle = within(heading).getByRole('button')
     const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '')
 
-    // Closed by default — and with no friendships in this fixture the body is the
+    // Closed by default - and with no friendships in this fixture the body is the
     // empty state rather than rows.
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     expect(panel?.hasAttribute('hidden')).toBe(true)
-    expect(screen.getByText(/No friends yet — search below to add someone/)).toBeTruthy()
+    expect(screen.getByText(/No friends yet - search below to add someone/)).toBeTruthy()
 
     fireEvent.click(toggle)
 

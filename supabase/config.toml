@@ -1,5 +1,5 @@
 # Minimal config so `supabase link` / `supabase db push` work for this repo.
-# Local `supabase start` (Docker) is optional — the hosted project is enough.
+# Local `supabase start` (Docker) is optional - the hosted project is enough.
 
 project_id = "climbcal"
 

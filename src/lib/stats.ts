@@ -1,6 +1,6 @@
 /**
  * Pure helpers for the stats page, kept free of React so they can be unit-tested
- * — the same split `lib/group.ts` uses for the feed.
+ * - the same split `lib/group.ts` uses for the feed.
  *
  * Everything here works off the read-only views in
  * `supabase/migrations/20260923000000_stats_views.sql`: `climber_daily_activity`
@@ -9,7 +9,7 @@
 import type { ClimberDailyActivityRow, ClimberGymStatsRow } from '../types'
 import { addDays, startOfWeek, toISODate } from './date'
 
-/** Heatmap columns: 13 weeks — a quarter of a year — ending with the current one. */
+/** Heatmap columns: 13 weeks - a quarter of a year - ending with the current one. */
 export const HEATMAP_WEEKS = 13
 
 /**
@@ -38,7 +38,7 @@ export interface HeatmapDay {
   date: string
   sessions: number
   exactMinutes: number
-  /** After today — planned rather than climbed. */
+  /** After today - planned rather than climbed. */
   planned: boolean
 }
 
@@ -65,7 +65,7 @@ export function activityByDate(
   return byDate
 }
 
-/** Monday of the first heatmap column — also the query's `since` date. */
+/** Monday of the first heatmap column - also the query's `since` date. */
 export function heatmapStartDate(today: Date, weeks = HEATMAP_WEEKS): string {
   return toISODate(addDays(startOfWeek(today), -7 * (weeks - 1)))
 }
@@ -73,7 +73,7 @@ export function heatmapStartDate(today: Date, weeks = HEATMAP_WEEKS): string {
 /**
  * The heatmap grid: `weeks` Monday-first columns ending with the week holding
  * `today`, so the current week is the last column. Days after today keep their
- * own flag instead of pretending to be empty — a climb row is a plan.
+ * own flag instead of pretending to be empty - a climb row is a plan.
  */
 export function buildHeatmap(
   today: Date,
@@ -107,7 +107,7 @@ export function buildHeatmap(
 
 /**
  * Gym breakdown order: most sessions first, then alphabetical for a stable scan,
- * with the unnamed bucket ('Not sure yet') always last — it is not a gym, and it
+ * with the unnamed bucket ('Not sure yet') always last - it is not a gym, and it
  * should not push one down the list just because it is large.
  */
 export function rankGymStats(rows: ClimberGymStatsRow[]): ClimberGymStatsRow[] {

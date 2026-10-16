@@ -1,5 +1,5 @@
 /**
- * The public share page — `/u/<username>`.
+ * The public share page - `/u/<username>`.
  *
  * This is the one surface reachable **without a session** (see `App.tsx`): the
  * whole point of a share link is that someone who has not signed up can open it,
@@ -149,7 +149,7 @@ export default function SharedProfile() {
           />
           <p className="text-sm text-zinc-400">
             Only climbers who set their profile to <strong>Public</strong> can be shared with a
-            link — a private week is visible to accepted friends only.
+            link - a private week is visible to accepted friends only.
           </p>
           <div className="mt-4">
             <JoinActions loginHref={loginHref} />
@@ -184,7 +184,7 @@ export default function SharedProfile() {
 
       {isOwner ? (
         <Notice>
-          You are looking at your public page — this is what anyone with the link sees.
+          You are looking at your public page - this is what anyone with the link sees.
         </Notice>
       ) : null}
 
@@ -312,7 +312,7 @@ export default function SharedProfile() {
           />
           <JoinActions loginHref={loginHref} />
           <p className="mt-3 text-xs text-zinc-500">
-            A shared link shows the time and the gym only — never session notes.
+            A shared link shows the time and the gym only - never session notes.
           </p>
         </Card>
       )}

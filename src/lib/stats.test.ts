@@ -4,7 +4,7 @@
  *
  * Dates are fixed literals rather than "now", so the 13-week window is asserted
  * exactly. 2026-09-16 is a Wednesday, so the current column (Mon 14 – Sun 20)
- * still contains days that are "planned" — the window always ends with the week
+ * still contains days that are "planned" - the window always ends with the week
  * holding today, which is why a Sunday pin would show nothing ahead.
  */
 import { describe, expect, it } from 'vitest'
@@ -56,7 +56,7 @@ function gymRow(overrides: Partial<ClimberGymStatsRow>): ClimberGymStatsRow {
 describe('heatLevel', () => {
   it('is binary: any sessions at all is the one shaded state', () => {
     // Two sessions in one day are rare, so the grid answers "did I climb that
-    // day?" — the exact count lives in the day's label, not in the shade.
+    // day?" - the exact count lives in the day's label, not in the shade.
     expect([0, 1, 2, 5, 9].map(heatLevel)).toEqual([0, 1, 1, 1, 1])
     expect(heatLevel(-1)).toBe(0)
   })

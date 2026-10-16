@@ -65,7 +65,7 @@ export default function Settings() {
 
     if (saveError) {
       if (saveError.code === '23505') {
-        setError('That username is already taken — try another one.')
+        setError('That username is already taken - try another one.')
         return
       }
       setError(saveError.message)
@@ -202,7 +202,7 @@ export default function Settings() {
             <p className="mt-2 text-sm text-zinc-400">
               {profile.visibility === 'public' ? (
                 <>
-                  Anyone with this link sees the time and gym of each session — never your notes.
+                  Anyone with this link sees the time and gym of each session - never your notes.
                   You can stop sharing by switching to Private.
                 </>
               ) : (
@@ -214,18 +214,18 @@ export default function Settings() {
             </p>
           </>
         ) : (
-          <Notice>Choose a username first — your link is built from it.</Notice>
+          <Notice>Choose a username first - your link is built from it.</Notice>
         )}
       </Card>
 
       <Card>
         <SectionHeading
           title="Feedback"
-          hint="Help us improve climbcal — send us your thoughts, bug reports, or feature ideas."
+          hint="Help us improve climbcal - send us your thoughts, bug reports, or feature ideas."
         />
 
         {feedbackError ? <ErrorBanner message={feedbackError} onDismiss={() => setFeedbackError(null)} /> : null}
-        {feedbackSent ? <Notice tone="success">Thanks — we'll get back to you.</Notice> : null}
+        {feedbackSent ? <Notice tone="success">Thanks - we'll get back to you.</Notice> : null}
 
         <form onSubmit={handleFeedbackSubmit} className="mt-3 space-y-4">
           <Field label="Category" htmlFor="settings-feedback-type">

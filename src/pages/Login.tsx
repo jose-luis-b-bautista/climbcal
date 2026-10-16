@@ -23,7 +23,7 @@ export default function Login() {
   const [searchParams] = useSearchParams()
   // A share link (`/u/<username>`) sends visitors here with `?next=` so they can
   // come back to it, and the email-confirmation round trip returns to this same
-  // URL — which is why the param is read from the query, not from router state.
+  // URL - which is why the param is read from the query, not from router state.
   const nextParam = searchParams.get('next')
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
@@ -84,7 +84,7 @@ export default function Login() {
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100">climbcal</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          See who is climbing, where, and when — this week.
+          See who is climbing, where, and when - this week.
         </p>
       </div>
 
@@ -92,7 +92,7 @@ export default function Login() {
         {confirmationSent ? (
           <div className="space-y-3">
             <Notice tone="success">
-              Check your inbox — confirm your email address, then come back and sign in.
+              Check your inbox - confirm your email address, then come back and sign in.
             </Notice>
             <button
               type="button"

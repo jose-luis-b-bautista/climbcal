@@ -6,7 +6,7 @@ import { climbGymNames } from './format'
  *
  * Nothing is contrast-corrected here. Several of these pairs are low-contrast by
  * WCAG (Rock On Boulder #000000 on #FF007F is fine, Good Climbs PH #0F172A on
- * #2A52BE is not), and that is deliberate for now — what is on screen is the
+ * #2A52BE is not), and that is deliberate for now - what is on screen is the
  * palette verbatim, so it can be edited in one place and seen immediately.
  * `gymColors.test.ts` checks the mapping and that both colours reach the cell
  * untouched.

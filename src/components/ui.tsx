@@ -74,7 +74,7 @@ export function SectionHeading({
  * The label stays a real heading at the level the page needs, and the toggle is
  * a real `<button>` carrying `aria-expanded` / `aria-controls`, so it is
  * keyboard-reachable and announced as expanded. The whole header row is the
- * click target — the date, the hint and the count toggle it too. The `hint` and
+ * click target - the date, the hint and the count toggle it too. The `hint` and
  * `action` sit outside the panel on purpose: they stay on screen when the body
  * is folded, so a closed section still says what it is and how much it holds.
  */
@@ -95,7 +95,7 @@ export function Disclosure({
    * still reads as just the label (a date beside "Today", say).
    */
   meta?: ReactNode
-  /** Line under the label — kept visible while the body is folded. */
+  /** Line under the label - kept visible while the body is folded. */
   hint?: ReactNode
   /** Right-hand control in the header row, e.g. a count. */
   action?: ReactNode
@@ -113,7 +113,7 @@ export function Disclosure({
 
   return (
     <div className={className}>
-      {/* The whole header row toggles, not just the label — the date, the hint
+      {/* The whole header row toggles, not just the label - the date, the hint
           and the count are all part of the target. The <button> stays the
           accessible control (keyboard + screen reader); its activation bubbles
           up to this handler. Anything interactive added to `action` later would

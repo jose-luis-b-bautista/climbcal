@@ -25,7 +25,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
   }
 }
 
-/** A high surrogate or low surrogate that lost its partner — the "�" symptom. */
+/** A high surrogate or low surrogate that lost its partner - the "�" symptom. */
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
 
 describe('normaliseUsername', () => {
@@ -123,7 +123,7 @@ describe('graphemes', () => {
       const fresh = await import('./format')
       const parts = fresh.graphemes('a🧗b')
 
-      // The fallback is code points, so the skin-tone case degrades — but no
+      // The fallback is code points, so the skin-tone case degrades - but no
       // surrogate half is ever handed to the browser.
       expect(parts).toEqual(['a', '🧗', 'b'])
       expect(LONE_SURROGATE.test(parts.join(''))).toBe(false)

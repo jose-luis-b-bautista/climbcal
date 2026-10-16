@@ -1,6 +1,6 @@
 /**
  * The session dialog is where gyms get picked, so the dropdown has to stay
- * separated by island region — with an "Other" group that carries the free-text
+ * separated by island region - with an "Other" group that carries the free-text
  * option, so a one-off gym is always reachable.
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'

@@ -21,7 +21,7 @@ interface EntryOptions {
   start?: string | null
   /** Free-typed gym (slot 1). */
   gym?: string | null
-  /** Free-typed gym (slot 2) — makes the session an "either". */
+  /** Free-typed gym (slot 2) - makes the session an "either". */
   gym2?: string | null
   /** Linked gym row (slot 1) instead of a typed name. */
   linkedGym?: string | null

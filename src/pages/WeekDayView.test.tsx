@@ -212,17 +212,17 @@ describe('<Week /> day views', () => {
     expect(screen.getByText('Starts in 1h')).toBeTruthy()
     expect(screen.getAllByText('Opening – Closing').length).toBeGreaterThan(0)
 
-    // The day summary is the social signal only — the session count and the
+    // The day summary is the social signal only - the session count and the
     // day's time span are gone (the cards below carry the timings).
     expect(screen.queryByText(/\d+ sessions?/)).toBeNull()
     expect(screen.getAllByText('1 friend climbing').length).toBeGreaterThan(0)
 
     // The nudge is a desktop-only aside (hidden below `sm`).
     expect(
-      screen.getByText('Your friends are out — add your own session to join them.').className,
+      screen.getByText('Your friends are out - add your own session to join them.').className,
     ).toContain('hidden')
 
-    // Tomorrow's card is on the page too — there is no tab to reach it.
+    // Tomorrow's card is on the page too - there is no tab to reach it.
     expect(screen.getAllByText('Riverside Boulders').length).toBe(1)
 
     // The grid covers Mon–Sun with an add button per day, and the view switcher

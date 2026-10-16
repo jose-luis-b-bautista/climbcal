@@ -1,5 +1,5 @@
 /**
- * The hidden admin dashboard — reachable only by typing `/admin` (nothing links
+ * The hidden admin dashboard - reachable only by typing `/admin` (nothing links
  * to it) and gated by a shared password.
  *
  * The password is a convenience lock, not a security boundary: it ships in the
@@ -42,7 +42,7 @@ function Stat({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
       <p className="text-xs tracking-wide text-zinc-500 uppercase">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-zinc-100">{value ?? '—'}</p>
+      <p className="mt-1 text-2xl font-semibold text-zinc-100">{value ?? '-'}</p>
     </div>
   )
 }
@@ -267,7 +267,7 @@ function GymManager() {
                   <li key={gym.id} className="flex items-center justify-between gap-3 py-2">
                     <span className="text-sm text-zinc-200">
                       {gym.name}
-                      {gym.city ? <span className="text-zinc-500"> — {gym.city}</span> : null}
+                      {gym.city ? <span className="text-zinc-500"> - {gym.city}</span> : null}
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <button
@@ -360,7 +360,7 @@ function FeedbackManager() {
     <Card>
       <SectionHeading
         title="Feedback"
-        hint="User-submitted feedback — sorted newest first."
+        hint="User-submitted feedback - sorted newest first."
       />
 
       {error ? <ErrorBanner message={error} /> : null}
@@ -494,8 +494,8 @@ export default function Admin() {
       />
 
       <Notice>
-        Hidden route: nothing links here. The password is only a convenience lock — anyone can read
-        it out of the bundle — so the real gate is <code>profiles.is_admin</code> + RLS. Promote
+        Hidden route: nothing links here. The password is only a convenience lock - anyone can read
+        it out of the bundle - so the real gate is <code>profiles.is_admin</code> + RLS. Promote
         yourself once in the SQL editor:{' '}
         <code>update public.profiles set is_admin = true where username = '&lt;you&gt;';</code>
       </Notice>

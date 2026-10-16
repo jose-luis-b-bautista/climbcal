@@ -65,7 +65,7 @@ function OnboardingForm({ initialProfile }: { initialProfile: Profile | null }) 
 
     if (saveError) {
       if (saveError.code === '23505') {
-        setError('That username is already taken — try another one.')
+        setError('That username is already taken - try another one.')
         return
       }
       setError(saveError.message)

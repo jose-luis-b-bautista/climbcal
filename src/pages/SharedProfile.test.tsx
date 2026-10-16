@@ -4,7 +4,7 @@
  * session, a private/unknown username reads as "not shared", the sign-up link
  * carries the visitor back with `?next=`, and the owner gets a copy-link control.
  *
- * The Supabase client is mocked — including `rpc('shared_profile', …)`, which is
+ * The Supabase client is mocked - including `rpc('shared_profile', …)`, which is
  * the only thing the page reads through.
  */
 import type { Session } from '@supabase/supabase-js'
@@ -86,7 +86,7 @@ function renderSharePage(path = '/u/mara') {
 describe('<SharedProfile />', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    // A Sunday, so "this week" is Mon 2026-09-14 – Sun 2026-09-20 — the week
+    // A Sunday, so "this week" is Mon 2026-09-14 – Sun 2026-09-20 - the week
     // containing the fixture session on the Wednesday.
     vi.setSystemTime(new Date('2026-09-20T19:00:00'))
     state.session = null

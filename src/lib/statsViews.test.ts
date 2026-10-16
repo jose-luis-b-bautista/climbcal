@@ -3,7 +3,7 @@
  * `supabase/migrations/20260923000000_stats_views.sql` and as row types in
  * `src/types.ts`. Nothing imports both, and a missing row type only shows up as
  * an `undefined` at runtime, so this test reads the two files and fails when they
- * drift — the same trick `slots.test.ts` uses on the window migration.
+ * drift - the same trick `slots.test.ts` uses on the window migration.
  *
  * It also guards the two labels that are duplicated in SQL on purpose: the
  * unnamed-gym bucket (`gymNameOf`) and the untagged-region bucket

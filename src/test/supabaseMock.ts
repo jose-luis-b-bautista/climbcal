@@ -91,7 +91,7 @@ export function createSupabaseMock(
   resolver: MockResolver,
   /**
    * The session `getSession()` reports. A getter lets one mock serve several
-   * tests — a share page is rendered for a signed-out visitor and for an owner
+   * tests - a share page is rendered for a signed-out visitor and for an owner
    * from the same module, so the value has to be readable per test.
    */
   session: Session | null | (() => Session | null) = makeTestSession(),
@@ -106,7 +106,7 @@ export function createSupabaseMock(
     const context = (): MockQueryContext => ({ table, filters, op })
 
     /**
-     * PostgREST with `head: true` returns no rows, just a count — the dashboard
+     * PostgREST with `head: true` returns no rows, just a count - the dashboard
      * stats rely on that, so the mock answers the same way.
      */
     const resolve = (): MockResult => {

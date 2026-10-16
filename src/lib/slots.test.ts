@@ -1,7 +1,7 @@
 /**
  * The eight time-of-day slots exist twice: here for the app, and in SQL for the
  * check constraint that guards the same rule on `climbs`. This test reads the
- * migration and fails if the two ever drift apart — the same trick
+ * migration and fails if the two ever drift apart - the same trick
  * `theme.test.ts` uses on `index.css`.
  */
 import { readFileSync } from 'node:fs'

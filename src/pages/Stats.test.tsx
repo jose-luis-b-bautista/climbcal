@@ -193,7 +193,7 @@ describe('<Stats />', () => {
     // A real tab, not a hidden route.
     expect(await screen.findByRole('link', { name: 'Stats' })).toBeTruthy()
     expect(
-      await screen.findByText('Your climbing so far — every session you have posted.'),
+      await screen.findByText('Your climbing so far - every session you have posted.'),
     ).toBeTruthy()
     // The cards only exist once the totals row has landed.
     await screen.findByText('On the wall')
@@ -202,7 +202,7 @@ describe('<Stats />', () => {
     expect(statCard('Sessions')).toContain('+2 planned')
     expect(statCard('Active days')).toContain('4')
     expect(statCard('Active days')).toContain('over 3 weeks')
-    // 270 exact minutes, and 90 average — never the notional slot windows.
+    // 270 exact minutes, and 90 average - never the notional slot windows.
     expect(statCard('On the wall')).toContain('4h 30m')
     expect(statCard('Usual session')).toContain('1h 30m')
     expect(statCard('Gyms')).toContain('2')
@@ -310,7 +310,7 @@ describe('<Stats />', () => {
     renderStats('/stats?climber=99999999-9999-9999-9999-999999999999')
 
     expect(
-      await screen.findByText('Your climbing so far — every session you have posted.'),
+      await screen.findByText('Your climbing so far - every session you have posted.'),
     ).toBeTruthy()
     const picker = (await screen.findByLabelText('Climber')) as HTMLSelectElement
     expect(picker.value).toBe(TEST_USER_ID)

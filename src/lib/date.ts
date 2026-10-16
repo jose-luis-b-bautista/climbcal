@@ -108,7 +108,7 @@ export function formatShortDate(value: string | Date): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-/** e.g. "Wed, Sep 17" — used for the feed and day headers. */
+/** e.g. "Wed, Sep 17" - used for the feed and day headers. */
 export function formatMediumDate(value: string | Date): string {
   const date = typeof value === 'string' ? parseISODate(value) : value
   return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
@@ -145,7 +145,7 @@ export function clockMinutes(time: string | null | undefined): number | null {
 /**
  * Canonical minutes past midnight for one end of a window: the clock time when
  * there is one, else the slot label's position (see `lib/slots`). Used for
- * ordering and validation only — never for display.
+ * ordering and validation only - never for display.
  */
 export function windowMinutes(
   time: string | null | undefined,

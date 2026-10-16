@@ -3,7 +3,7 @@
  * either end of a session window ("Opening", "Before Dinner", …).
  *
  * `minutes` is a canonical position on the day (minutes past midnight) used
- * *only* to order and validate windows — it is never shown to a user, because
+ * *only* to order and validate windows - it is never shown to a user, because
  * a label like "Closing" means whatever the gym means by it. The same scale
  * lives in SQL as `public.window_minutes(time, text)` (see
  * `supabase/migrations/20260920000100_session_windows.sql`); `slots.test.ts`

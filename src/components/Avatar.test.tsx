@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 import { Avatar } from './ui'
 import type { Profile } from '../types'
 
-/** A high surrogate or low surrogate that lost its partner — the "�" symptom. */
+/** A high surrogate or low surrogate that lost its partner - the "�" symptom. */
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
 
 function profile(fields: Partial<Profile>): Profile {

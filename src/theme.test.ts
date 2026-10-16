@@ -3,7 +3,7 @@
  *  1. the colour tokens in index.css keep readable contrast in both themes,
  *  2. the pre-paint script in index.html stays in step with the toggle.
  *
- * The token values live in CSS, so the CSS is parsed instead of duplicated —
+ * The token values live in CSS, so the CSS is parsed instead of duplicated -
  * changing a colour here without checking contrast fails the test.
  */
 import { readFileSync } from 'node:fs'
@@ -56,7 +56,7 @@ const EXTRA_COLORS: Record<string, string> = { white: '#ffffff' }
 
 function resolve(tokens: Record<string, string>, name: string): string {
   const value = tokens[name] ?? EXTRA_COLORS[name]
-  if (!value) throw new Error(`Unknown colour token "${name}" — check index.css`)
+  if (!value) throw new Error(`Unknown colour token "${name}" - check index.css`)
   return value
 }
 

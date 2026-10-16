@@ -103,7 +103,7 @@ vi.mock('../lib/supabase', async () => {
     created_by: null,
     created_at: stamp,
   })
-  // 'BHive' has sessions in the feed, 'Edge Climb' has none — both are options.
+  // 'BHive' has sessions in the feed, 'Edge Climb' has none - both are options.
   const gyms = [
     gym('gym-space', 'Boulder Space'),
     gym('gym-hive', 'BHive'),
@@ -188,7 +188,7 @@ describe('<Feed />', () => {
     // picks the gym cell rather than the gym filter's <option> of the same name.
     expect(await screen.findByText('Boulder Space', { selector: 'span' })).toBeTruthy()
     const hiveCell = screen.getByText('BHive', { selector: 'span' })
-    // Verbatim colours: #3174b4 fills the cell, #fbfcf7 is the ink — no border.
+    // Verbatim colours: #3174b4 fills the cell, #fbfcf7 is the ink - no border.
     expect(hiveCell.getAttribute('style')).toContain('rgb(49, 116, 180)')
     expect(hiveCell.getAttribute('style')).toContain('rgb(251, 252, 247)')
 
@@ -214,7 +214,7 @@ describe('<Feed />', () => {
     expect((await screen.findAllByText('Mara')).length).toBeGreaterThan(0)
     expect(screen.getAllByText('@mara').length).toBeGreaterThan(0)
 
-    // Noor has no display name, so the handle is the name — printed once.
+    // Noor has no display name, so the handle is the name - printed once.
     expect(screen.getByText('@noor')).toBeTruthy()
     expect(screen.queryByText('noor')).toBeNull()
 
@@ -281,7 +281,7 @@ describe('<Feed />', () => {
     expect(within(hive).getByText('1 climber')).toBeTruthy()
 
     // Boulder World holds Noor *and* the flexible session, so two distinct
-    // climbers — the count is climbers, not sessions.
+    // climbers - the count is climbers, not sessions.
     const world = screen.getByRole('group', { name: 'Boulder World' })
     expect(within(world).getByText('@noor')).toBeTruthy()
     expect(within(world).getByText('2 climbers')).toBeTruthy()
@@ -314,7 +314,7 @@ describe('<Feed />', () => {
     expect(panelOf(laterHeading).hasAttribute('hidden')).toBe(true)
     expect(screen.queryByRole('group', { name: 'Future Wall' })).toBeNull()
 
-    // Each day's count sits outside its panel, so a folded day still reports it —
+    // Each day's count sits outside its panel, so a folded day still reports it -
     // here for the later day, which is the one still shut.
     const panel = panelOf(laterHeading)
     const root = panel.previousElementSibling as HTMLElement
@@ -351,7 +351,7 @@ describe('<Feed />', () => {
     expect(await screen.findByText(/September 2026/)).toBeTruthy()
     expect(screen.getByText('Tap a day to see who is climbing.')).toBeTruthy()
 
-    // The 20th carries me, Mara and Noor as dots — not as cards.
+    // The 20th carries me, Mara and Noor as dots - not as cards.
     const day = screen.getByRole('button', { name: /Sep 20/ })
     expect(day.getAttribute('aria-label')).toContain('3 climbing')
     expect(within(day).getAllByText(/^(LU|MA|NO)$/).length).toBe(3)

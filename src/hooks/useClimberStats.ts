@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { ClimberDailyActivityRow, ClimberGymStatsRow, ClimberTotalsRow } from '../types'
 
 interface UseClimberStatsArgs {
-  /** Whose stats to read — RLS decides whose climbs actually come back. */
+  /** Whose stats to read - RLS decides whose climbs actually come back. */
   userId: string | null
   /** Earliest `climb_date` for the activity rows (the heatmap window). */
   sinceDate: string
@@ -21,7 +21,7 @@ interface UseClimberStatsResult {
   reload: () => void
 }
 
-/** PostgREST's "relation does not exist" — the views are not deployed. */
+/** PostgREST's "relation does not exist" - the views are not deployed. */
 function isMissingView(error: { code?: string; message: string }): boolean {
   return error.code === '42P01' || /does not exist/i.test(error.message)
 }

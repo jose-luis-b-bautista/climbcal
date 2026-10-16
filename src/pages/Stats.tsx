@@ -1,11 +1,11 @@
 /**
- * Stats — what your climbing looks like so far.
+ * Stats - what your climbing looks like so far.
  *
  * Everything on this page comes from the read-only views in
  * `supabase/migrations/20260923000000_stats_views.sql`: headline cards from
  * `climber_totals`, the daily heatmap from `climber_daily_activity`, and the
  * "where I climb" breakdown from `climber_gym_stats`. The views are
- * `security_invoker`, so RLS decides the scope — which is why the climber picker
+ * `security_invoker`, so RLS decides the scope - which is why the climber picker
  * offers yourself plus your accepted friends and nothing else.
  *
  * A session here is a *plan you posted*, not a logged send: the schema has no
@@ -182,7 +182,7 @@ export default function Stats() {
   const today = useMemo(() => new Date(), [])
   const sinceDate = useMemo(() => heatmapStartDate(today), [today])
 
-  // `?climber=<id>` keeps a friend's stats linkable, like the feed's filters — but
+  // `?climber=<id>` keeps a friend's stats linkable, like the feed's filters - but
   // only for a climber we already know about, so a stale id falls back to you.
   const param = searchParams.get('climber')
   const requested = param && (param === userId || friendIds.includes(param)) ? param : null
@@ -229,7 +229,7 @@ export default function Stats() {
         title="Stats"
         hint={
           isSelf
-            ? 'Your climbing so far — every session you have posted.'
+            ? 'Your climbing so far - every session you have posted.'
             : `The sessions ${who} has posted that you can see.`
         }
         action={
@@ -264,8 +264,8 @@ export default function Stats() {
       {missingViews ? (
         <Notice>
           The stats views are not in the database yet. Run{' '}
-          <code>supabase/migrations/{STATS_MIGRATION}</code> — with the CLI that is{' '}
-          <code>npx supabase@latest db push</code> — then refresh.
+          <code>supabase/migrations/{STATS_MIGRATION}</code> - with the CLI that is{' '}
+          <code>npx supabase@latest db push</code> - then refresh.
         </Notice>
       ) : null}
 
@@ -306,7 +306,7 @@ export default function Stats() {
             />
             <StatCard
               label="Usual session"
-              value={totalRow.avg_exact_minutes ? formatMinutesSpan(totalRow.avg_exact_minutes) : '—'}
+              value={totalRow.avg_exact_minutes ? formatMinutesSpan(totalRow.avg_exact_minutes) : '-'}
               hint="average, exact windows"
             />
             <StatCard

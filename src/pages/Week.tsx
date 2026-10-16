@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { DaySessions } from '../components/DaySessions'
 import { SessionCard } from '../components/SessionCard'
 import { SessionFormModal } from '../components/SessionFormModal'
+import { WeekSessionImage } from '../components/WeekSessionImage'
 import {
   EmptyState,
   ErrorBanner,

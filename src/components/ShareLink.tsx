@@ -6,7 +6,7 @@ import { cx, inputClass, secondaryButtonClass } from './ui'
  *
  * Phones get the native sheet (`navigator.share`, so the link can go straight to
  * WhatsApp); everywhere else the link is copied to the clipboard. Both can be
- * unavailable — an insecure origin, a browser without the API — so the URL is
+ * unavailable - an insecure origin, a browser without the API - so the URL is
  * always shown next to the button: copying is a convenience, never the only way
  * to get the link.
  */
@@ -20,7 +20,7 @@ export function ShareLink({ path, label = 'Share link' }: { path: string; label?
         await navigator.share({ url, title: 'climbcal' })
         return
       } catch {
-        // Dismissed, or the URL is not shareable — fall through to the clipboard.
+        // Dismissed, or the URL is not shareable - fall through to the clipboard.
       }
     }
 
@@ -49,7 +49,7 @@ export function ShareLink({ path, label = 'Share link' }: { path: string; label?
       </div>
       {status === 'failed' ? (
         <p className="text-xs text-red-300">
-          Could not copy automatically — select the link above instead.
+          Could not copy automatically - select the link above instead.
         </p>
       ) : null}
     </div>

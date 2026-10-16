@@ -2,11 +2,11 @@
  * Climbers feed.
  *
  * Two ways to read the same sessions:
- * - **List** — the next few weeks, grouped by day and then by gym ("who is going
+ * - **List** - the next few weeks, grouped by day and then by gym ("who is going
  *   where"), so a gym with several climbers reads as one block. Each day is a
- *   disclosure — today's starts open, the rest folded — with the date and the
+ *   disclosure - today's starts open, the rest folded - with the date and the
  *   session count as the summary and one click opening a day.
- * - **Calendar** — a month of avatar dots; tapping a day opens that day's list
+ * - **Calendar** - a month of avatar dots; tapping a day opens that day's list
  *   underneath, so the grid stays scannable instead of carrying every card.
  *
  * Both include public profiles *and* your own sessions (whatever your own
@@ -58,7 +58,7 @@ import type { ClimbEntry } from '../types'
 type FeedView = 'list' | 'calendar'
 
 /**
- * Days ahead covered by the list view — a rolling window from today, not a
+ * Days ahead covered by the list view - a rolling window from today, not a
  * calendar week, so the feed always starts at the current day.
  */
 const FEED_HORIZON_DAYS = 7
@@ -122,7 +122,7 @@ function FeedSessionRow({ entry }: { entry: ClimbEntry }) {
   const name = displayNameOf(entry.climber)
   const handle = usernameOf(entry.climber)
   // The gym is the group header now, so only an "either" session needs its own
-  // label — it is filed under two gyms at once.
+  // label - it is filed under two gyms at once.
   const showGymLabel = climbGymNames(entry).length > 1
 
   return (
@@ -273,12 +273,12 @@ export default function Feed() {
       : toISODate(addDays(today, FEED_HORIZON_DAYS))
 
   // participantIds = null: let RLS decide, then keep public profiles plus your
-  // own rows — leaving your own sessions out made it look like they weren't
+  // own rows - leaving your own sessions out made it look like they weren't
   // posted at all.
   const { entries, loading, error, reload } = useClimbs({ startDate, endDate, participantIds: null })
 
   // `''` is every gym. Matching happens on the name, so a session that typed the
-  // gym name instead of picking it still filters — and an "either" session
+  // gym name instead of picking it still filters - and an "either" session
   // matches on both of its slots.
   const selectedGymName = gymFilter ? gyms.find((gym) => gym.id === gymFilter)?.name : undefined
 
@@ -400,7 +400,7 @@ export default function Feed() {
             title={selectedGymName ? `Nobody at ${selectedGymName}` : 'Nothing on the horizon'}
             hint={
               selectedGymName
-                ? `No sessions there in the next ${FEED_HORIZON_DAYS} days — try another gym.`
+                ? `No sessions there in the next ${FEED_HORIZON_DAYS} days - try another gym.`
                 : "Your sessions and public climbers' sessions show up here, grouped by gym."
             }
           />
@@ -498,7 +498,7 @@ export default function Feed() {
               {selectedGroups.length === 0 ? (
                 <EmptyState
                   title={selectedGymName ? `Nobody at ${selectedGymName}` : 'Nobody yet'}
-                  hint="No sessions posted for this day — pick another."
+                  hint="No sessions posted for this day - pick another."
                 />
               ) : (
                 <GymGroupList groups={selectedGroups} />

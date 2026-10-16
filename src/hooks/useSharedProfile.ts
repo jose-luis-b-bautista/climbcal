@@ -20,7 +20,7 @@ interface UseSharedProfileResult {
  * `supabase/migrations/20260924000000_public_profile_share.sql`): anonymous
  * visitors have no grants at all, and the function answers only for a public
  * profile with session notes stripped. `notFound` therefore covers both "no such
- * username" and "that profile is private" — the same answer on purpose, so a
+ * username" and "that profile is private" - the same answer on purpose, so a
  * share link cannot be used to probe for accounts.
  */
 export function useSharedProfile(
@@ -76,7 +76,7 @@ export function useSharedProfile(
             custom_gym_name: null,
             gym_id_2: null,
             custom_gym_name_2: null,
-            // The public payload carries no note — keep it empty rather than
+            // The public payload carries no note - keep it empty rather than
             // letting a stale value leak through.
             note: null,
             created_at: data.profile.created_at,

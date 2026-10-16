@@ -12,7 +12,7 @@ export interface GymGroup {
   /** The gym this group is for, or the climb's own label when none was named. */
   gymName: string
   entries: ClimbEntry[]
-  /** Distinct climbers heading there — two sessions by one person count once. */
+  /** Distinct climbers heading there - two sessions by one person count once. */
   climberCount: number
 }
 

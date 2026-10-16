@@ -1,4 +1,4 @@
-# climbcal — UI & Design Guide
+# climbcal - UI & Design Guide
 
 A portable description of how this app looks, feels, and is styled.
 Keep this as a reference for future projects: the *patterns* below (dark-first
@@ -6,7 +6,7 @@ tokens, a single primitives module, token-based theming, contrast tests) are
 reusable even when the domain changes.
 
 - **Stack:** React 19 + Vite + TypeScript + Tailwind CSS 4 + React Router.
-- **Styling model:** Tailwind utility classes only — no CSS Modules, no
+- **Styling model:** Tailwind utility classes only - no CSS Modules, no
   styled-components. The one hand-written stylesheet is `src/index.css`, used
   for theme tokens, base element styles, and two non-utility rules.
 - **Design language:** dark-first, low-chrome, card-based, mobile-first.
@@ -53,7 +53,7 @@ pre-paint script in `index.html` reads the literal string; `theme.test.ts`
 asserts they stay in sync.
 
 ```ts
-// applyTheme — the ONLY place the theme touches the DOM
+// applyTheme - the ONLY place the theme touches the DOM
 document.documentElement.classList.toggle('dark', theme === 'dark')
 ```
 
@@ -83,7 +83,7 @@ values so the role is preserved in both themes:
 | `zinc-500` | hint / small print | `#71717a` | `#71717a` |
 
 > Note how `zinc-950` (background) is **darker** in dark mode and **lighter**
-> in light mode. Same class name, opposite luminosity — because the token is
+> in light mode. Same class name, opposite luminosity - because the token is
 > defined per theme.
 
 ### Accent & status
@@ -124,7 +124,7 @@ pattern, with `text-emerald-200/300` for readable ink on top.
   shadow-black/20`. Nested session cards use `rounded-lg` (one step smaller).
 - **Radii:** `rounded-lg` for controls and inner cards, `rounded-xl` for top
   level cards, `rounded-full` for pills/badges/avatars.
-- **Spacing rhythm:** gap/padding multiples of Tailwind's scale — `p-2.5`,
+- **Spacing rhythm:** gap/padding multiples of Tailwind's scale - `p-2.5`,
   `p-3`, `p-4`, `gap-2`, `gap-3`, `space-y-2`, `space-y-4`.
 - **Grids:** `grid-cols-2 gap-3 sm:grid-cols-3` for stat cards; a 7-column
   Mon–Sun grid for the week; `flex gap-0.5` for the stats heatmap.
@@ -141,7 +141,7 @@ Everything visual is built from these. Reuse them across pages.
 cx(...values) // tiny clsx replacement: joins truthy class strings
 ```
 
-### Buttons — shared class constants
+### Buttons - shared class constants
 
 | Constant | Look |
 | -------- | ---- |
@@ -204,7 +204,7 @@ surface in dark mode, and the light theme's redefined tokens keep it soft.
 
 - 8 hues: `emerald, sky, violet, fuchsia, rose, amber, teal, indigo`.
 - Hue is **derived from the user id** (a small string hash), so a climber keeps
-  the same colour on every page and render — no flicker.
+  the same colour on every page and render - no flicker.
 - Each hue has a chip token + an ink token in **both** themes
   (`--color-avatar-<hue>` and `--color-avatar-<hue>-ink`).
 - Class names are written literally (`AVATAR_HUE_CLASSES`) because Tailwind only
@@ -271,7 +271,7 @@ keep the gym picker grouped by region; a sentinel option (`__other__`,
   unlayered so it beats Tailwind utilities, and keyed to pointer type (not
   width) because a phone in landscape is wider than `sm` but still zooms.
 - **Viewport meta** allows pinch-zoom (`width=device-width, initial-scale=1`,
-  no `maximum-scale`) — enforced by `mobile.test.ts`.
+  no `maximum-scale`) - enforced by `mobile.test.ts`.
 - **Tap targets:** small controls carry padding + `leading-6`; the whole
   disclosure header row is tappable.
 
@@ -301,11 +301,11 @@ Because the token values live in CSS, tests **parse `src/index.css` and
 `index.html` from disk** (Vitest stubs CSS imports) rather than duplicating
 values:
 
-- `src/theme.test.ts` — parses the `@theme` and `.dark` blocks, computes WCAG
+- `src/theme.test.ts` - parses the `@theme` and `.dark` blocks, computes WCAG
   contrast for the documented pairs, checks every avatar hue has a chip+ink pair
   in both themes, and asserts the toggle / pre-paint script stay wired to the
   same storage key and `.dark` class.
-- `src/mobile.test.ts` — asserts the 16px touch-form-control rule and the
+- `src/mobile.test.ts` - asserts the 16px touch-form-control rule and the
   zoom-friendly viewport meta.
 
 **Rule of thumb:** if a design decision matters (contrast, zoom, grid shape),
@@ -313,7 +313,7 @@ encode it as a test that reads the real source so it can't silently drift.
 
 ---
 
-## 12. Copying this into a new project — checklist
+## 12. Copying this into a new project - checklist
 
 1. **Tokens first.** Create `src/index.css` with `@import 'tailwindcss'`, a
    `@custom-variant dark (&:where(.dark, .dark *))`, an `@theme` block of

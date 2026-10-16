@@ -26,7 +26,7 @@ beforeAll(() => {
 describe('<Week />', () => {
   beforeEach(() => {
     // Pinned so "today" is deterministic: the fixture's sessions are on
-    // Wednesday 2026-09-16 — inside the week being browsed, but not today.
+    // Wednesday 2026-09-16 - inside the week being browsed, but not today.
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(new Date('2026-09-20T19:00:00'))
   })

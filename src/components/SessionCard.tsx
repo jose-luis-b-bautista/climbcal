@@ -17,7 +17,7 @@ const TIMING_CLASSES: Record<SessionTiming['state'], string> = {
   done: 'border-zinc-800 bg-zinc-900/60 text-zinc-500',
 }
 
-/** One climbing session: who, where, when — with an optional relative badge. */
+/** One climbing session: who, where, when - with an optional relative badge. */
 export function SessionCard({ entry, isOwn, onEdit, timing }: SessionCardProps) {
   return (
     <div
