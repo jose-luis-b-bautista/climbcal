@@ -4,6 +4,7 @@ import { DaySessions } from '../components/DaySessions'
 import { SessionCard } from '../components/SessionCard'
 import { SessionFormModal } from '../components/SessionFormModal'
 import { WeekSessionImage } from '../components/WeekSessionImage'
+import { displayNameOf } from '../lib/format'
 import {
   EmptyState,
   ErrorBanner,
@@ -35,7 +36,7 @@ import {
 import type { Climb, ClimbEntry } from '../types'
 
 export default function Week() {
-  const { userId } = useAuth()
+  const { userId, profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const { friendIds, friends, loading: friendsLoading, error: friendsError } = useFriends()
   const { gyms } = useGyms()
@@ -274,6 +275,15 @@ export default function Week() {
           )}
         </section>
       </div>
+
+      {/* Instagram Story share image */}
+      {weekEntries.length > 0 && profile ? (
+        <WeekSessionImage
+          sessions={weekEntries}
+          weekTitle={formatWeekRange(weekStart)}
+          displayName={displayNameOf(profile)}
+        />
+      ) : null}
 
       {modal.open ? (
         <SessionFormModal
