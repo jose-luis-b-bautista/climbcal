@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
 import { useGyms } from '../hooks/useGyms'
+import { useTheme } from '../hooks/useTheme'
 import { groupByDate, useWeekClimbs } from '../hooks/useWeekClimbs'
 import {
   DAY_NAMES_SHORT,
@@ -37,6 +38,7 @@ import type { Climb, ClimbEntry } from '../types'
 
 export default function Week() {
   const { userId, profile } = useAuth()
+  const { theme } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
   const { friendIds, friends, loading: friendsLoading, error: friendsError } = useFriends()
   const { gyms } = useGyms()
@@ -166,6 +168,16 @@ export default function Week() {
           onEdit={(climb) => setModal({ open: true, date: climb.climb_date, initial: climb })}
         />
 
+                      {profile && userId ? (
+                <WeekSessionImage
+                  sessions={weekEntries}
+                  weekTitle={formatWeekRange(weekStart)}
+                  displayName={displayNameOf(profile)}
+                  userId={userId}
+                  theme={theme}
+                />
+              ) : null}
+
         <section>
           <SectionHeading
             title="Week"
@@ -275,15 +287,6 @@ export default function Week() {
           )}
         </section>
       </div>
-
-      {/* Instagram Story share image */}
-      {weekEntries.length > 0 && profile ? (
-        <WeekSessionImage
-          sessions={weekEntries}
-          weekTitle={formatWeekRange(weekStart)}
-          displayName={displayNameOf(profile)}
-        />
-      ) : null}
 
       {modal.open ? (
         <SessionFormModal
