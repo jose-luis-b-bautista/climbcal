@@ -1,4 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "https://climbcal.vercel.app/",
+      "destination": "https://climbcal.app/"
+    },
+    {
+      "source": "https://climbcal.vercel.app/:splat*",
+      "destination": "https://climbcal.app/:splat*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
