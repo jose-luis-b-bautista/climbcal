@@ -48,8 +48,9 @@ describe('generateWeekSessionSVG', () => {
 
     expect(svg).toContain('width="1080"')
     expect(svg).toContain('height="1920"')
-    // Page + card/accent tokens from the dark theme.
-    expect(svg).toContain('fill="#09090b"')
+    // No full-canvas rect: the background is transparent for overlaying.
+    expect(svg).not.toContain('<rect width="1080" height="1920"')
+    // Card/accent tokens from the dark theme.
     expect(svg).toContain('fill="#10b981"')
     expect(svg).not.toContain('fill="#fafafa"')
   })
@@ -57,8 +58,8 @@ describe('generateWeekSessionSVG', () => {
   it('paints the light palette when the app is light', () => {
     const svg = generateWeekSessionSVG(sessions, 'Sep 14 – Sep 20', 'Luis', 'light')
 
-    // Page goes zinc-950 light, accents go emerald-600 light.
-    expect(svg).toContain('fill="#fafafa"')
+    // Accents go emerald-600 light, and the page stays transparent.
+    expect(svg).not.toContain('<rect width="1080" height="1920"')
     expect(svg).toContain('fill="#065f46"')
     expect(svg).not.toContain('fill="#09090b"')
   })
@@ -89,6 +90,35 @@ describe('generateWeekSessionSVG', () => {
     expect(svg).toContain('Rock &amp; Roll')
     expect(svg).toContain('Lou &amp; Lou')
     expect(svg).toContain('A &lt; B')
+  })
+
+  it('keeps the header and footer inside the Instagram Stories safe zones', () => {
+    const svg = generateWeekSessionSVG(sessions, 'Sep 14 – Sep 20', 'Luis', 'dark')
+
+    // Instagram covers roughly the top and bottom 250px of a 1080x1920 story.
+    // The title baseline starts at 250 + 88, so the profile row cannot cover it.
+    expect(svg).toContain('y="338"')
+    // The footer band starts at 1920 - 250 - 20 - 72 = 1578, above the reply bar.
+    expect(svg).toContain('y="1578"')
+  })
+
+  it('leaves a fixed gap between the header block and the first day strip', () => {
+    // A busy week forces the content to scale, so the group starts exactly at
+    // the header offset: 438 + 64 = 502.
+    const busyWeek = Array.from({ length: 7 }, (_, day) =>
+      entry({
+        id: `busy-${day}`,
+        climb_date: `2026-09-${String(14 + day).padStart(2, '0')}`,
+      }),
+    )
+    const svg = generateWeekSessionSVG(busyWeek, 'Sep 14 – Sep 20', 'Luis', 'dark')
+
+    expect(svg).toContain(' 502) scale(')
+
+    // Even a single climb is anchored below the header instead of being
+    // centred halfway down the canvas.
+    const lightSvg = generateWeekSessionSVG(sessions, 'Sep 14 – Sep 20', 'Luis', 'dark')
+    expect(lightSvg).toContain('translate(0 502) scale(1)')
   })
 })
 
