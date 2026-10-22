@@ -113,6 +113,20 @@ function AdminStats() {
   )
 }
 
+/**
+ * Turns the two gym-write errors the dashboard can meet into something the
+ * person at the keyboard can act on. `42501` is an RLS refusal, and the only
+ * policy on `gyms` writes is `public.is_admin(auth.uid())` - so it means the
+ * signed-in profile is not an admin, not that the password was wrong.
+ */
+function gymWriteError(error: { code?: string; message: string }): string {
+  if (error.code === '23505') return 'That gym already exists.'
+  if (error.code === '42501') {
+    return 'Only admins can change the gym list. Ask an admin to set is_admin on your profile.'
+  }
+  return error.message
+}
+
 /** Add, rename and retire the gyms everyone picks from. */
 function GymManager() {
   const { gyms, loading, error, reload } = useGyms()
@@ -160,7 +174,7 @@ function GymManager() {
     setBusy(false)
 
     if (saveError) {
-      setFormError(saveError.code === '23505' ? 'That gym already exists.' : saveError.message)
+      setFormError(gymWriteError(saveError))
       return
     }
 
@@ -179,7 +193,7 @@ function GymManager() {
     const { error: deleteError } = await supabase.from('gyms').delete().eq('id', gym.id)
 
     if (deleteError) {
-      setFormError(deleteError.message)
+      setFormError(gymWriteError(deleteError))
       return
     }
 

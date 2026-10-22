@@ -14,8 +14,10 @@ import { ThemeProvider } from '../hooks/useTheme'
 
 // Hoisted with the stamp: the `vi.mock` factory runs before module-level consts
 // are initialised, so anything it reads at that point has to live in here.
-const { gymRows, stamp } = vi.hoisted(() => ({
+const { gymRows, gymFailure, stamp } = vi.hoisted(() => ({
   gymRows: [] as Array<Record<string, unknown>>,
+  // Set by a test to make the next gym write fail, e.g. an RLS refusal (42501).
+  gymFailure: { value: null as { message: string; code?: string } | null },
   stamp: '2026-09-01T00:00:00.000Z',
 }))
 
@@ -64,6 +66,9 @@ vi.mock('../lib/supabase', async () => {
     isSupabaseConfigured: true,
     supabase: createSupabaseMock(({ table, filters, op }) => {
       if (table === 'gyms') {
+        if (gymFailure.value && (op === 'insert' || op === 'update' || op === 'delete')) {
+          return { data: null, error: gymFailure.value }
+        }
         if (op === 'insert') {
           const row = {
             id: `g${gymRows.length + 1}`,
@@ -118,6 +123,7 @@ async function unlock() {
 describe('<Admin />', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    gymFailure.value = null
     gymRows.length = 0
     gymRows.push({
       id: 'g1',
@@ -166,6 +172,26 @@ describe('<Admin />', () => {
     // the row (its city is a nested span inside the name cell) before asserting.
     const city = await screen.findByText(/Makati/)
     expect(city.parentElement?.textContent).toContain('Edge Climb')
+  })
+
+  it('explains an RLS refusal instead of echoing the policy error', async () => {
+    // What PostgREST returns when the signed-in profile is not an admin and the
+    // gym write has no policy that admits it (see 20260920000400_admin.sql).
+    gymFailure.value = {
+      code: '42501',
+      message: 'new row violates row-level security policy for table "gyms"',
+    }
+
+    renderAdmin()
+    await unlock()
+
+    fireEvent.change(await screen.findByLabelText('Gym name'), {
+      target: { value: 'Climb Shack' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add gym' }))
+
+    expect(await screen.findByText(/Only admins can change the gym list/)).toBeTruthy()
+    expect(screen.queryByText(/row-level security policy/)).toBeNull()
   })
 
   it('deletes a gym once the confirmation is accepted', async () => {
