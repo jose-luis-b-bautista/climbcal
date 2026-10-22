@@ -72,8 +72,8 @@ describe('generateWeekSessionSVG', () => {
       'dark',
     )
 
-    expect(svg).toContain('Wednesday')
-    expect(svg).toContain('Friday')
+    expect(svg).toContain('WED')
+    expect(svg).toContain('FRI')
     expect(svg).toContain('Vertical Hub')
     expect(svg).toContain('18:30 – 21:00')
     expect(svg).toContain('07:00 – 09:30')
@@ -92,19 +92,65 @@ describe('generateWeekSessionSVG', () => {
     expect(svg).toContain('A &lt; B')
   })
 
+  it('handles a second gym on the same day', () => {
+    const svg = generateWeekSessionSVG(
+      [
+        entry(),
+        entry({
+          id: 'climb-2',
+          gym: { id: 'gym-2', name: 'Flow State' },
+          start_time: '19:00:00',
+          end_time: '21:30:00',
+        }),
+      ],
+      'Sep 14 – Sep 20',
+      'Luis',
+      'dark',
+    )
+
+    expect(svg).toContain('Vertical Hub + Flow State')
+    expect(svg).toContain('19:00 – 21:30')
+    expect(svg).not.toContain('2 sessions')
+  })
+
+  it('uses the gym primary colour for the accent stripe', () => {
+    const svg = generateWeekSessionSVG(
+      [entry({ gym: { id: 'gym-1', name: 'Boulder24' } })],
+      'Sep 14 – Sep 20',
+      'Luis',
+      'dark',
+    )
+
+    expect(svg).toContain('fill="#EF4444"')
+  })
+
+  it('omits per-day summaries, rest days and the week total', () => {
+    const svg = generateWeekSessionSVG(sessions, 'Sep 14 – Sep 20', 'Luis', 'dark')
+
+    expect(svg).not.toContain('WEEK OF')
+    expect(svg).not.toContain('1 session')
+    expect(svg).not.toContain('REST DAYS')
+    // No duration summaries remain anywhere.
+    expect(svg).not.toContain('2h 30m')
+  })
+
   it('keeps the header and footer inside the Instagram Stories safe zones', () => {
     const svg = generateWeekSessionSVG(sessions, 'Sep 14 – Sep 20', 'Luis', 'dark')
 
     // Instagram covers roughly the top and bottom 250px of a 1080x1920 story.
-    // The title baseline starts at 250 + 88, so the profile row cannot cover it.
-    expect(svg).toContain('y="338"')
-    // The footer band starts at 1920 - 250 - 20 - 72 = 1578, above the reply bar.
-    expect(svg).toContain('y="1578"')
+    // The identity label starts at 250 + 42 and the title at 250 + 116.
+    expect(svg).toContain('y="292"')
+    expect(svg).toContain('y="366"')
+    // With one card the wordmark anchors 56px below it: 470 + 210 + 56 = 736.
+    expect(svg).toContain('y="736"')
+    expect(svg).toContain('🧗 climbcal.app')
+    // The footer divider was removed entirely.
+    expect(svg).not.toContain('<line')
   })
 
-  it('leaves a fixed gap between the header block and the first day strip', () => {
+  it('leaves a fixed gap between the header and the first day card', () => {
     // A busy week forces the content to scale, so the group starts exactly at
-    // the header offset: 438 + 64 = 502.
+    // the content offset: 470.
     const busyWeek = Array.from({ length: 7 }, (_, day) =>
       entry({
         id: `busy-${day}`,
@@ -113,12 +159,12 @@ describe('generateWeekSessionSVG', () => {
     )
     const svg = generateWeekSessionSVG(busyWeek, 'Sep 14 – Sep 20', 'Luis', 'dark')
 
-    expect(svg).toContain(' 502) scale(')
+    expect(svg).toContain(' 470) scale(')
 
     // Even a single climb is anchored below the header instead of being
     // centred halfway down the canvas.
     const lightSvg = generateWeekSessionSVG(sessions, 'Sep 14 – Sep 20', 'Luis', 'dark')
-    expect(lightSvg).toContain('translate(0 502) scale(1)')
+    expect(lightSvg).toContain('translate(0 470) scale(1)')
   })
 })
 

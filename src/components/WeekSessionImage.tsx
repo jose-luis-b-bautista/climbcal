@@ -4,7 +4,8 @@
 import { useState } from 'react'
 import type { ClimbEntry } from '../types'
 import { gymNameOf } from '../lib/format'
-import { formatTimeWindow, formatDuration, formatShortDate, DAY_NAMES } from '../lib/date'
+import { DAY_NAMES_SHORT, formatTimeWindow } from '../lib/date'
+import { gymPaletteOf } from '../lib/gymColors'
 import type { Theme } from '../hooks/useTheme'
 import { primaryButtonClass, secondaryButtonClass } from './ui'
 
@@ -22,21 +23,16 @@ const FONT_FAMILY = 'system-ui, -apple-system, sans-serif'
 const TOP_SAFE_INSET = 250
 const BOTTOM_SAFE_INSET = 250
 
-const HEADER_TEXT_TOP = 88 // title baseline below the top safe inset
-const HEADER_TEXT_GAP = 52 // title -> week range baseline
-const HEADER_BOTTOM_PADDING = 48 // week range -> header block edge
-const HEADER_HEIGHT = TOP_SAFE_INSET + HEADER_TEXT_TOP + HEADER_TEXT_GAP + HEADER_BOTTOM_PADDING
-const HEADER_CONTENT_GAP = 64 // header block -> first day strip
+const HEADER_LABEL_BASELINE = TOP_SAFE_INSET + 42
+const HEADER_TITLE_BASELINE = TOP_SAFE_INSET + 116
+const CONTENT_TOP = 470
+const CONTENT_BOTTOM = 1560
 
-const CARD_HEIGHT = 190
+const CARD_HEIGHT = 210
 const CARD_SPACING = 26
-const DAY_LABEL_HEIGHT = 76
-const DAY_BLOCK_GAP = 24
+const FOOTER_CONTENT_GAP = 56
 
-const FOOTER_HEIGHT = 72
-const FOOTER_GAP = 20 // footer -> bottom safe inset
-const CONTENT_FOOTER_GAP = 32 // content -> footer
-const MAX_DAY_GAP = 72 // cap on the spread between day groups
+const FOOTER_BASELINE = CANVAS_HEIGHT - BOTTOM_SAFE_INSET - 34
 
 /**
  * The image mirrors the app's own token pairs (see src/index.css): in light mode
@@ -44,22 +40,15 @@ const MAX_DAY_GAP = 72 // cap on the spread between day groups
  */
 interface Palette {
   page: string
-  headerFrom: string
-  headerTo: string
   headerText: string
   headerMuted: string
-  divider: string
-  dayBg: string
   dayBorder: string
   dayName: string
   dayDate: string
   cardBg: string
-  cardBorder: string
   gym: string
   time: string
   meta: string
-  footerBg: string
-  footerBorder: string
   footerText: string
   footerMuted: string
 }
@@ -67,43 +56,29 @@ interface Palette {
 const PALETTES: Record<Theme, Palette> = {
   dark: {
     page: '#09090b',
-    headerFrom: '#14532d',
-    headerTo: '#065f46',
     headerText: '#ffffff',
     headerMuted: '#a1a1aa',
-    divider: '#27272a',
-    dayBg: '#18181b',
     dayBorder: '#27272a',
     dayName: '#ffffff',
     dayDate: '#71717a',
     cardBg: '#18181b',
-    cardBorder: '#10b981',
     gym: '#e4e4e7',
     time: '#10b981',
     meta: '#a1a1aa',
-    footerBg: '#18181b',
-    footerBorder: '#27272a',
     footerText: '#a1a1aa',
     footerMuted: '#71717a',
   },
   light: {
     page: '#fafafa',
-    headerFrom: '#ecfdf5',
-    headerTo: '#d1fae5',
     headerText: '#064e3b',
     headerMuted: '#047857',
-    divider: '#e4e4e7',
-    dayBg: '#ffffff',
     dayBorder: '#e4e4e7',
     dayName: '#18181b',
     dayDate: '#71717a',
     cardBg: '#ecfdf5',
-    cardBorder: '#34d399',
     gym: '#18181b',
     time: '#065f46',
     meta: '#52525b',
-    footerBg: '#ffffff',
-    footerBorder: '#e4e4e7',
     footerText: '#52525b',
     footerMuted: '#71717a',
   },
@@ -146,46 +121,20 @@ export function generateWeekSessionSVG(
   // No background rect: the page stays transparent so the image can be pasted
   // over any photo in Instagram Stories.
 
-  // Header gradient
-  const gradient = svgNode('linearGradient', {
-    id: 'headerGradient',
-    x1: '0%',
-    y1: '0%',
-    x2: '0%',
-    y2: '100%',
-  })
-  gradient.append(
-    svgNode('stop', { offset: '0%', style: `stop-color:${palette.headerFrom};stop-opacity:1` }),
-    svgNode('stop', { offset: '100%', style: `stop-color:${palette.headerTo};stop-opacity:1` }),
-  )
-  const defs = svgNode('defs')
-  defs.appendChild(gradient)
-  root.appendChild(defs)
-
-  // Header block. The gradient runs to the top edge for a full-bleed look, but
-  // the text baselines start below the top safe inset so Instagram's profile
-  // row cannot cover them.
-  root.appendChild(
-    svgNode('rect', {
-      x: 0,
-      y: 0,
-      width: CANVAS_WIDTH,
-      height: HEADER_HEIGHT,
-      fill: 'url(#headerGradient)',
-    }),
-  )
+  // Typographic header: no gradient slab, just the climber identity and week.
   root.appendChild(
     svgNode(
       'text',
       {
         x: PADDING,
-        y: TOP_SAFE_INSET + HEADER_TEXT_TOP,
+        y: HEADER_LABEL_BASELINE,
         'font-family': FONT_FAMILY,
-        'font-size': 52,
-        'font-weight': 'bold',
-        fill: palette.headerText,
+        'font-size': 22,
+        'font-weight': 600,
+        'letter-spacing': 6,
+        fill: palette.headerMuted,
       },
-      `${displayName}'s Week`,
+      `${displayName}`,
     ),
   )
   root.appendChild(
@@ -193,10 +142,11 @@ export function generateWeekSessionSVG(
       'text',
       {
         x: PADDING,
-        y: TOP_SAFE_INSET + HEADER_TEXT_TOP + HEADER_TEXT_GAP,
+        y: HEADER_TITLE_BASELINE,
         'font-family': FONT_FAMILY,
-        'font-size': 32,
-        fill: palette.headerMuted,
+        'font-size': 56,
+        'font-weight': 'bold',
+        fill: palette.headerText,
       },
       weekTitle,
     ),
@@ -216,208 +166,164 @@ export function generateWeekSessionSVG(
     .sort()
     .map((dayKey) => ({ dayKey, entries: byDay.get(dayKey) ?? [] }))
 
-  const naturalHeight = dayBlocks.reduce(
-    (total, block) =>
-      total +
-      DAY_LABEL_HEIGHT +
-      DAY_BLOCK_GAP +
-      block.entries.length * (CARD_HEIGHT + CARD_SPACING) +
-      DAY_BLOCK_GAP,
-    0,
-  )
-
-  const contentTop = HEADER_HEIGHT + HEADER_CONTENT_GAP
-  const footerTop = CANVAS_HEIGHT - BOTTOM_SAFE_INSET - FOOTER_GAP - FOOTER_HEIGHT
-  const availableHeight = footerTop - CONTENT_FOOTER_GAP - contentTop
-  // Shrink only when a busy week would otherwise overflow. Content is anchored
-  // right below the header - leftover height is shared between the day groups
-  // (capped) instead of pushing the first group halfway down the canvas.
-  const scale = Math.min(1, availableHeight / Math.max(naturalHeight, 1))
-  const gapCount = Math.max(1, dayBlocks.length)
-  const breathingRoom =
-    scale === 1
-      ? Math.min(MAX_DAY_GAP, Math.max(0, (availableHeight - naturalHeight) / gapCount))
-      : 0
+  const cardsHeight =
+    dayBlocks.length * CARD_HEIGHT + Math.max(0, dayBlocks.length - 1) * CARD_SPACING
+  const availableHeight = CONTENT_BOTTOM - CONTENT_TOP
+  // Shrink only when the week is busy enough to overflow the story canvas.
+  const scale = Math.min(1, availableHeight / Math.max(cardsHeight, 1))
   const contentGroup = svgNode('g')
 
   let y = 0
 
-  dayBlocks.forEach(({ dayKey, entries }) => {
-    const dayDate = new Date(dayKey + 'T00:00:00')
-    const dayName = DAY_NAMES[dayDate.getDay() === 0 ? 6 : dayDate.getDay() - 1]
-    const dateLabel = formatShortDate(dayDate)
+  dayBlocks.forEach(({ dayKey, entries }, dayIndex) => {
+    const dayDate = new Date(`${dayKey}T00:00:00`)
+    const dayShort = DAY_NAMES_SHORT[(dayDate.getDay() + 6) % 7].toUpperCase()
 
-    // Day label strip
+    // One card per active day. A second gym on the same day is the edge case:
+    // both names share the headline and each session keeps its own time line.
+    const gymLabel = [...new Set(entries.map((session) => gymNameOf(session)))].join(' + ')
+    const gymSize = gymLabel.length > 30 ? 28 : gymLabel.length > 22 ? 34 : 40
+    const lines = entries.map((session) =>
+      formatTimeWindow(session.start_time, session.end_time, session.start_slot, session.end_slot),
+    )
+    if (lines.length > 2) {
+      lines[1] = `${lines[1]} · +${lines.length - 2} more`
+    }
+
+    // The accent stripe is the gym's own primary colour (first gym wins when a
+    // day has two); unknown gyms fall back to the theme accent.
+    const accent =
+      entries
+        .map((session) => gymPaletteOf(gymNameOf(session))?.fill)
+        .find((color): color is string => Boolean(color)) ?? palette.time
+    const cardY = y
+
     contentGroup.appendChild(
       svgNode('rect', {
         x: PADDING,
-        y,
+        y: cardY,
         width: CANVAS_WIDTH - PADDING * 2,
-        height: DAY_LABEL_HEIGHT,
-        rx: 16,
-        fill: palette.dayBg,
+        height: CARD_HEIGHT,
+        rx: 28,
+        fill: palette.cardBg,
         stroke: palette.dayBorder,
         'stroke-width': 2,
+      }),
+    )
+    contentGroup.appendChild(
+      svgNode('rect', {
+        x: PADDING + 28,
+        y: cardY + 30,
+        width: 6,
+        height: CARD_HEIGHT - 60,
+        rx: 3,
+        fill: accent,
       }),
     )
     contentGroup.appendChild(
       svgNode(
         'text',
         {
-          x: PADDING + 28,
-          y: y + 38,
+          x: PADDING + 52,
+          y: cardY + 58,
           'font-family': FONT_FAMILY,
-          'font-size': 30,
-          'font-weight': 'bold',
-          fill: palette.dayName,
+          'font-size': 22,
+          'font-weight': 600,
+          'letter-spacing': 3,
+          fill: palette.dayDate,
         },
-        dayName,
+        dayShort,
       ),
     )
     contentGroup.appendChild(
       svgNode(
         'text',
         {
-          x: PADDING + 28,
-          y: y + 66,
+          x: PADDING + 52,
+          y: cardY + 132,
           'font-family': FONT_FAMILY,
-          'font-size': 22,
-          fill: palette.dayDate,
+          'font-size': 58,
+          'font-weight': 'bold',
+          fill: palette.dayName,
         },
-        dateLabel,
+        String(dayDate.getDate()),
       ),
     )
-    y += DAY_LABEL_HEIGHT + DAY_BLOCK_GAP
+    contentGroup.appendChild(
+      svgNode(
+        'text',
+        {
+          x: PADDING + 170,
+          y: cardY + 92,
+          'font-family': FONT_FAMILY,
+          'font-size': gymSize,
+          'font-weight': 'bold',
+          fill: palette.gym,
+        },
+        gymLabel,
+      ),
+    )
 
-    // One card per climb - only the climb itself, nothing else.
-    entries.forEach((session) => {
-      const cardWidth = CANVAS_WIDTH - PADDING * 2
-      const cardX = PADDING
-      const cardY = y
-
-      contentGroup.appendChild(
-        svgNode('rect', {
-          x: cardX,
-          y: cardY,
-          width: cardWidth,
-          height: CARD_HEIGHT,
-          rx: 16,
-          fill: palette.cardBg,
-          stroke: palette.cardBorder,
-          'stroke-width': 2,
-        }),
-      )
-
-      // Gym name
-      const gymName = gymNameOf(session)
+    lines.slice(0, 2).forEach((line, lineIndex) => {
       contentGroup.appendChild(
         svgNode(
           'text',
           {
-            x: cardX + 40,
-            y: cardY + 62,
+            x: PADDING + 170,
+            y: cardY + 134 + lineIndex * 30,
             'font-family': FONT_FAMILY,
-            'font-size': 36,
-            'font-weight': 'bold',
-            fill: palette.gym,
+            'font-size': 23,
+            fill: palette.meta,
           },
-          gymName,
+          line,
         ),
       )
-
-      // Time window
-      const timeWindow = formatTimeWindow(session.start_time, session.end_time, session.start_slot, session.end_slot)
-      contentGroup.appendChild(
-        svgNode(
-          'text',
-          {
-            x: cardX + 40,
-            y: cardY + 110,
-            'font-family': FONT_FAMILY,
-            'font-size': 30,
-            'font-weight': 'bold',
-            fill: palette.time,
-          },
-          timeWindow,
-        ),
-      )
-
-      if (session.start_time && session.end_time) {
-        const duration = formatDuration(session.start_time, session.end_time)
-        contentGroup.appendChild(
-          svgNode(
-            'text',
-            {
-              x: cardX + 40,
-              y: cardY + 146,
-              'font-family': FONT_FAMILY,
-              'font-size': 22,
-              fill: palette.meta,
-            },
-            duration,
-          ),
-        )
-      }
-
-      if (session.note) {
-        const noteText = session.note.length > 40 ? session.note.substring(0, 37) + '...' : session.note
-        contentGroup.appendChild(
-          svgNode(
-            'text',
-            {
-              x: cardX + 40,
-              y: cardY + 174,
-              'font-family': FONT_FAMILY,
-              'font-size': 20,
-              fill: palette.meta,
-            },
-            noteText,
-          ),
-        )
-      }
-
-      y += CARD_HEIGHT + CARD_SPACING
     })
 
-    y += DAY_BLOCK_GAP + breathingRoom
+    const note = entries.find((session) => session.note)?.note
+    if (note) {
+      const noteText = note.length > 44 ? `${note.slice(0, 41)}...` : note
+      contentGroup.appendChild(
+        svgNode(
+          'text',
+          {
+            x: PADDING + 170,
+            y: cardY + 194,
+            'font-family': FONT_FAMILY,
+            'font-size': 18,
+            fill: palette.footerMuted,
+          },
+          noteText,
+        ),
+      )
+    }
+
+    y += CARD_HEIGHT
+    if (dayIndex < dayBlocks.length - 1) y += CARD_SPACING
   })
 
   const offsetX = (CANVAS_WIDTH - CANVAS_WIDTH * scale) / 2
-  contentGroup.setAttribute('transform', `translate(${offsetX} ${contentTop}) scale(${scale})`)
+  contentGroup.setAttribute('transform', `translate(${offsetX} ${CONTENT_TOP}) scale(${scale})`)
   root.appendChild(contentGroup)
 
-  // Footer sits above the bottom safe inset so Instagram's reply bar cannot
-  // cover it.
-  root.appendChild(
-    svgNode('rect', {
-      x: 0,
-      y: footerTop,
-      width: CANVAS_WIDTH,
-      height: FOOTER_HEIGHT,
-      fill: palette.footerBg,
-    }),
-  )
-  root.appendChild(
-    svgNode('line', {
-      x1: 0,
-      y1: footerTop,
-      x2: CANVAS_WIDTH,
-      y2: footerTop,
-      stroke: palette.footerBorder,
-      'stroke-width': 2,
-    }),
+  // Keep the wordmark close to the last card instead of pinning it to the
+  // canvas bottom, but never let it cross the bottom safe inset.
+  const scaledCardsHeight = cardsHeight * scale
+  const footerY = Math.min(
+    FOOTER_BASELINE,
+    CONTENT_TOP + scaledCardsHeight + FOOTER_CONTENT_GAP,
   )
   root.appendChild(
     svgNode(
       'text',
       {
         x: PADDING,
-        y: footerTop + FOOTER_HEIGHT / 2 + 8,
+        y: footerY,
         'font-family': FONT_FAMILY,
-        'font-size': 24,
+        'font-size': 22,
         fill: palette.footerText,
       },
-      'climbcal.app • Share your weekly climbs',
+      '🧗 climbcal.app',
     ),
   )
 
