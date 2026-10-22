@@ -160,7 +160,7 @@ export default function Login() {
               </Field>
               {mode === 'signin' ? (
                 <p className="text-sm text-zinc-400">
-                  Forgot your password? Contact the owner (luis) of this app to reset it.
+                  Forgot your password? Contact the owner (@luisbauu_) of this app to reset it.
                 </p>
               ) : null}
 
