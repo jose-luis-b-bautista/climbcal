@@ -60,7 +60,7 @@ read or write what.
   *plan*, so nothing pretends to be a logged send: slot-only windows ("Opening" – "Closing") are never
   counted as time on the wall.
 - **Settings** - edit profile, flip public/private. The gym list itself is curated by admins (see
-  [Admin dashboard](#admin-dashboard)).
+  [Adding a gym](#adding-a-gym)).
 - **Share** - Settings (and your own public page) carry a **Share link** built from your username,
   `/u/<username>`. It opens for someone who has *not* signed up, which is the point: the page renders
   the week as a read-only snapshot and offers a **create an account** link that brings them straight
@@ -201,9 +201,9 @@ auth.users ──n:n── friendships (requester_id, addressee_id, status[pendi
   verbatim, and a duration appears only when both ends are clock times.
 - `gyms.region` is free text (`Luzon` / `Visayas` / `Mindanao` for the seeded list): the session
   dropdown groups by it, with an "Other" bucket for untagged gyms.
-- The gym list is **admin-curated**: signed-in users only ever read it. Add or change a row with the
-  SQL editor or a migration (see `20260920000200_gyms_admin_only.sql`); a one-off gym is recorded by
-  typing its name on a session, which never creates a gym row.
+- The gym list is **admin-curated**: signed-in users only ever read it. Add or change a row in the
+  `/admin` dashboard, the SQL editor or a migration (see [Adding a gym](#adding-a-gym)); a one-off
+  gym is recorded by typing its name on a session, which never creates a gym row.
 - Signing up creates the `profiles` row automatically (`on_auth_user_created` trigger).
 - `updated_at` is maintained by triggers.
 
@@ -245,6 +245,84 @@ every write refused (`new row violates row-level security policy`), the promoted
 accepted, a non-admin still reads the gym list, and `is_admin` additionally grants read access to all
 sessions - which is what makes the dashboard's counts real rather than "whatever this account is
 allowed to see".
+
+## Adding a gym
+
+Gyms are **shared reference data** - one list everybody picks from - not per-user content. A row is
+written by an admin or by a migration (see
+[`20260920000200_gyms_admin_only.sql`](supabase/migrations/20260920000200_gyms_admin_only.sql));
+signed-in climbers only ever read it. A one-off venue does **not** need a row at all: type its name in
+the session's "Other" field and it is stored as `custom_gym_name` on that climb.
+
+There are three ways in, depending on whether the gym should be permanent and versioned:
+
+### a. From the admin dashboard (normal way)
+
+1. Make sure your account is an admin (once): `update public.profiles set is_admin = true where username = '<you>';`
+   - see [Admin dashboard](#admin-dashboard).
+2. Open `/admin`, enter the shared password, scroll to **Gyms**.
+3. Fill the form and press **Add gym**:
+   - **Gym name** (required, trimmed; blank is rejected by the `gyms_name_not_blank` check)
+   - **City** (optional, display-only - it shows in the admin list)
+   - **Region** - the dropdown offers **Luzon** / **Visayas** / **Mindanao**, or *No region* for the
+     "Other" bucket. Any other label can be set via SQL and forms its own group.
+
+The row appears immediately in the session dialog's gym dropdown, the feed's gym filter and the stats
+breakdown - no deploy needed, because it lives in the database. Use **Edit** / **Delete** on the list
+to change it later.
+
+### b. From the SQL editor
+
+Same effect, handy when you want the statement written down:
+
+```sql
+insert into public.gyms (name, city, region)
+values ('New Gym', 'Quezon City', 'Luzon')
+on conflict ((lower(btrim(name)))) do update
+  set region = excluded.region;
+```
+
+The conflict target is the `gyms_name_lower_key` unique index on `lower(btrim(name))`, so
+`'New Gym'` and `'new gym'` cannot both exist and re-running the statement is safe. Match the seeded
+spelling exactly (`Luzon`, `Visayas`, `Mindanao`) to land in the right dropdown group; notice the
+existing rows do not update `city`, so add `city = coalesce(excluded.city, public.gyms.city)` if you
+need that.
+
+### c. As a migration (keeps the list in the repo)
+
+Use this when the gym belongs to the seeded list in version control - see
+[`20260929000000_grava_gym.sql`](supabase/migrations/20260929000000_grava_gym.sql) as the template:
+
+1. Add `supabase/migrations/<timestamp>_<slug>_gym.sql` (timestamp format `YYYYMMDDHHMMSS`, e.g.
+   `20261101000000_new_gym.sql`) with the idempotent `insert … on conflict` above.
+2. Apply it: `npx supabase@latest db push` (or paste it into the SQL editor). All migrations are
+   idempotent, so re-running is safe.
+3. Give it brand colours, or it renders the neutral cell:
+   - add `'New Gym': { primary: '#RRGGBB', background: '#RRGGBB' }` to `GYM_PALETTES` in
+     [`src/lib/gymColors.ts`](src/lib/gymColors.ts);
+   - add the new file to `SEED_MIGRATIONS` in
+     [`src/lib/gymColors.test.ts`](src/lib/gymColors.test.ts) and bump the `seeded.length` assertion -
+     that test asserts the palette covers **exactly** the seeded gyms, so a palette for an
+     admin-added (non-migration) gym, or a seeded gym without one, fails CI.
+4. Mention the new file in [step 1.2](#1-create-the-supabase-project) and the
+   [project layout](#project-layout) migration list in this README.
+
+### Renaming and deleting
+
+- **Rename** with Edit: `climbs.gym_id` is a foreign key, so every session that linked the gym picks
+  up the new label automatically.
+- **Delete is permanent.** The FK is `on delete set null`, so sessions that used the gym lose their
+  gym link and read as **"Not sure yet"** (an existing `custom_gym_name` / second slot is untouched).
+  Rename instead if the gym still exists under a new name, or back-fill the label first, as
+  [`20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql) did for the
+  retired placeholder gyms:
+
+  ```sql
+  update public.climbs c
+  set custom_gym_name = g.name
+  from public.gyms g
+  where c.gym_id = g.id and c.custom_gym_name is null and g.name = 'Old Name';
+  ```
 
 ## Project layout
 
