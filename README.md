@@ -307,6 +307,52 @@ Use this when the gym belongs to the seeded list in version control - see
 4. Mention the new file in [step 1.2](#1-create-the-supabase-project) and the
    [project layout](#project-layout) migration list in this README.
 
+### If a gym write is refused (RLS)
+
+`new row violates row-level security policy for table "gyms"` (from the REST API, `psql`, or an older
+build of the dashboard) means the request was authenticated but `public.is_admin(auth.uid())` was
+false - the password only unlocks the UI. The `/admin` form reports the same cause in plain words:
+*"Only admins can change the gym list. Ask an admin to set is_admin on your profile."* The policies live in
+[`20260920000400_admin.sql`](supabase/migrations/20260920000400_admin.sql), which also re-grants
+`insert, update, delete` to `authenticated`.
+
+Check, in the SQL editor:
+
+```sql
+-- Is the flag actually set on the account you are signed in as?
+select id, username, is_admin from public.profiles order by created_at;
+
+-- Do the policies and the helper exist? Expect gyms_insert_admin / _update_admin / _delete_admin.
+select policyname, cmd from pg_policies where schemaname = 'public' and tablename = 'gyms';
+select proname from pg_proc where proname = 'is_admin';
+```
+
+Then set the flag by the account's email, which catches a mistyped or differently-cased username:
+
+```sql
+update public.profiles p
+set is_admin = true
+from auth.users u
+where u.id = p.id
+  and lower(u.email) = lower('you@example.com')
+returning p.username, p.is_admin;
+```
+
+`UPDATE 1` means it worked; `UPDATE 0` means the email matched no profile. Reload `/admin` and
+retry - no sign-out needed, because the policy reads the table on the server.
+
+Two gotchas:
+
+- **`auth.uid()` is null in the SQL editor**, which runs as the project owner (so RLS is bypassed and
+  `select public.is_admin(auth.uid())` usefully returns `false`). Do not use that to test the flag;
+  query `profiles` by username/email instead.
+- **Wrong project.** `.env.local` can point at a different Supabase project than the one you just
+  updated - compare `VITE_SUPABASE_URL`'s project ref with the dashboard, and remember that the SQL
+  editor's own inserts bypass RLS, so "it works in the SQL editor" proves nothing about the app.
+
+As a last resort the SQL editor can always write the row (it runs as the owner), which is exactly
+route **b** above.
+
 ### Renaming and deleting
 
 - **Rename** with Edit: `climbs.gym_id` is a foreign key, so every session that linked the gym picks
