@@ -319,8 +319,8 @@ export function SessionFormModal({
             </button>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+            <div className="min-w-0">
               <Field label="From" htmlFor="session-start">
                 <Select
                   id="session-start"
