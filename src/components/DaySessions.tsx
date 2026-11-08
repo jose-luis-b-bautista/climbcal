@@ -18,8 +18,11 @@ interface DaySessionsProps {
 
 /**
  * Single-day summary; the calendar page stacks Today and Tomorrow over the week.
- * Each card folds away on its own and starts closed, so the week grid leads and
- * a day opens on demand - the label, the date and the summary stay either way.
+ *
+ * Each card folds away on its own and **starts open**: the next two days are why
+ * the page gets opened, so hiding them behind a tap would be backwards - and on a
+ * phone the fold is still one click away when the week grid needs the room. The
+ * label, the date and the summary stay either way.
  */
 export function DaySessions({
   kind,
@@ -64,6 +67,8 @@ export function DaySessions({
     <Card>
       <Disclosure
         title={label}
+        // Open on arrival: today's plan is the first thing a climber came for.
+        defaultOpen
         // The date rides on the label's baseline; the heading stays just "Today".
         meta={<p className="text-sm text-zinc-500">{formatDayLabel(date)}</p>}
         hint={

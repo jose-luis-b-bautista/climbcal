@@ -236,6 +236,10 @@ header row is the click target, but the accessible control is a real `<button>`
 with `aria-expanded` / `aria-controls`. `hint` and `action` sit *outside* the
 panel so a folded section still says what it is.
 
+A section that *is* the reason for the page can opt out with `defaultOpen`: the
+calendar's Today/Tomorrow cards do, so the next two days are readable on arrival
+and folding one is what brings the week grid up.
+
 ### URL as UI state
 
 View modes and periods live in the query string so they are linkable and

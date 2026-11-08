@@ -33,7 +33,7 @@ read or write what.
   session cards, plus a count of friends climbing from `sm` up - like the day cards' nudges, that
   small print is desktop-only so phones stay uncluttered. Your own sessions are highlighted and
   editable. The day cards always describe the *real* today and tomorrow, whatever week the grid is
-  parked on.
+  parked on, and both **open on arrival** - fold one to bring the week grid up.
 - **Add / edit / delete session** - date, gym (dropdown grouped by region - Luzon / Visayas /
   Mindanao - or free-text "Other"), an optional second gym so it reads as **"Either X or Y"**, or
   **"Not sure yet"** when the venue isn't decided; a time window (exact clock times **or** flexible

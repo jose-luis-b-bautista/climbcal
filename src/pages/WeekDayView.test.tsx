@@ -1,6 +1,7 @@
 /**
  * Integration coverage for the calendar page: the Today and Tomorrow cards sit
- * on top of the week grid, on one page and with no tab switcher.
+ * on top of the week grid, on one page and with no tab switcher - and both start
+ * open, so the next two days are readable without a tap.
  *
  * The clock is pinned, so "today" is deterministic, and the fixture is built
  * around that pinned day: a session spanning the whole day, a slot-based one,
@@ -230,11 +231,11 @@ describe('<Week /> day views', () => {
     expect(screen.getAllByRole('button', { name: /^Add a session on / })).toHaveLength(7)
     expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
 
-    // Not a tab switcher either: each day card carries its own disclosure,
-    // closed by default so the week grid leads.
-    expect(screen.getByRole('button', { name: 'Today' }).getAttribute('aria-expanded')).toBe('false')
+    // Not a tab switcher either: each day card carries its own disclosure, and
+    // both start open, so the next two days are readable without a tap.
+    expect(screen.getByRole('button', { name: 'Today' }).getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByRole('button', { name: 'Tomorrow' }).getAttribute('aria-expanded')).toBe(
-      'false',
+      'true',
     )
 
     // Two ranges: the day cards always ask for the real today → tomorrow, the
@@ -276,40 +277,35 @@ describe('<Week /> day views', () => {
     expect(screen.getAllByText('Vertical Hub').length).toBeGreaterThan(0)
   })
 
-  it('opens a folded day card and folds it back, closed by default', async () => {
+  it('starts the day cards open, and folds each one independently', async () => {
     renderApp('/week')
     expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
 
-    const toggles = () => screen.getByRole('button', { name: 'Today' })
+    const toggle = (label: 'Today' | 'Tomorrow') => screen.getByRole('button', { name: label })
     /** The panel a toggle points at, via the id in its `aria-controls`. */
-    const panelOf = (toggle: HTMLElement) =>
-      document.getElementById(toggle.getAttribute('aria-controls') ?? '') as HTMLElement
+    const panelOf = (button: HTMLElement) =>
+      document.getElementById(button.getAttribute('aria-controls') ?? '') as HTMLElement
 
-    // Closed by default: today's cards are behind the toggle, so only the week
-    // grid's own copy of my session is reachable. (Roles respect `hidden`.)
-    expect(toggles().getAttribute('aria-expanded')).toBe('false')
-    expect(panelOf(toggles()).hasAttribute('hidden')).toBe(true)
-    expect(within(panelOf(toggles())).queryByRole('button', { name: 'Edit' })).toBeNull()
-    expect(await screen.findByRole('button', { name: 'Edit' })).toBeTruthy()
-
-    fireEvent.click(toggles())
-
-    // Open: the label and its aria state follow, and the cards arrive. (`find*`
-    // because the two-day query is still in flight when the card first paints.)
-    expect(toggles().getAttribute('aria-expanded')).toBe('true')
-    expect(panelOf(toggles()).hasAttribute('hidden')).toBe(false)
-    expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy()
-    expect(await within(panelOf(toggles())).findByRole('button', { name: 'Edit' })).toBeTruthy()
-
-    // Tomorrow folds independently of today.
-    expect(screen.getByRole('button', { name: 'Tomorrow' }).getAttribute('aria-expanded')).toBe(
-      'false',
-    )
+    // Open on arrival, so your own session is editable without a tap. (Roles
+    // respect `hidden`, so this only matches while the panel is open - the week
+    // grid's copy of the same session sits outside this panel.)
+    expect(toggle('Today').getAttribute('aria-expanded')).toBe('true')
+    expect(panelOf(toggle('Today')).hasAttribute('hidden')).toBe(false)
+    expect(
+      await within(panelOf(toggle('Today'))).findByRole('button', { name: 'Edit' }),
+    ).toBeTruthy()
+    expect(toggle('Tomorrow').getAttribute('aria-expanded')).toBe('true')
 
     // The header row is the target, not just the label: clicking the row itself
-    // (the date sits beside the label) folds it again.
-    fireEvent.click(panelOf(toggles()).previousElementSibling as HTMLElement)
-    expect(toggles().getAttribute('aria-expanded')).toBe('false')
-    expect(within(panelOf(toggles())).queryByRole('button', { name: 'Edit' })).toBeNull()
+    // (the date sits beside the label) folds it, and its controls go away.
+    fireEvent.click(panelOf(toggle('Today')).previousElementSibling as HTMLElement)
+    expect(toggle('Today').getAttribute('aria-expanded')).toBe('false')
+    expect(panelOf(toggle('Today')).hasAttribute('hidden')).toBe(true)
+    expect(within(panelOf(toggle('Today'))).queryByRole('button', { name: 'Edit' })).toBeNull()
+
+    // Folding today left tomorrow alone, and the label opens it again.
+    expect(toggle('Tomorrow').getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(toggle('Today'))
+    expect(toggle('Today').getAttribute('aria-expanded')).toBe('true')
   })
 })
