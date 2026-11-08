@@ -138,7 +138,6 @@ export default function Wall() {
         <Card>
           <SectionHeading
             title="Wall notes"
-            hint="Newest last. Anyone who can see the wall can leave a note."
           />
           <WallComments
             profileId={target.id}
