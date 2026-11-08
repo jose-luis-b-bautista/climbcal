@@ -51,7 +51,8 @@ or write what.
 - **Share links** - `/u/<username>` renders one week (time and gym only, never notes) for a
   signed-out visitor, with a sign-up link that brings them back to that page.
 - **What was updated** - release notes open once per device and cover **everything new since your last
-  visit** (a skipped deploy is not lost), re-openable from Settings.
+  visit** (a skipped deploy is not lost); a device with no marker yet gets the whole list.
+  Re-openable from Settings.
 - **Comments and walls** - a flat comment thread on every session ("who is coming?"), and a
   **wall** (guestbook) for every climber at `/wall/<id>`. Session comments are readable by whoever
   may read the session; wall notes by the climber, their friends, or anyone while the profile is

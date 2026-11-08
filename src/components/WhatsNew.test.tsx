@@ -88,14 +88,14 @@ function renderProbe() {
 }
 
 describe('<WhatsNewProvider />', () => {
-  it('opens on an unread release and records it on dismiss', () => {
+  it('opens on every unread release and records them on dismiss', () => {
     // The test setup marks releases read; a first visit has no key at all.
     window.localStorage.removeItem(WHATS_NEW_STORAGE_KEY)
     renderProbe()
 
     expect(screen.getByText('notes open')).toBeTruthy()
-    // A brand-new device gets the current notes, not the whole history.
-    expect(screen.getByText('count 1')).toBeTruthy()
+    // Nothing is known to be read, so the whole shipped list is unread.
+    expect(screen.getByText(`count ${WHATS_NEW.length}`)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'dismiss' }))
     expect(screen.getByText('notes closed')).toBeTruthy()
@@ -115,10 +115,13 @@ describe('<WhatsNewProvider />', () => {
   })
 
   it('opens again for a release the device has not read', () => {
+    // A marker the client no longer ships - we cannot tell what was read, so
+    // everything is treated as unread rather than silently dropping releases.
     window.localStorage.setItem(WHATS_NEW_STORAGE_KEY, '2020-01-01-older-release')
     renderProbe()
 
     expect(screen.getByText('notes open')).toBeTruthy()
+    expect(screen.getByText(`count ${WHATS_NEW.length}`)).toBeTruthy()
   })
 
   it('shows every release newer than the last one read', () => {

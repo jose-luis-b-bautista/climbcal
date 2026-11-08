@@ -4,8 +4,9 @@
  * Entries are newest-first. The id of the newest *read* release is what gets
  * stored, and the pop-up shows every entry above it - so a device that skipped a
  * deploy sees both releases in one go, while a copy tweak on notes people
- * already read stays quiet. Keep the highlights to one short line each: this is a
- * pop-up, not a changelog file.
+ * already read stays quiet. With no marker at all (a first visit) nothing is
+ * known to be read, so the whole list is unread. Keep the highlights to one
+ * short line each: this is a pop-up, not a changelog file.
  */
 export interface WhatsNewEntry {
   /** Stable release id. Change it to re-open the pop-up for everyone. */
@@ -47,21 +48,26 @@ export const WHATS_NEW: WhatsNewEntry[] = [
  *
  * The stored marker is one id, meaning "read up to and including this release".
  * So:
- * - no marker, or an id that is no longer in the list (history pruned) → just the
- *   newest release. A brand-new device gets the current notes, not the archive;
- * - a known marker → every release above it, which is usually one or two.
+ * - no marker, or an id that is no longer in the list (history pruned) → all of
+ *   them. Nothing is known to be read, so the whole list is unread;
+ * - a known marker → every release above it, which is usually one or two;
+ * - the newest marker → none.
  */
 export function unreadWhatsNew(
   seenId: string | null | undefined,
   entries: WhatsNewEntry[] = WHATS_NEW,
 ): WhatsNewEntry[] {
-  if (!seenId) return entries.slice(0, 1)
+  if (!seenId) return entries
 
   const index = entries.findIndex((entry) => entry.id === seenId)
-  if (index <= 0) return index === 0 ? [] : entries.slice(0, 1)
+  // An unknown marker means we cannot tell what was read - assume nothing was.
+  if (index === -1) return entries
 
   return entries.slice(0, index)
 }
 
-/** The release the pop-up opens with, and the one a visit records as read. */
+/**
+ * The newest release: what a dismiss records as read, and what the Settings
+ * card's "Show what was updated" opens with.
+ */
 export const WHATS_NEW_LATEST = WHATS_NEW[0]

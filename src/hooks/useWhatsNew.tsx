@@ -15,7 +15,7 @@ interface WhatsNewContextValue {
   entries: WhatsNewEntry[]
   /** Opens it by hand - the Settings card's "Show what was updated". */
   show: () => void
-  /** Closes it and records the newest release as read, so it stays closed. */
+  /** Closes it and records every unread release as read, so it stays closed. */
   dismiss: () => void
 }
 
@@ -36,9 +36,10 @@ function readSeen(): string | null {
  *
  * It starts **open** whenever there are releases newer than the stored marker,
  * and shows all of them in one dialog - skipping a deploy does not lose a
- * release. Any close (× / backdrop / Escape / "Got it") records the newest id, so
- * the next visit is quiet. A device that is fully up to date holds no entries at
- * all, which is also the closed state.
+ * release, and a device that has never read any notes gets the whole list. Any
+ * close (× / backdrop / Escape / "Got it") records the newest id, so the next
+ * visit is quiet. A device that is fully up to date holds no entries at all,
+ * which is also the closed state.
  */
 export function WhatsNewProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<WhatsNewEntry[]>(() => unreadWhatsNew(readSeen()))

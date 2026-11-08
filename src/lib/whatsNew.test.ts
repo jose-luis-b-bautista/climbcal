@@ -41,9 +41,11 @@ describe('unreadWhatsNew', () => {
     { id: '2026-09-01-first', date: '1 September 2026', highlights: ['first release note here'] },
   ]
 
-  it('shows only the newest on a first visit, or for a marker it no longer knows', () => {
-    expect(unreadWhatsNew(null, entries)).toEqual([entries[0]])
-    expect(unreadWhatsNew('2020-01-01-long-gone', entries)).toEqual([entries[0]])
+  it('shows every release on a first visit, or for a marker it no longer knows', () => {
+    // Nothing stored, or an id we cannot place: assume nothing was read.
+    expect(unreadWhatsNew(null, entries)).toEqual(entries)
+    expect(unreadWhatsNew(undefined, entries)).toEqual(entries)
+    expect(unreadWhatsNew('2020-01-01-long-gone', entries)).toEqual(entries)
   })
 
   it('is quiet once the newest release has been read', () => {
@@ -57,5 +59,6 @@ describe('unreadWhatsNew', () => {
 
   it('reads the shipped list by default', () => {
     expect(unreadWhatsNew(WHATS_NEW[1].id)).toEqual(WHATS_NEW.slice(0, 1))
+    expect(unreadWhatsNew(null)).toEqual(WHATS_NEW)
   })
 })

@@ -264,7 +264,8 @@ Escape and a backdrop click both dismiss, and the primary action is focused so
 Enter gets you out. Its **read marker** is the newest release id the device has
 dismissed - the copy lives in `src/lib/whatsNew.ts`, and the pop-up then renders
 every release above that marker, one section each, so a deploy that was never
-opened is not lost. A missing or unknown marker shows just the newest release.
+opened is not lost. A missing or unknown marker means nothing is known to be
+read, so it shows the whole list.
 
 ### Feedback
 
