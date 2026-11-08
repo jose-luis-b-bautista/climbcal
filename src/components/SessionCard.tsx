@@ -24,6 +24,12 @@ export interface SessionCardProps {
    * the column. The day cards and feed rows keep the inline thread.
    */
   commentsDisplay?: 'inline' | 'sheet'
+  /**
+   * `card` draws the session as its own bordered box (week grid, share page);
+   * `flat` makes it a row inside the day cards, where the Today/Tomorrow card is
+   * the only box and rows are separated by a hairline instead of a second border.
+   */
+  variant?: 'card' | 'flat'
 }
 
 const TIMING_CLASSES: Record<SessionTiming['state'], string> = {
@@ -40,6 +46,7 @@ export function SessionCard({
   viewerId,
   commentCount,
   commentsDisplay = 'inline',
+  variant = 'card',
 }: SessionCardProps) {
   // Comments sit first in the footer; this rides along on the same left-aligned
   // row via the thread's `action` slot.
@@ -56,8 +63,20 @@ export function SessionCard({
   return (
     <div
       className={cx(
-        'min-w-0 rounded-lg border p-2.5',
-        isOwn ? 'border-emerald-700/70 bg-emerald-950/40' : 'border-zinc-800 bg-zinc-900/60',
+        'min-w-0',
+        variant === 'flat'
+          ? cx(
+              'py-2.5 first:pt-0 last:pb-0',
+              // Your own session keeps a soft tint (no border) so the day card's
+              // hairlines still run edge to edge.
+              isOwn && 'bg-emerald-950/20',
+            )
+          : cx(
+              'rounded-lg border p-2.5',
+              isOwn
+                ? 'border-emerald-700/70 bg-emerald-950/40'
+                : 'border-zinc-800 bg-zinc-900/60',
+            ),
       )}
     >
       <div className="flex items-center gap-2">

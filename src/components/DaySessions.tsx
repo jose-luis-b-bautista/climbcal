@@ -69,11 +69,13 @@ export function DaySessions({
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-zinc-800/60">
             {entries.map((entry) => (
               <SessionCard
                 key={entry.id}
                 entry={entry}
+                // The day card is the box; sessions are rows separated by a rule.
+                variant="flat"
                 isOwn={entry.user_id === userId}
                 viewerId={userId}
                 commentCount={commentCounts[entry.id]}

@@ -286,10 +286,14 @@ opened is not lost. A missing or unknown marker shows just the newest release.
   thread adds its own posts/deletes as a render-time delta - no effect syncing
   state, no refetch after every post.
 - **Left-aligned action row.** The toggle comes first, then any host action the
-  card passes (`SessionCard` sends its **Edit** button), with the panel rendered as
-  a sibling below - never inside the row - so an open thread spans the card instead
-  of shrinking to the row's width. This is what keeps the Today/Tomorrow cards
-  matching the feed on desktop.
+  card passes (`SessionCard` sends its **Edit Session** button), with the panel
+  rendered as a sibling below - never inside the row - so an open thread spans the
+  card instead of shrinking to the row's width. This is what keeps the
+  Today/Tomorrow cards matching the feed on desktop.
+- **Flat, not nested.** Comments are a hairline list (no per-comment cards) and the
+  composer is a soft, borderless field at 13px, so a thread inside a session card
+  does not read as boxes within boxes. The character counter appears only once you
+  start typing; the Post button is compact with a mouse and 40px on touch.
 - **Mobile sizing.** The toggle is `min-h-10` (40px), the Post button `min-h-11`
   (44px), and the composer uses `textareaClass`, which the touch-pointer rule in
   `index.css` pins at 16px so focusing it cannot zoom the page. Long words get
@@ -325,6 +329,10 @@ opened is not lost. A missing or unknown marker shows just the newest release.
   no `maximum-scale`) - enforced by `mobile.test.ts`.
 - **Tap targets:** small controls carry padding + `leading-6`; the whole
   disclosure header row is tappable.
+- **Day cards are lists, not stacks of boxes.** Today/Tomorrow render sessions as
+  flat rows inside the one card (`SessionCard variant="flat"`), separated by a
+  hairline; the week grid and the share page keep the bordered card, where a box
+  per session is what makes a narrow column readable.
 
 
 ---

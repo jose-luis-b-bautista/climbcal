@@ -287,7 +287,7 @@ describe('<Week /> day views', () => {
     expect(toggle('Today').getAttribute('aria-expanded')).toBe('true')
     expect(panelOf(toggle('Today')).hasAttribute('hidden')).toBe(false)
     expect(
-      await within(panelOf(toggle('Today'))).findByRole('button', { name: 'Edit' }),
+      await within(panelOf(toggle('Today'))).findByRole('button', { name: /^edit/i }),
     ).toBeTruthy()
     expect(toggle('Tomorrow').getAttribute('aria-expanded')).toBe('true')
 
@@ -296,7 +296,7 @@ describe('<Week /> day views', () => {
     fireEvent.click(panelOf(toggle('Today')).previousElementSibling as HTMLElement)
     expect(toggle('Today').getAttribute('aria-expanded')).toBe('false')
     expect(panelOf(toggle('Today')).hasAttribute('hidden')).toBe(true)
-    expect(within(panelOf(toggle('Today'))).queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(within(panelOf(toggle('Today'))).queryByRole('button', { name: /^edit/i })).toBeNull()
 
     // Folding today left tomorrow alone, and the label opens it again.
     expect(toggle('Tomorrow').getAttribute('aria-expanded')).toBe('true')

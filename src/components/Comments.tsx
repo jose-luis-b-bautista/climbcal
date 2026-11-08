@@ -2,10 +2,13 @@
  * Comment threads: a session's comments and a climber's wall.
  *
  * One component for both - the two threads differ only in wording, so the layout
- * (and the mobile behaviour) is written once. Everything is thumb-sized on
- * purpose: the toggle is a 40px row, the post button 44px, and the textarea is
- * `textareaClass`, which `index.css` pins at 16px on touch pointers so iOS does
- * not zoom the page when the composer is focused.
+ * (and the mobile behaviour) is written once. The thread is deliberately flat:
+ * comments are a hairline list, not a stack of cards, and the composer is a soft
+ * field, so a thread inside a session card does not read as boxes within boxes.
+ *
+ * Sizing: the toggle is a 40px row on a phone, the Post button 40px there and
+ * compact on a mouse, and the textarea is 13px - `index.css` still forces 16px on
+ * touch pointers, which is what stops iOS zooming when it is focused.
  *
  * The thread is **collapsed by default** and only queries when opened, so a page
  * with thirty session cards still makes one comments request per opened card
@@ -22,8 +25,6 @@ import {
   ErrorBanner,
   Notice,
   cx,
-  primaryButtonClass,
-  textareaClass,
 } from './ui'
 
 /** The migration this feature needs; the file name matches `supabase/migrations/`. */
@@ -97,7 +98,7 @@ function CommentItem({
   const name = displayNameOf(comment.author)
 
   return (
-    <li className="flex min-w-0 gap-2.5 rounded-lg border border-zinc-800/70 bg-zinc-950/40 p-2.5">
+    <li className="flex min-w-0 gap-2.5 py-2 first:pt-0 last:pb-0">
       <Avatar profile={comment.author} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -125,7 +126,7 @@ function CommentItem({
             </button>
           ) : null}
         </div>
-        <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap text-zinc-300">
+        <p className="mt-0.5 text-[13px] leading-relaxed break-words whitespace-pre-wrap text-zinc-300">
           {comment.body}
         </p>
       </div>
@@ -308,7 +309,7 @@ function CommentThread({
       {comments.length > 0 ? (
         // Capped and scrollable so a busy thread cannot push the week away on
         // a phone; `overscroll-contain` stops the page scrolling with it.
-        <ul className="max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-0.5 sm:max-h-80">
+        <ul className="max-h-64 divide-y divide-zinc-800/50 overflow-y-auto overscroll-contain pr-0.5 sm:max-h-80">
           {comments.map((comment) => (
             <CommentItem
               key={comment.id}
@@ -332,32 +333,34 @@ function CommentThread({
       {canComment ? (
         <form
           onSubmit={handleSubmit}
-          className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-950/40 p-2"
+          className="flex items-end gap-2 border-t border-zinc-800/50 pt-2"
         >
-          <label className="sr-only" htmlFor={inputId}>
-            {label}
-          </label>
-          <textarea
-            id={inputId}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            rows={2}
-            maxLength={COMMENT_MAX_LENGTH}
-            placeholder={placeholder}
-            className={textareaClass}
-          />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[11px] text-zinc-500">
-              {draft.length}/{COMMENT_MAX_LENGTH}
-            </span>
-            <button
-              type="submit"
-              disabled={busy || draft.trim().length === 0}
-              className={cx(primaryButtonClass, 'min-h-11')}
-            >
-              {busy ? 'Posting…' : 'Post'}
-            </button>
+          <div className="min-w-0 flex-1">
+            <label className="sr-only" htmlFor={inputId}>
+              {label}
+            </label>
+            <textarea
+              id={inputId}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              rows={2}
+              maxLength={COMMENT_MAX_LENGTH}
+              placeholder={placeholder}
+              className="w-full resize-none rounded-md bg-zinc-950/50 px-2 py-1.5 text-[13px] leading-snug text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-1 focus:ring-emerald-600"
+            />
+            {draft.length > 0 ? (
+              <p className="mt-0.5 text-right text-[10px] text-zinc-500">
+                {draft.length}/{COMMENT_MAX_LENGTH}
+              </p>
+            ) : null}
           </div>
+          <button
+            type="submit"
+            disabled={busy || draft.trim().length === 0}
+            className="min-h-10 shrink-0 rounded-md bg-emerald-600 px-2.5 text-xs font-semibold text-white transition hover:bg-emerald-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-1.5"
+          >
+            {busy ? 'Posting…' : 'Post'}
+          </button>
         </form>
       ) : (
         <p className="text-xs text-zinc-500">
