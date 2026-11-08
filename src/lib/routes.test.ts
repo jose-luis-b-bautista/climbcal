@@ -4,7 +4,7 @@
  * typing their password. The rejection cases matter more than the happy path.
  */
 import { describe, expect, it } from 'vitest'
-import { loginRedirectPath, profileSharePath, safeRedirectPath } from './routes'
+import { climberWallPath, loginRedirectPath, profileSharePath, safeRedirectPath } from './routes'
 
 describe('safeRedirectPath', () => {
   it('accepts same-origin absolute paths', () => {
@@ -43,5 +43,12 @@ describe('profileSharePath', () => {
   it('builds the public share path, escaping the username', () => {
     expect(profileSharePath('luis')).toBe('/u/luis')
     expect(profileSharePath('a b')).toBe('/u/a%20b')
+  })
+})
+
+describe('climberWallPath', () => {
+  it('builds the signed-in wall path from a climber id', () => {
+    expect(climberWallPath('abc-123')).toBe('/wall/abc-123')
+    expect(climberWallPath('a b')).toBe('/wall/a%20b')
   })
 })

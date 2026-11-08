@@ -16,6 +16,7 @@
  */
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { SessionComments } from '../components/Comments'
 import {
   Avatar,
   Card,
@@ -32,6 +33,7 @@ import {
   secondaryButtonClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { useCommentCounts } from '../hooks/useComments'
 import { useGyms } from '../hooks/useGyms'
 import { groupByDate, useClimbs } from '../hooks/useWeekClimbs'
 import {
@@ -55,6 +57,7 @@ import {
 import { climbGymNames, displayNameOf, groupGymsByRegion, usernameOf } from '../lib/format'
 import { gymPaletteOf } from '../lib/gymColors'
 import { groupByGym, indexByDate, uniqueClimbers, type GymGroup } from '../lib/group'
+import { climberWallPath } from '../lib/routes'
 import type { ClimbEntry } from '../types'
 
 type FeedView = 'list' | 'calendar'
@@ -120,7 +123,15 @@ function GymGroupHeading({ name }: { name: string }) {
 }
 
 /** One climber's session inside a gym group. */
-function FeedSessionRow({ entry }: { entry: ClimbEntry }) {
+function FeedSessionRow({
+  entry,
+  viewerId,
+  commentCount,
+}: {
+  entry: ClimbEntry
+  viewerId: string | null
+  commentCount?: number
+}) {
   const name = displayNameOf(entry.climber)
   const handle = usernameOf(entry.climber)
   // The gym is the group header now, so only an "either" session needs its own
@@ -128,38 +139,65 @@ function FeedSessionRow({ entry }: { entry: ClimbEntry }) {
   const showGymLabel = climbGymNames(entry).length > 1
 
   return (
-    <Card className="flex items-start gap-3">
-      <Avatar profile={entry.climber} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <p className="text-sm font-medium text-zinc-100">{name}</p>
-          {/* Skip the handle when it is already the name (no display name). */}
-          {handle && handle !== name ? (
-            <span className="text-xs text-zinc-500">{handle}</span>
-          ) : null}
+    <Card>
+      <div className="flex items-start gap-3">
+        <Avatar profile={entry.climber} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-2">
+            {/* The name opens their wall - the thread lives one tap away. */}
+            <Link
+              to={climberWallPath(entry.user_id)}
+              className="text-sm font-medium text-zinc-100 hover:text-emerald-300 hover:underline"
+            >
+              {name}
+            </Link>
+            {/* Skip the handle when it is already the name (no display name). */}
+            {handle && handle !== name ? (
+              <span className="text-xs text-zinc-500">{handle}</span>
+            ) : null}
+          </div>
+
+          {showGymLabel ? <GymCell climb={entry} /> : null}
+
+          <p className="text-xs font-medium text-emerald-300">
+            {formatTimeWindow(entry.start_time, entry.end_time, entry.start_slot, entry.end_slot)}
+            {/* A duration only makes sense when both ends are clock times. */}
+            {entry.start_time && entry.end_time ? (
+              <span className="text-zinc-500">
+                {' '}
+                · {formatDuration(entry.start_time, entry.end_time)}
+              </span>
+            ) : null}
+          </p>
+
+          {entry.note ? <p className="mt-1 text-xs text-zinc-400">{entry.note}</p> : null}
         </div>
-
-        {showGymLabel ? <GymCell climb={entry} /> : null}
-
-        <p className="text-xs font-medium text-emerald-300">
-          {formatTimeWindow(entry.start_time, entry.end_time, entry.start_slot, entry.end_slot)}
-          {/* A duration only makes sense when both ends are clock times. */}
-          {entry.start_time && entry.end_time ? (
-            <span className="text-zinc-500">
-              {' '}
-              · {formatDuration(entry.start_time, entry.end_time)}
-            </span>
-          ) : null}
-        </p>
-
-        {entry.note ? <p className="mt-1 text-xs text-zinc-400">{entry.note}</p> : null}
       </div>
+
+      {viewerId ? (
+        <div className="mt-2 border-t border-zinc-800/60 pt-1">
+          <SessionComments
+            climbId={entry.id}
+            ownerId={entry.user_id}
+            viewerId={viewerId}
+            count={commentCount}
+          />
+        </div>
+      ) : null}
     </Card>
   )
 }
 
 /** Sessions grouped per gym: heading, then the climber rows. */
-function GymGroupList({ groups }: { groups: GymGroup[] }) {
+function GymGroupList({
+  groups,
+  viewerId,
+  commentCounts = {},
+}: {
+  groups: GymGroup[]
+  viewerId: string | null
+  commentCounts?: Record<string, number>
+}) {
   return (
     <div className="space-y-4">
       {groups.map((group) => (
@@ -170,7 +208,12 @@ function GymGroupList({ groups }: { groups: GymGroup[] }) {
           <div className="space-y-2">
             {group.entries.map((entry) => (
               // One session can sit in two groups, so the key is namespaced.
-              <FeedSessionRow key={`${group.gymName}-${entry.id}`} entry={entry} />
+              <FeedSessionRow
+                key={`${group.gymName}-${entry.id}`}
+                entry={entry}
+                viewerId={viewerId}
+                commentCount={commentCounts[entry.id]}
+              />
             ))}
           </div>
         </section>
@@ -295,6 +338,10 @@ export default function Feed() {
   }, [entries, userId, selectedGymName])
 
   const dayGroups = useMemo(() => groupByDate(feedEntries), [feedEntries])
+  // One batched count for every visible session, so the collapsed cards can say
+  // how many comments they hold without a request each.
+  const commentIds = useMemo(() => feedEntries.map((entry) => entry.id), [feedEntries])
+  const commentCounts = useCommentCounts('climb', commentIds)
   const byDate = useMemo(() => indexByDate(feedEntries), [feedEntries])
   const calendarDays = useMemo(() => monthDays(monthStart), [monthStart])
   const gymGroups = groupGymsByRegion(gyms)
@@ -454,7 +501,11 @@ export default function Feed() {
                     </span>
                   }
                 >
-                  <GymGroupList groups={groupByGym(group.entries, groupOptions)} />
+                  <GymGroupList
+                    groups={groupByGym(group.entries, groupOptions)}
+                    viewerId={userId}
+                    commentCounts={commentCounts}
+                  />
                 </Disclosure>
               </section>
             ))}
@@ -525,7 +576,11 @@ export default function Feed() {
                   hint="No sessions posted for this day - pick another."
                 />
               ) : (
-                <GymGroupList groups={selectedGroups} />
+                <GymGroupList
+                  groups={selectedGroups}
+                  viewerId={userId}
+                  commentCounts={commentCounts}
+                />
               )}
             </div>
           ) : (

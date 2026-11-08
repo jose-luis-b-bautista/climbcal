@@ -50,10 +50,18 @@ or write what.
 - **Settings** - edit profile, flip public/private, share link, send feedback.
 - **Share links** - `/u/<username>` renders one week (time and gym only, never notes) for a
   signed-out visitor, with a sign-up link that brings them back to that page.
-- **What was updated** - release notes once per release per browser, re-openable from Settings.
+- **What was updated** - release notes open once per device and cover **everything new since your last
+  visit** (a skipped deploy is not lost), re-openable from Settings.
+- **Comments and walls** - a flat comment thread on every session ("who is coming?"), and a
+  **wall** (guestbook) for every climber at `/wall/<id>`. Session comments are readable by whoever
+  may read the session; wall notes by the climber, their friends, or anyone while the profile is
+  public - both rules live in RLS, not in the client. The author can delete their own comment, and
+  the owner of the session or wall can delete any on it (two taps, so a stray thumb on a phone
+  cannot). A collapsed card shows its count from one batched query per page; the thread itself only
+  loads when it is opened. The public share page stays text-free.
 - **Light / dark mode** - remembered per browser, falls back to the OS, no flash on load.
 
-Out of scope for v1: notifications, chat, maps, recurring sessions, comments, native apps.
+Out of scope for v1: notifications, chat, maps, recurring sessions, native apps.
 
 ## 1. Create the Supabase project
 
@@ -62,11 +70,21 @@ every file under `supabase/migrations/` into the SQL editor in filename order, o
 Docker needed):
 
 ```bash
-npx supabase@latest login                     # opens the browser once
+npx supabase@latest login                            # opens the browser once
 npx supabase@latest link --project-ref <your-project-ref>
-npx supabase@latest db push                   # applies pending migrations, safe to repeat
-npx supabase@latest migration list --linked   # local vs remote should match
+npx supabase@latest db push --include-all --remote   # applies pending migrations, safe to repeat
+npx supabase@latest migration list --remote          # local vs remote should match
 ```
+
+Two flags that matter:
+
+- **`--remote`** - CLI v3 pushes to your **local** stack by default; a bare `db push` fails with
+  `ECONNREFUSED 127.0.0.1:54322` unless Docker is running.
+- **`--include-all`** - `db push` only applies migrations *newer* than the last one on the remote.
+  This repo carries `20270912000000_feedback.sql`, which is later than the 2026-11 migrations, so
+  without this flag a new 2026-11 file is skipped while the command still exits `0` - the app then
+  reports `Could not find the table … in the schema cache`. `migration list --remote` is the check
+  that catches it.
 
 | Migration                                     | Adds                                                       |
 | --------------------------------------------- | ---------------------------------------------------------- |
@@ -81,6 +99,7 @@ npx supabase@latest migration list --linked   # local vs remote should match
 | `20260924000000_public_profile_share.sql`     | `shared_profile()` RPC for `/u/` links                     |
 | `20260929000000_grava_gym.sql`                | Grava (Luzon)                                              |
 | `20261109000000_hangar8_climb_shack_gyms.sql` | Hangar 8 + Climb Shack (Luzon)                             |
+| `20261110000000_comments.sql`                 | session comments + walls, with RLS                        |
 | `20270912000000_feedback.sql`                 | `feedback` table + RLS                                     |
 
 Every migration is idempotent, so re-running is safe.
@@ -140,6 +159,8 @@ auth.users ──1:n── climbs   (climb_date, start_time | start_slot, end_ti
                              gym_id | custom_gym_name, gym_id_2 | custom_gym_name_2, note)
 gyms                        (name, city, region - admin-curated reference data)
 auth.users ──n:n── friendships (requester_id, addressee_id, status[pending|accepted])
+climbs      ──1:n── climb_comments   (user_id, body ≤ 280)       - the session thread
+profiles    ──1:n── profile_comments (user_id, body ≤ 280)       - the wall (guestbook)
 ```
 
 - One `friendships` row per pair: a unique index over `least()` / `greatest()` of the two ids makes
@@ -155,16 +176,22 @@ auth.users ──n:n── friendships (requester_id, addressee_id, status[pendi
   verbatim and a duration appears only when both ends are clock times.
 - Signing up creates the `profiles` row (`on_auth_user_created` trigger); `updated_at` is
   trigger-maintained.
+- Comments are two flat tables, no replies: `climb_comments` hangs off a session and
+  `profile_comments` is a climber's wall. Both are 1–280 characters, cascade away with their
+  session/wall (or the author's account), and freeze everything but `body` on update. Anonymous
+  visitors never see them - `shared_profile()` does not read either table.
 
 ### Visibility rules (enforced by RLS, not the client)
 
-| Table         | Read                                                                | Write                                         |
-| ------------- | ------------------------------------------------------------------- | --------------------------------------------- |
-| `profiles`    | any signed-in user                                                  | owner only                                    |
-| `gyms`        | any signed-in user                                                  | **admins only** (via `/admin`)                |
-| `climbs`      | owner, **accepted friends**, or everyone when the owner is `public` | owner only                                    |
-| `friendships` | the two participants only                                           | insert self as requester; either side deletes |
-| `feedback`    | admins only                                                         | any signed-in user inserts; admins manage     |
+| Table              | Read                                                                | Write                                                               |
+| ------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `profiles`         | any signed-in user                                                  | owner only                                                          |
+| `gyms`             | any signed-in user                                                  | **admins only** (via `/admin`)                                      |
+| `climbs`           | owner, **accepted friends**, or everyone when the owner is `public` | owner only                                                          |
+| `climb_comments`   | whoever can read that session (`can_view_climb`)                    | insert as yourself; delete your own or any on **your** session      |
+| `profile_comments` | the climber, their friends, or anyone while the profile is `public` | insert as yourself; delete your own or any on **your** wall         |
+| `friendships`      | the two participants only                                           | insert self as requester; either side deletes                       |
+| `feedback`         | admins only                                                         | any signed-in user inserts; admins manage                           |
 
 Two rules worth knowing: only the **addressee** can flip a request to accepted, and one row exists
 per pair (see the data model above).
@@ -226,7 +253,7 @@ group.
 [`20260929000000_grava_gym.sql`](supabase/migrations/20260929000000_grava_gym.sql)):
 
 1. Add `supabase/migrations/<timestamp>_<slug>_gym.sql` with the idempotent insert above, then push
-   it with `npx supabase@latest db push`.
+   it with `npx supabase@latest db push --include-all --remote` (see the flag notes in step 1).
 2. Give it brand colours or it renders the neutral cell: add an entry to `GYM_PALETTES` in
    [`src/lib/gymColors.ts`](src/lib/gymColors.ts), keyed by the gym name, with `primary` and
    `background` hex values.
@@ -254,15 +281,18 @@ about the app.
 ```
 src/
   components/   Layout, ProtectedRoute, SessionFormModal, SessionCard + DaySessions,
-                ShareLink, ThemeToggle, WhatsNewDialog, ui.tsx (primitives + class tokens)
+                Comments (session thread + wall), ShareLink, ThemeToggle,
+                WhatsNewDialog, ui.tsx (primitives + class tokens)
   hooks/        useAuth, useTheme, useWeekClimbs, useClimberStats, useSharedProfile,
-                useFriends, usePublicClimbers, useGyms, useWhatsNew
-  lib/          supabase (client), date (week/month + window math), format (names, gym
-                grouping), group (feed grouping), stats (heatmap, streaks, breakdowns),
-                avatar + gymColors, slots (the eight window labels), admin, routes
-                (share paths + safe redirects), whatsNew
-  pages/        Login, Onboarding, Week, Stats, Friends, Feed, Settings,
-                SharedProfile (public /u/<username>), Admin (unlinked)
+                useComments (threads + batched counts), useFriends,
+                usePublicClimbers, useGyms, useWhatsNew
+  lib/          supabase (client), date (week/month + window + relative-time math),
+                format (names, gym grouping), group (feed grouping), stats (heatmap,
+                streaks, breakdowns), avatar + gymColors, slots (the eight window
+                labels), admin, routes (share + wall paths, safe redirects), whatsNew
+  pages/        Login, Onboarding, Week, Stats, Friends, Feed, Wall (a climber's
+                guestbook), Settings, SharedProfile (public /u/<username>),
+                Admin (unlinked)
   test/         Supabase client mock (tables + `rpc`) + fixtures
 supabase/
   migrations/   see the table in step 1
@@ -273,6 +303,10 @@ Queries work in two steps: load the accepted friend ids, then fetch climbs for `
 the selected week (embedded gym name included) and map the climber profiles onto the rows. The feed
 reuses the same hook with no user filter, letting RLS return the visible rows and keeping only
 `visibility = 'public'` profiles - plus your own rows, whatever your visibility.
+
+Comments follow the same shape: one batched count per page, then a thread query (plus an author
+profile join) only when a card is opened. Writes are the caller's own rows; the delete policies are
+where the session/wall owner moderation lives.
 
 ## Theming
 
@@ -330,20 +364,49 @@ the same URL as `emailRedirectTo` so the confirmation round trip lands on the pr
 `loginRedirectPath` / `safeRedirectPath` in [`src/lib/routes.ts`](src/lib/routes.ts) keep that
 same-origin, so `?next=` cannot become an open redirect.
 
+## Comments and walls
+
+Two flat threads, no replies, both 1–280 characters:
+
+- **Session comments** - the toggle at the foot of a session card (week grid, today/tomorrow, the
+  feed list and the calendar's day list). Readable by whoever may read that session, so a public
+  session's thread is exactly as public as the session. In the week grid - seven columns at
+  `xl:grid-cols-7`, ~150px each - the toggle is icon + count and the thread opens in a sheet, so
+  the narrow column never has to hold a composer.
+- **Wall notes** - `/wall/<id>`, reached from a climber's name in the feed, from a Friends row, or
+  from the Stats header. Readable by the climber, their friends, and anyone while the profile is
+  public.
+
+The author deletes their own comment, and the owner of the session or wall deletes any comment on it
+(the delete policies, not the UI, are the real rule - the button is just a mirror). Deletes take two
+taps on purpose. Threads load lazily, so a page of collapsed cards costs one batched count query
+rather than one request per session. `/u/<username>` is untouched: `shared_profile()` reads neither
+comment table, so the share page keeps its "time and gym only, never text" promise.
+
+Apply the migration like any other:
+
+```bash
+npx supabase@latest db push --include-all --remote   # or paste the file into the SQL editor
+npx supabase@latest migration list --remote          # 20261110000000_comments.sql should be applied
+```
+
 ## Testing
 
 CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push to
 `main` and on pull requests - no secrets required.
 
-The suite covers the date/format helpers plus two integration renders against a mocked Supabase
-client (`src/test/`): the week view (auth gate, friend lookup, climb query, gym join) and the share
+The suite covers the date/format helpers plus the integration renders against a mocked Supabase
+client (`src/test/`): the week view (auth gate, friend lookup, climb query, gym join), the share
 page (renders signed out, a private/unknown username reads as "not shared", `rpc('shared_profile')`
-and the `?next=` sign-up link are wired). It also asserts `vercel.json` stays deployable - the SPA
+and the `?next=` sign-up link are wired), the comment thread (lazy load, posting, both delete rules,
+the 280-character cap, the migration notice) and the wall page (a public wall, posting onto it, and a
+private stranger's wall staying closed). It also asserts `vercel.json` stays deployable - the SPA
 fallback is intact and no `source` is a full URL - and that the theme tokens hold AA contrast in
 both themes.
 
 The SQL was validated against a local Postgres with a stubbed `auth` schema: signup trigger, check
 constraints, per-visibility reads, one-row-per-pair, "only the addressee accepts", the `anon`
-posture (no table access, only `shared_profile` executable), and the stats views against
-hand-computed fixture rollups.
+posture (no table access, only `shared_profile` executable), the comment walls (`can_view_climb` /
+`can_view_wall` answers, author-or-owner deletes, bodies frozen on update, cascade with the session),
+and the stats views against hand-computed fixture rollups.
 

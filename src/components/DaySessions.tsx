@@ -12,6 +12,8 @@ interface DaySessionsProps {
   userId: string | null
   /** True while the two-day query is still in flight, so nothing flashes empty. */
   loading?: boolean
+  /** Comment counts for the sessions on screen (one batched query per page). */
+  commentCounts?: Record<string, number>
   onAdd: (dateISO: string) => void
   onEdit: (climb: Climb) => void
 }
@@ -30,6 +32,7 @@ export function DaySessions({
   entries,
   userId,
   loading = false,
+  commentCounts = {},
   onAdd,
   onEdit,
 }: DaySessionsProps) {
@@ -72,6 +75,8 @@ export function DaySessions({
                 key={entry.id}
                 entry={entry}
                 isOwn={entry.user_id === userId}
+                viewerId={userId}
+                commentCount={commentCounts[entry.id]}
                 timing={
                   kind === 'today'
                     ? sessionTiming(

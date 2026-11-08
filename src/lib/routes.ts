@@ -40,3 +40,14 @@ export function loginRedirectPath({
 export function profileSharePath(username: string): string {
   return `/u/${encodeURIComponent(username)}`
 }
+
+/**
+ * The signed-in wall (guestbook) of a climber: `/wall/<id>`.
+ *
+ * Keyed by id, not username: a wall is an in-app surface, and profiles with no
+ * username yet (fresh accounts) still have one. Anonymous visitors never see
+ * this route - it lives behind `RequireProfile`.
+ */
+export function climberWallPath(userId: string): string {
+  return `/wall/${encodeURIComponent(userId)}`
+}

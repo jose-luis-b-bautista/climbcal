@@ -223,7 +223,7 @@ export default function Settings() {
       <Card>
         <SectionHeading
           title="What's new"
-          hint={`Release notes from ${WHATS_NEW_LATEST.date} - the pop-up shows once per release.`}
+          hint={`Release notes from ${WHATS_NEW_LATEST.date} - the pop-up shows what is new since your last visit.`}
         />
 
         <button type="button" className={secondaryButtonClass} onClick={showWhatsNew}>

@@ -1,6 +1,7 @@
 import { formatDuration, formatTimeWindow, type SessionTiming } from '../lib/date'
 import { displayNameOf } from '../lib/format'
 import type { Climb, ClimbEntry } from '../types'
+import { SessionComments } from './Comments'
 import { Avatar, GymCell, cx } from './ui'
 
 export interface SessionCardProps {
@@ -9,6 +10,20 @@ export interface SessionCardProps {
   onEdit: (climb: Climb) => void
   /** Optional "On now" / "Finished" badge, used by the day views. */
   timing?: SessionTiming | null
+  /**
+   * Who is reading. Comments render only when this is set, which is what keeps
+   * the public share page (`/u/<username>`) a read-only snapshot: it passes no
+   * viewer, and anonymous visitors can never write there anyway.
+   */
+  viewerId?: string | null
+  /** Count from the page's batched query (see `useCommentCounts`). */
+  commentCount?: number
+  /**
+   * How the thread opens. The week grid's columns are ~150px wide, so its cards
+   * pass `sheet` - an inline thread there would squeeze the composer and widen
+   * the column. The day cards and feed rows keep the inline thread.
+   */
+  commentsDisplay?: 'inline' | 'sheet'
 }
 
 const TIMING_CLASSES: Record<SessionTiming['state'], string> = {
@@ -17,11 +32,31 @@ const TIMING_CLASSES: Record<SessionTiming['state'], string> = {
 }
 
 /** One climbing session: who, where, when - with an optional relative badge. */
-export function SessionCard({ entry, isOwn, onEdit, timing }: SessionCardProps) {
+export function SessionCard({
+  entry,
+  isOwn,
+  onEdit,
+  timing,
+  viewerId,
+  commentCount,
+  commentsDisplay = 'inline',
+}: SessionCardProps) {
+  // Comments sit first in the footer; this rides along on the same left-aligned
+  // row via the thread's `action` slot.
+  const editButton = isOwn ? (
+    <button
+      type="button"
+      onClick={() => onEdit(entry)}
+      className="inline-flex min-h-10 items-center rounded-md px-2 text-xs font-medium text-emerald-400 transition hover:text-emerald-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 sm:min-h-9"
+    >
+      Edit Session
+    </button>
+  ) : null
+
   return (
     <div
       className={cx(
-        'rounded-lg border p-2.5',
+        'min-w-0 rounded-lg border p-2.5',
         isOwn ? 'border-emerald-700/70 bg-emerald-950/40' : 'border-zinc-800 bg-zinc-900/60',
       )}
     >
@@ -59,14 +94,24 @@ export function SessionCard({ entry, isOwn, onEdit, timing }: SessionCardProps) 
 
       {entry.note ? <p className="mt-1 text-xs text-zinc-400">{entry.note}</p> : null}
 
-      {isOwn ? (
-        <button
-          type="button"
-          onClick={() => onEdit(entry)}
-          className="mt-2 text-xs font-medium text-emerald-400 hover:text-emerald-300 hover:underline"
-        >
-          Edit
-        </button>
+      {isOwn || viewerId ? (
+        // Comments first, then Edit - both flush left, matching the feed. The
+        // thread takes the Edit button as its `action` so the opened panel stays a
+        // full-width sibling rather than a squeezed flex item.
+        <div className="mt-1 border-t border-zinc-800/60 pt-1">
+          {viewerId ? (
+            <SessionComments
+              climbId={entry.id}
+              ownerId={entry.user_id}
+              viewerId={viewerId}
+              count={commentCount}
+              display={commentsDisplay}
+              action={editButton}
+            />
+          ) : (
+            <div className="-ml-2 flex flex-wrap items-center gap-2">{editButton}</div>
+          )}
+        </div>
       ) : null}
     </div>
   )

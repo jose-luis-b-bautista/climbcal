@@ -1,4 +1,5 @@
 import { useRef, useMemo, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Avatar,
   Card,
@@ -18,6 +19,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
 import { usePublicClimbers } from '../hooks/usePublicClimbers'
 import { displayNameOf } from '../lib/format'
+import { climberWallPath } from '../lib/routes'
 import type { Profile } from '../types'
 
 function FriendRow({ profile, action }: { profile: Profile; action: ReactNode }) {
@@ -122,6 +124,11 @@ export default function Friends() {
   const renderClimberRow = (profile: Profile) => {
     const relation = relationFor(profile.id)
     const isSelf = profile.id === userId
+    const wallLink = (
+      <Link to={climberWallPath(profile.id)} className={ghostButtonClass}>
+        {isSelf ? 'Your wall' : 'Wall'}
+      </Link>
+    )
 
     return (
       <FriendRow
@@ -129,31 +136,36 @@ export default function Friends() {
         profile={profile}
         action={
           isSelf ? (
-            <span className="text-xs text-zinc-500">That's you</span>
-          ) : !relation ? (
-            <button
-              type="button"
-              className={primaryButtonClass}
-              onClick={() => void run(() => sendRequest(profile.id))}
-            >
-              Add friend
-            </button>
-          ) : relation.status === 'accepted' ? (
-            <span className="text-xs font-medium text-emerald-400">Friends ✓</span>
-          ) : relation.requester_id === userId ? (
-            // No cancel here: a pending request is withdrawn from the
-            // "Sent requests" card below.
-            <span className="text-xs text-zinc-500">Request sent</span>
+            wallLink
           ) : (
             <>
-              <span className="text-xs text-zinc-500">Asked you</span>
-              <button
-                type="button"
-                className={primaryButtonClass}
-                onClick={() => void run(() => acceptRequest(relation.id))}
-              >
-                Accept
-              </button>
+              {wallLink}
+              {!relation ? (
+                <button
+                  type="button"
+                  className={primaryButtonClass}
+                  onClick={() => void run(() => sendRequest(profile.id))}
+                >
+                  Add friend
+                </button>
+              ) : relation.status === 'accepted' ? (
+                <span className="text-xs font-medium text-emerald-400">Friends ✓</span>
+              ) : relation.requester_id === userId ? (
+                // No cancel here: a pending request is withdrawn from the
+                // "Sent requests" card below.
+                <span className="text-xs text-zinc-500">Request sent</span>
+              ) : (
+                <>
+                  <span className="text-xs text-zinc-500">Asked you</span>
+                  <button
+                    type="button"
+                    className={primaryButtonClass}
+                    onClick={() => void run(() => acceptRequest(relation.id))}
+                  >
+                    Accept
+                  </button>
+                </>
+              )}
             </>
           )
         }
@@ -230,13 +242,21 @@ export default function Friends() {
                       profile={friend}
                       action={
                         relation ? (
-                          <button
-                            type="button"
-                            className={dangerButtonClass}
-                            onClick={() => void run(() => removeFriend(relation.id))}
-                          >
-                            Unfriend
-                          </button>
+                          <>
+                            <Link
+                              to={climberWallPath(friend.id)}
+                              className={ghostButtonClass}
+                            >
+                              Wall
+                            </Link>
+                            <button
+                              type="button"
+                              className={dangerButtonClass}
+                              onClick={() => void run(() => removeFriend(relation.id))}
+                            >
+                              Unfriend
+                            </button>
+                          </>
                         ) : null
                       }
                     />

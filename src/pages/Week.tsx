@@ -17,6 +17,7 @@ import {
   secondaryButtonClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { useCommentCounts } from '../hooks/useComments'
 import { useFriends } from '../hooks/useFriends'
 import { useGyms } from '../hooks/useGyms'
 import { useTheme } from '../hooks/useTheme'
@@ -78,6 +79,14 @@ export default function Week() {
     reloadUpcoming()
     reloadWeek()
   }
+
+  // One batched count for every session on the page - the day cards and the
+  // week grid share it, so opening the page costs a single extra request.
+  const commentIds = useMemo(
+    () => [...upcoming, ...weekEntries].map((entry) => entry.id),
+    [upcoming, weekEntries],
+  )
+  const commentCounts = useCommentCounts('climb', commentIds)
 
   // Both queries fail together in practice, so surface a single banner.
   const dataError = upcomingError ?? weekError
@@ -154,6 +163,7 @@ export default function Week() {
           entries={dayEntries(todayISO)}
           userId={userId}
           loading={upcomingLoading}
+          commentCounts={commentCounts}
           onAdd={(date) => setModal({ open: true, date, initial: null })}
           onEdit={(climb) => setModal({ open: true, date: climb.climb_date, initial: climb })}
         />
@@ -164,6 +174,7 @@ export default function Week() {
           entries={dayEntries(tomorrowISO)}
           userId={userId}
           loading={upcomingLoading}
+          commentCounts={commentCounts}
           onAdd={(date) => setModal({ open: true, date, initial: null })}
           onEdit={(climb) => setModal({ open: true, date: climb.climb_date, initial: climb })}
         />
@@ -215,7 +226,7 @@ export default function Week() {
                     <div
                       key={dateISO}
                       className={cx(
-                        'rounded-xl border p-3',
+                        'min-w-0 rounded-xl border p-3',
                         isTodayColumn
                           ? 'border-emerald-800/70 bg-emerald-950/20'
                           : 'border-zinc-800 bg-zinc-900/30',
@@ -252,6 +263,11 @@ export default function Week() {
                               key={entry.id}
                               entry={entry}
                               isOwn={entry.user_id === userId}
+                              viewerId={userId}
+                              commentCount={commentCounts[entry.id]}
+                              // A 7-column day is ~150px wide: open the thread in
+                              // a sheet instead of squeezing it into the column.
+                              commentsDisplay="sheet"
                               onEdit={(climb) =>
                                 setModal({ open: true, date: climb.climb_date, initial: climb })
                               }

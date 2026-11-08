@@ -16,7 +16,7 @@
  * they would only invite comparing training loads the data cannot support.
  */
 import { useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Card,
   EmptyState,
@@ -40,6 +40,7 @@ import {
   formatShortDate,
 } from '../lib/date'
 import { displayNameOf, usernameOf } from '../lib/format'
+import { climberWallPath } from '../lib/routes'
 import {
   HEAT_LEVEL_CLASSES,
   HEAT_PLANNED_CLASS,
@@ -318,7 +319,7 @@ export default function Stats() {
       <SectionHeading
         title="Stats"
         action={
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-40">
               <Field label="Climber" htmlFor="stats-climber">
                 <Select
@@ -339,6 +340,11 @@ export default function Stats() {
                 </Select>
               </Field>
             </div>
+            {targetId ? (
+              <Link to={climberWallPath(targetId)} className={ghostButtonClass}>
+                Wall
+              </Link>
+            ) : null}
             <button type="button" className={ghostButtonClass} onClick={reload}>
               Refresh
             </button>
@@ -350,7 +356,7 @@ export default function Stats() {
         <Notice>
           The stats views are not in the database yet. Run{' '}
           <code>supabase/migrations/{STATS_MIGRATION}</code> - with the CLI that is{' '}
-          <code>npx supabase@latest db push</code> - then refresh.
+          <code>npx supabase@latest db push --include-all --remote</code> - then refresh.
         </Notice>
       ) : null}
 

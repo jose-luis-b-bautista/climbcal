@@ -1,14 +1,21 @@
 /* oxlint-disable react/only-export-components, react-refresh/only-export-components */
 // This module intentionally exports both <WhatsNewProvider> and useWhatsNew().
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
-import { WHATS_NEW_LATEST, WHATS_NEW_STORAGE_KEY } from '../lib/whatsNew'
+import {
+  WHATS_NEW_LATEST,
+  WHATS_NEW_STORAGE_KEY,
+  unreadWhatsNew,
+  type WhatsNewEntry,
+} from '../lib/whatsNew'
 
 interface WhatsNewContextValue {
   /** True while the release-notes dialog should be on screen. */
   open: boolean
+  /** The releases to render, newest first. Empty while closed. */
+  entries: WhatsNewEntry[]
   /** Opens it by hand - the Settings card's "Show what was updated". */
   show: () => void
-  /** Closes it and records this release as read, so it stays closed. */
+  /** Closes it and records the newest release as read, so it stays closed. */
   dismiss: () => void
 }
 
@@ -27,15 +34,17 @@ function readSeen(): string | null {
 /**
  * Remembers which release notes have been read, per device.
  *
- * It starts **open** whenever the stored id is not the current release, which is
- * what makes the pop-up appear once after a deploy - and mark itself read on any
- * close (the × / the backdrop / Escape / "Got it" all land here).
+ * It starts **open** whenever there are releases newer than the stored marker,
+ * and shows all of them in one dialog - skipping a deploy does not lose a
+ * release. Any close (× / backdrop / Escape / "Got it") records the newest id, so
+ * the next visit is quiet. A device that is fully up to date holds no entries at
+ * all, which is also the closed state.
  */
 export function WhatsNewProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(() => readSeen() !== WHATS_NEW_LATEST.id)
+  const [entries, setEntries] = useState<WhatsNewEntry[]>(() => unreadWhatsNew(readSeen()))
 
   const dismiss = useCallback(() => {
-    setOpen(false)
+    setEntries([])
     try {
       window.localStorage.setItem(WHATS_NEW_STORAGE_KEY, WHATS_NEW_LATEST.id)
     } catch {
@@ -43,9 +52,12 @@ export function WhatsNewProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const show = useCallback(() => setOpen(true), [])
+  const show = useCallback(() => setEntries([WHATS_NEW_LATEST]), [])
 
-  const value = useMemo(() => ({ open, show, dismiss }), [open, show, dismiss])
+  const value = useMemo(
+    () => ({ open: entries.length > 0, entries, show, dismiss }),
+    [entries, show, dismiss],
+  )
 
   return <WhatsNewContext.Provider value={value}>{children}</WhatsNewContext.Provider>
 }

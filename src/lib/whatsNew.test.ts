@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { WHATS_NEW, WHATS_NEW_LATEST, WHATS_NEW_STORAGE_KEY } from './whatsNew'
+import {
+  WHATS_NEW,
+  WHATS_NEW_LATEST,
+  WHATS_NEW_STORAGE_KEY,
+  unreadWhatsNew,
+  type WhatsNewEntry,
+} from './whatsNew'
 
 describe('release notes', () => {
   it('opens on the newest release, with unique ids', () => {
@@ -24,5 +30,32 @@ describe('release notes', () => {
 
   it('records what was read under one stable key', () => {
     expect(WHATS_NEW_STORAGE_KEY).toBe('climbcal-whats-new-seen')
+  })
+})
+
+describe('unreadWhatsNew', () => {
+  // A three-release history, so "everything above the marker" is more than one.
+  const entries: WhatsNewEntry[] = [
+    { id: '2026-11-10-third', date: '10 November 2026', highlights: ['third release note here'] },
+    { id: '2026-11-09-second', date: '9 November 2026', highlights: ['second release note here'] },
+    { id: '2026-09-01-first', date: '1 September 2026', highlights: ['first release note here'] },
+  ]
+
+  it('shows only the newest on a first visit, or for a marker it no longer knows', () => {
+    expect(unreadWhatsNew(null, entries)).toEqual([entries[0]])
+    expect(unreadWhatsNew('2020-01-01-long-gone', entries)).toEqual([entries[0]])
+  })
+
+  it('is quiet once the newest release has been read', () => {
+    expect(unreadWhatsNew(entries[0].id, entries)).toEqual([])
+  })
+
+  it('returns every release above the last one read, newest first', () => {
+    expect(unreadWhatsNew(entries[2].id, entries)).toEqual([entries[0], entries[1]])
+    expect(unreadWhatsNew(entries[1].id, entries)).toEqual([entries[0]])
+  })
+
+  it('reads the shipped list by default', () => {
+    expect(unreadWhatsNew(WHATS_NEW[1].id)).toEqual(WHATS_NEW.slice(0, 1))
   })
 })

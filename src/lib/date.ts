@@ -114,6 +114,33 @@ export function formatMediumDate(value: string | Date): string {
   return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+/**
+ * Short age of a timestamp, for comment threads: "just now", "5m", "3h", "2d",
+ * then the date ("Sep 17"). Deliberately terse - it sits beside a name on a phone
+ * where a full "5 minutes ago" would crowd the comment out.
+ *
+ * A timestamp slightly in the future (clock skew between the browser and the
+ * database) reads as "just now" rather than a negative age.
+ */
+export function formatRelativeTime(value: string | Date, now: Date = new Date()): string {
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return ''
+
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h`
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d`
+
+  return formatMediumDate(date)
+}
+
 /** Postgres returns `HH:MM:SS`; inputs and displays use `HH:MM`. */
 export function trimTime(value: string): string {
   return value.slice(0, 5)

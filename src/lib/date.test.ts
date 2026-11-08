@@ -8,6 +8,7 @@ import {
   endOfMonth,
   formatDuration,
   formatMonthLabel,
+  formatRelativeTime,
   formatTimeWindow,
   formatWeekRange,
   isSameMonth,
@@ -227,5 +228,30 @@ describe('resolveWeekStart', () => {
     // 2026-09-20 is a Sunday, so its week starts on the 14th.
     expect(toISODate(resolveWeekStart(null, new Date(2026, 8, 20)))).toBe('2026-09-14')
     expect(toISODate(resolveWeekStart('not-a-date', new Date(2026, 8, 20)))).toBe('2026-09-14')
+  })
+})
+
+describe('formatRelativeTime', () => {
+  const now = new Date('2026-09-20T12:00:00.000Z')
+  const ago = (milliseconds: number) => new Date(now.getTime() - milliseconds).toISOString()
+
+  it('counts up in minutes, hours and days', () => {
+    expect(formatRelativeTime(ago(30 * 1000), now)).toBe('just now')
+    expect(formatRelativeTime(ago(5 * 60 * 1000), now)).toBe('5m')
+    expect(formatRelativeTime(ago(3 * 60 * 60 * 1000), now)).toBe('3h')
+    expect(formatRelativeTime(ago(2 * 24 * 60 * 60 * 1000), now)).toBe('2d')
+  })
+
+  it('falls back to the date after a week, and to the date for junk', () => {
+    const old = new Date('2026-09-01T12:00:00.000Z')
+    const label = formatRelativeTime(old, now)
+    expect(label).toContain('Sep')
+    expect(label).not.toContain('d')
+
+    expect(formatRelativeTime('not-a-date', now)).toBe('')
+  })
+
+  it('reads a clock-skewed future timestamp as "just now"', () => {
+    expect(formatRelativeTime(ago(-45 * 1000), now)).toBe('just now')
   })
 })

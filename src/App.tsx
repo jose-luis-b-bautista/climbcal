@@ -9,6 +9,7 @@ import Onboarding from './pages/Onboarding'
 import Settings from './pages/Settings'
 import SharedProfile from './pages/SharedProfile'
 import Stats from './pages/Stats'
+import Wall from './pages/Wall'
 import Week from './pages/Week'
 
 export default function App() {
@@ -33,6 +34,8 @@ export default function App() {
           <Route path="/stats" element={<Stats />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/feed" element={<Feed />} />
+          {/* A climber's wall (guestbook): notes, not sessions. */}
+          <Route path="/wall/:userId" element={<Wall />} />
           <Route path="/settings" element={<Settings />} />
           {/* Deliberately unlinked: reachable only by typing /admin. */}
           <Route path="/admin" element={<Admin />} />

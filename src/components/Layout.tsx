@@ -2,7 +2,6 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
 import { WhatsNewProvider, useWhatsNew } from '../hooks/useWhatsNew'
-import { WHATS_NEW_LATEST } from '../lib/whatsNew'
 import { ThemeToggle } from './ThemeToggle'
 import { WhatsNewDialog } from './WhatsNewDialog'
 import { Avatar, cx, ghostButtonClass } from './ui'
@@ -84,7 +83,7 @@ function LayoutShell() {
       </main>
 
       {whatsNew.open ? (
-        <WhatsNewDialog entry={WHATS_NEW_LATEST} onClose={whatsNew.dismiss} />
+        <WhatsNewDialog entries={whatsNew.entries} onClose={whatsNew.dismiss} />
       ) : null}
     </div>
   )

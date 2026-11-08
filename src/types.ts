@@ -45,6 +45,40 @@ export type FeedbackRow = {
   admin_notes: string | null
 }
 
+/** A comment on a session. Flat thread, oldest first - no replies. */
+export type ClimbCommentRow = {
+  id: string
+  climb_id: string
+  user_id: string
+  body: string
+  created_at: string
+  updated_at: string
+}
+
+/** A note on a climber's wall (the profile guestbook). Flat thread, no replies. */
+export type ProfileCommentRow = {
+  id: string
+  profile_id: string
+  user_id: string
+  body: string
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * A comment ready for rendering: the row's own fields plus the profile of the
+ * climber who wrote it. Shared by `climb_comments` and `profile_comments`, which
+ * differ only in the column naming their target.
+ */
+export type CommentEntry = {
+  id: string
+  user_id: string
+  body: string
+  created_at: string
+  updated_at: string
+  author: Profile
+}
+
 export type ClimbRow = {
   id: string
   user_id: string
@@ -327,6 +361,42 @@ export interface Database {
           },
         ]
       }
+      /** Session comments - visible wherever the session is (see `can_view_climb`). */
+      climb_comments: {
+        Row: ClimbCommentRow
+        Insert: {
+          id?: string
+          climb_id: string
+          user_id: string
+          body: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          climb_id?: string
+          user_id?: string
+          body?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'climb_comments_climb_id_fkey'
+            columns: ['climb_id']
+            isOneToOne: false
+            referencedRelation: 'climbs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'climb_comments_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       friendships: {
         Row: FriendshipRow
         Insert: {
@@ -385,6 +455,42 @@ export interface Database {
         Relationships: [
           {
             foreignKeyName: 'feedback_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      /** Wall notes - visible wherever the wall is (see `can_view_wall`). */
+      profile_comments: {
+        Row: ProfileCommentRow
+        Insert: {
+          id?: string
+          profile_id: string
+          user_id: string
+          body: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          user_id?: string
+          body?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'profile_comments_profile_id_fkey'
+            columns: ['profile_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'profile_comments_user_id_fkey'
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'users'

@@ -261,8 +261,10 @@ keep the gym picker grouped by region; a sentinel option (`__other__`,
 `WhatsNewDialog` reuses the same sheet (bottom-anchored on phones, centred card
 from `sm` up): `role="dialog"` + `aria-modal`, `aria-labelledby` on the title,
 Escape and a backdrop click both dismiss, and the primary action is focused so
-Enter gets you out. Its **release id** is the read marker - the copy lives in
-`src/lib/whatsNew.ts`, and a new id is what makes the pop-up appear again.
+Enter gets you out. Its **read marker** is the newest release id the device has
+dismissed - the copy lives in `src/lib/whatsNew.ts`, and the pop-up then renders
+every release above that marker, one section each, so a deploy that was never
+opened is not lost. A missing or unknown marker shows just the newest release.
 
 ### Feedback
 
@@ -271,6 +273,39 @@ Enter gets you out. Its **release id** is the read marker - the copy lives in
 - Errors: `ErrorBanner` at the top of the section.
 - Success/info: `Notice`.
 - Share/copy: status text swaps to "Copied", never a toast dependency.
+
+### Comment threads (sessions and walls)
+
+`SessionComments` / `WallComments` in `src/components/Comments.tsx` share one
+`CommentThread`, so a session card and a wall look and behave the same.
+
+- **Collapsed first, lazy load.** The toggle is a `<button>` with
+  `aria-expanded` / `aria-controls`; a collapsed card makes no request, so a week
+  or feed of cards costs one batched count query instead of one per session.
+- **Counts are seeded, not polled.** The page passes the batched count and the
+  thread adds its own posts/deletes as a render-time delta - no effect syncing
+  state, no refetch after every post.
+- **Left-aligned action row.** The toggle comes first, then any host action the
+  card passes (`SessionCard` sends its **Edit** button), with the panel rendered as
+  a sibling below - never inside the row - so an open thread spans the card instead
+  of shrinking to the row's width. This is what keeps the Today/Tomorrow cards
+  matching the feed on desktop.
+- **Mobile sizing.** The toggle is `min-h-10` (40px), the Post button `min-h-11`
+  (44px), and the composer uses `textareaClass`, which the touch-pointer rule in
+  `index.css` pins at 16px so focusing it cannot zoom the page. Long words get
+  `break-words`, and the list is capped (`max-h-64`, `overscroll-contain`) so a
+  busy thread cannot push the grid away.
+- **Delete is two taps** (Delete → Delete?) because a delete has no undo and
+  phones have thumbs. The author and the owner of the session/wall see it; RLS is
+  the real gate.
+- **The week grid opens a sheet.** Its columns are ~150px wide at
+  `xl:grid-cols-7`, so `SessionCard` passes `commentsDisplay="sheet"`: the toggle
+  collapses to the icon + count, and the thread opens in a dialog (bottom sheet
+  on a phone, centred card from `sm` up - the same shell as the session dialog).
+  Day cards, feed rows and walls keep the inline thread.
+- **Threads stay off the share page.** `SessionCard` only renders comments when a
+  `viewerId` is passed, and `SharedProfile` passes none, so `/u/<username>` stays
+  a read-only, text-free snapshot.
 
 ---
 
@@ -361,6 +396,7 @@ encode it as a test that reads the real source so it can't silently drift.
 | Theme toggle button | `src/components/ThemeToggle.tsx` |
 | Pre-paint script, viewport meta | `index.html` |
 | Design primitives & class tokens | `src/components/ui.tsx` |
+| Comment thread (session + wall) | `src/components/Comments.tsx` |
 | App shell / header / nav | `src/components/Layout.tsx` |
 | Avatar palette | `src/lib/avatar.ts` |
 | Gym brand colours | `src/lib/gymColors.ts` |
