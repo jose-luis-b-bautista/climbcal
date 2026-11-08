@@ -214,9 +214,7 @@ describe('<Stats />', () => {
 
     // A real tab, not a hidden route.
     expect(await screen.findByRole('link', { name: 'Stats' })).toBeTruthy()
-    expect(
-      await screen.findByText('Your climbing so far - every session you have posted.'),
-    ).toBeTruthy()
+
     // The cards only exist once the totals row has landed.
     await screen.findByText('Active days')
 
@@ -380,7 +378,6 @@ describe('<Stats />', () => {
 
     fireEvent.change(picker, { target: { value: FRIEND_ID } })
 
-    expect(await screen.findByText('The sessions Mara has posted that you can see.')).toBeTruthy()
     // Hers only: your own numbers never sit under her name while she loads.
     expect(await screen.findByText(/posted and done/)).toBeTruthy()
     expect(screen.queryByText('+2 planned')).toBeNull()
@@ -394,7 +391,6 @@ describe('<Stats />', () => {
   it('opens on a friend from ?climber=', async () => {
     renderStats(`/stats?climber=${FRIEND_ID}`)
 
-    expect(await screen.findByText('The sessions Mara has posted that you can see.')).toBeTruthy()
     expect(await screen.findByText(/posted and done/)).toBeTruthy()
     expect(statCard('Sessions')).toContain('3')
   })
@@ -402,9 +398,6 @@ describe('<Stats />', () => {
   it('falls back to your own stats for an unknown ?climber= id', async () => {
     renderStats('/stats?climber=99999999-9999-9999-9999-999999999999')
 
-    expect(
-      await screen.findByText('Your climbing so far - every session you have posted.'),
-    ).toBeTruthy()
     const picker = (await screen.findByLabelText('Climber')) as HTMLSelectElement
     expect(picker.value).toBe(TEST_USER_ID)
   })

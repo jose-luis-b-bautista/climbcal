@@ -206,22 +206,17 @@ describe('<Week /> day views', () => {
 
     // Relative badges belong to today only. The day-long session and the
     // "Opening – Closing" slot session are both live (slots sit on the same
-    // canonical scale the app orders by), the 07:00 one is done, and the 20:00
-    // one starts in an hour.
+    // canonical scale the app orders by), and the 07:00 one is done. The 20:00
+    // session has not started, so it carries no badge at all.
     expect(screen.getAllByText('On now').length).toBe(2)
     expect(screen.getByText('Finished')).toBeTruthy()
-    expect(screen.getByText('Starts in 1h')).toBeTruthy()
+    expect(screen.queryByText(/^Starts in /)).toBeNull()
     expect(screen.getAllByText('Opening – Closing').length).toBeGreaterThan(0)
 
-    // The day summary is the social signal only - the session count and the
-    // day's time span are gone (the cards below carry the timings).
+    // No day summary any more - neither a session count nor a count of friends
+    // climbing; the cards below carry the timings and the names.
     expect(screen.queryByText(/\d+ sessions?/)).toBeNull()
-    expect(screen.getAllByText('1 friend climbing').length).toBeGreaterThan(0)
-
-    // The nudge is a desktop-only aside (hidden below `sm`).
-    expect(
-      screen.getByText('Your friends are out - add your own session to join them.').className,
-    ).toContain('hidden')
+    expect(screen.queryByText(/friends? climbing/)).toBeNull()
 
     // Tomorrow's card is on the page too - there is no tab to reach it.
     expect(screen.getAllByText('Riverside Boulders').length).toBe(1)
@@ -307,5 +302,22 @@ describe('<Week /> day views', () => {
     expect(toggle('Tomorrow').getAttribute('aria-expanded')).toBe('true')
     fireEvent.click(toggle('Today'))
     expect(toggle('Today').getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('adds a session for tomorrow straight from the header', async () => {
+    renderApp('/week')
+    expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
+
+    // The shortcut beside "+ Add session" opens the same dialog, dated tomorrow.
+    fireEvent.click(screen.getByRole('button', { name: 'Add a session for tomorrow' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Add session' })
+    expect((within(dialog).getByLabelText('Date') as HTMLInputElement).value).toBe(TOMORROW)
+
+    // "+ Add session" itself still starts on today.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    fireEvent.click(screen.getByRole('button', { name: '+ Add session' }))
+    const todayDialog = await screen.findByRole('dialog', { name: 'Add session' })
+    expect((within(todayDialog).getByLabelText('Date') as HTMLInputElement).value).toBe(TODAY)
   })
 })

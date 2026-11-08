@@ -180,11 +180,6 @@ export default function Friends() {
           <Card>
             <SectionHeading
               title="Requests"
-              hint={
-                incoming.length === 0
-                  ? 'No pending incoming requests.'
-                  : `${incoming.length} waiting on you.`
-              }
             />
             {incoming.length === 0 ? (
               <p className="text-sm text-zinc-500">Nothing to accept right now.</p>
@@ -223,11 +218,6 @@ export default function Friends() {
           <Card>
             <Disclosure
               title="Your climber friends"
-              hint={
-                friends.length === 0
-                  ? 'No friends yet - search below to add someone.'
-                  : `${friends.length} friend${friends.length === 1 ? '' : 's'}.`
-              }
             >
               {friends.length === 0 ? (
                 <EmptyState title="No friends yet" hint="Use the search below to send a request." />

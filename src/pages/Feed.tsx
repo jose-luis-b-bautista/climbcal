@@ -5,7 +5,9 @@
  * - **List** - the next few weeks, grouped by day and then by gym ("who is going
  *   where"), so a gym with several climbers reads as one block. Each day is a
  *   disclosure - today's starts open, the rest folded - with the date and the
- *   session count as the summary and one click opening a day.
+ *   session count as the summary and one click opening a day. **View all days**
+ *   in the header opens (or folds) every day at once, and from the calendar it
+ *   is the way back to that expanded list.
  * - **Calendar** - a month of avatar dots; tapping a day opens that day's list
  *   underneath, so the grid stays scannable instead of carrying every card.
  *
@@ -156,17 +158,14 @@ function FeedSessionRow({ entry }: { entry: ClimbEntry }) {
   )
 }
 
-/** Sessions grouped per gym: heading, climber count, then the climber rows. */
+/** Sessions grouped per gym: heading, then the climber rows. */
 function GymGroupList({ groups }: { groups: GymGroup[] }) {
   return (
     <div className="space-y-4">
       {groups.map((group) => (
         <section key={group.gymName} role="group" aria-label={group.gymName}>
-          <div className="mb-2 flex items-baseline justify-between gap-2">
+          <div className="mb-2">
             <GymGroupHeading name={group.gymName} />
-            <span className="text-xs text-zinc-500">
-              {group.climberCount} climber{group.climberCount === 1 ? '' : 's'}
-            </span>
           </div>
           <div className="space-y-2">
             {group.entries.map((entry) => (
@@ -254,6 +253,11 @@ export default function Feed() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [gymFilter, setGymFilter] = useState('')
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  // The list view's days fold one at a time; this opens (or folds) every day at
+  // once. `null` means "follow the default": today open, the rest folded.
+  const [allDays, setAllDays] = useState<'open' | 'closed' | null>(null)
+  // A day the reader toggled by hand wins over that default.
+  const [dayOverrides, setDayOverrides] = useState<Record<string, boolean>>({})
 
   // Captured once, so "today" and the horizon do not drift while you browse.
   const today = useMemo(() => new Date(), [])
@@ -300,7 +304,6 @@ export default function Feed() {
   const groupOptions = { onlyGymName: selectedGymName }
   const selectedEntries = selectedDay ? byDate.get(selectedDay) ?? [] : []
   const selectedGroups = groupByGym(selectedEntries, groupOptions)
-  const selectedClimbers = uniqueClimbers(selectedEntries)
   const isCurrentMonth = isSameMonth(monthStart, today)
 
   const withParams = (changes: (params: URLSearchParams) => void) => {
@@ -340,20 +343,48 @@ export default function Feed() {
   const toggleDay = (dateISO: string) =>
     setSelectedDay((current) => (current === dateISO ? null : dateISO))
 
+  /** A day is open when the reader said so, else by the header control/default. */
+  const isDayOpen = (dateISO: string) =>
+    dayOverrides[dateISO] ?? (allDays === 'open' || (allDays === null && dateISO === todayISO))
+
+  const setDayOpen = (dateISO: string, open: boolean) =>
+    setDayOverrides((current) => ({ ...current, [dateISO]: open }))
+
+  const toggleAllDays = () => {
+    // From the calendar, "View all days" is also the way back to the day list.
+    if (view === 'calendar') {
+      setView('list')
+      setAllDays('open')
+      setDayOverrides({})
+      return
+    }
+
+    setAllDays((current) => (current === 'open' ? 'closed' : 'open'))
+    // Start every day from the same state again, dropping the manual toggles.
+    setDayOverrides({})
+  }
+
+  const allDaysOpen = view === 'list' && allDays === 'open'
+
   return (
     <div className="space-y-4">
       <SectionHeading
         title="Climbers feed"
-        hint={
-          view === 'calendar'
-            ? `Public profiles plus your own sessions, day by day in ${formatMonthLabel(monthStart)}.`
-            : `Public profiles plus your own sessions, grouped by gym over the next ${FEED_HORIZON_DAYS} days.`
-        }
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <ViewToggle view={view} onChange={setView} />
             <button type="button" onClick={reload} className={ghostButtonClass}>
               Refresh
+            </button>
+            {/* Opens every day at once; from the calendar it also lands on the
+                list, which is the only layout that has days to open. */}
+            <button
+              type="button"
+              aria-pressed={allDaysOpen}
+              onClick={toggleAllDays}
+              className={ghostButtonClass}
+            >
+              {allDaysOpen ? 'Fold all days' : 'View all days'}
             </button>
           </div>
         }
@@ -411,8 +442,10 @@ export default function Feed() {
                 <Disclosure
                   headingLevel={3}
                   // Today is the day you came to look at, so it starts open; the
-                  // rest of the horizon stays folded until asked for.
-                  defaultOpen={group.date === todayISO}
+                  // rest of the horizon stays folded until asked for - unless the
+                  // header's View all days control has the last word.
+                  open={isDayOpen(group.date)}
+                  onOpenChange={(open) => setDayOpen(group.date, open)}
                   title={formatMediumDate(group.date)}
                   // The session count stays on screen when the day is folded.
                   action={
@@ -482,18 +515,9 @@ export default function Feed() {
 
           {selectedDay ? (
             <div className="space-y-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-sm font-semibold text-zinc-200">
-                  {formatMediumDate(selectedDay)}
-                </h3>
-                <span className="text-xs text-zinc-500">
-                  {selectedClimbers.length === 0
-                    ? 'nothing posted'
-                    : `${selectedClimbers.length} climbing at ${selectedGroups.length} gym${
-                        selectedGroups.length === 1 ? '' : 's'
-                      }`}
-                </span>
-              </div>
+              <h3 className="text-sm font-semibold text-zinc-200">
+                {formatMediumDate(selectedDay)}
+              </h3>
 
               {selectedGroups.length === 0 ? (
                 <EmptyState

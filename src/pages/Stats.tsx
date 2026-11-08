@@ -317,11 +317,6 @@ export default function Stats() {
     <div className="space-y-6">
       <SectionHeading
         title="Stats"
-        hint={
-          isSelf
-            ? 'Your climbing so far - every session you have posted.'
-            : `The sessions ${who} has posted that you can see.`
-        }
         action={
           <div className="flex items-end gap-2">
             <div className="min-w-40">

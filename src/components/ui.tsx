@@ -84,6 +84,8 @@ export function Disclosure({
   hint,
   action,
   defaultOpen = false,
+  open: openProp,
+  onOpenChange,
   headingLevel = 2,
   className,
   panelClassName,
@@ -99,17 +101,31 @@ export function Disclosure({
   hint?: ReactNode
   /** Right-hand control in the header row, e.g. a count. */
   action?: ReactNode
-  /** Start folded; the reader opens it. */
+  /** Start folded; the reader opens it. Ignored when `open` is given. */
   defaultOpen?: boolean
+  /**
+   * Controlled open state, for a parent that opens several sections at once (a
+   * "view all days" control). Omit it and the section keeps its own state.
+   */
+  open?: boolean
+  /** Reports every toggle, so a controlled parent can keep up. */
+  onOpenChange?: (open: boolean) => void
   /** Keeps the page outline: 3 for a heading nested under a section. */
   headingLevel?: 2 | 3
   className?: string
   panelClassName?: string
   children: ReactNode
 }) {
-  const [open, setOpen] = useState(defaultOpen)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
+  const open = openProp ?? uncontrolledOpen
   const panelId = useId()
   const Heading = headingLevel === 3 ? 'h3' : 'h2'
+
+  const toggle = () => {
+    const next = !open
+    if (openProp === undefined) setUncontrolledOpen(next)
+    onOpenChange?.(next)
+  }
 
   return (
     <div className={className}>
@@ -120,7 +136,7 @@ export function Disclosure({
           need its own `stopPropagation`. */}
       <div
         className="mb-3 flex cursor-pointer flex-wrap items-end justify-between gap-2"
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-baseline gap-2">
@@ -306,8 +322,8 @@ export const textareaClass = 'w-full rounded-lg border border-zinc-700 bg-zinc-9
 export const selectClass = cx(inputClass, 'appearance-none pr-9')
 
 /**
- * Muted aside that only shows from `sm` up: on a phone the friend nudges and
- * per-day counts crowd the cards, so the small print is desktop-only.
+ * Muted aside that only shows from `sm` up: on a phone the empty-state hint
+ * crowds the cards, so the small print is desktop-only.
  */
 export const subTextClass = 'hidden text-xs text-zinc-500 sm:block'
 

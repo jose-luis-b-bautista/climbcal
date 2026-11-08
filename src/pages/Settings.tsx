@@ -114,7 +114,6 @@ export default function Settings() {
     <div className="space-y-6">
       <SectionHeading
         title="Settings"
-        hint="Your profile, and who can see your climbing week."
       />
 
       <Card>
@@ -193,7 +192,6 @@ export default function Settings() {
       <Card>
         <SectionHeading
           title="Share"
-          hint="A link to your climbing week that works for people without an account."
         />
 
         {profile?.username ? (

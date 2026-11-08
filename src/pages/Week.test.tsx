@@ -62,9 +62,6 @@ describe('<Week />', () => {
     expect(screen.getByText(/18:30 – 21:00/)).toBeTruthy()
     expect(screen.getByText(/07:00 – 09:00/)).toBeTruthy()
 
-    // Day-level friend count: Wednesday has one friend climbing.
-    expect(screen.getAllByText(/1 friend climbing/).length).toBeGreaterThan(0)
-
     // Week header for the requested week (appears in the range hint and the
     // Monday column), so at least one match is expected.
     expect(screen.getAllByText(/Sep 14/).length).toBeGreaterThan(0)
@@ -103,10 +100,8 @@ describe('<Week />', () => {
     // Mon–Sun grid below: six empty columns plus Wednesday's two sessions.
     expect(screen.getAllByText('Nothing planned')).toHaveLength(6)
 
-    // The muted asides (per-day counts, empty-card hints) are desktop-only, so
-    // they keep `hidden sm:block`; the tests run without CSS, hence the classes.
-    expect(screen.getAllByText('No friends yet')[0].className).toContain('sm:block')
-    expect(screen.getAllByText('No friends yet')[0].className).toContain('hidden')
+    // The muted aside (the empty card's hint) is desktop-only, so it keeps
+    // `hidden sm:block`; the tests run without CSS, hence the classes.
     expect(
       screen.getAllByText('Post a session and your friends will see it here.')[0].className,
     ).toContain('hidden')

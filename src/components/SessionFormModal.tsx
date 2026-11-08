@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { windowMinutes } from '../lib/date'
+import { addDays, toISODate, windowMinutes } from '../lib/date'
 import { OTHER_REGION_LABEL, groupGymsByRegion } from '../lib/format'
 import { TIME_SLOTS } from '../lib/slots'
 import type { Climb, Gym } from '../types'
@@ -9,6 +9,7 @@ import {
   Field,
   Select,
   dangerButtonClass,
+  cx,
   ghostButtonClass,
   inputClass,
   primaryButtonClass,
@@ -63,6 +64,13 @@ export function SessionFormModal({
   const [note, setNote] = useState(initial?.note ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // "Oops, I meant tomorrow": captured once, so the shortcuts cannot drift while
+  // the dialog is open. They work for an edit too - moving a session is a click.
+  const [quickDates] = useState(() => {
+    const today = new Date()
+    return { today: toISODate(today), tomorrow: toISODate(addDays(today, 1)) }
+  })
 
   // Native <optgroup>s keep the dropdown separated by region; the free-text
   // "Other" option rides along in the Other group so there is always a way out.
@@ -239,16 +247,43 @@ export function SessionFormModal({
         {error ? <ErrorBanner message={error} /> : null}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Date" htmlFor="session-date">
-            <input
-              id="session-date"
-              type="date"
-              required
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          <div>
+            <Field label="Date" htmlFor="session-date">
+              <input
+                id="session-date"
+                type="date"
+                required
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+                className={inputClass}
+              />
+            </Field>
+            {/* The shortcuts sit outside the Field's <label>, so a click sets the
+                date instead of also focusing the date input. */}
+            <div role="group" aria-label="Quick date" className="mt-2 flex items-center gap-1.5">
+              {(
+                [
+                  ['Today', quickDates.today],
+                  ['Tomorrow', quickDates.tomorrow],
+                ] as const
+              ).map(([label, value]) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={date === value}
+                  onClick={() => setDate(value)}
+                  className={cx(
+                    'rounded-lg border px-2.5 py-1 text-sm font-medium transition',
+                    date === value
+                      ? 'border-emerald-700 bg-emerald-950/60 text-emerald-300'
+                      : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-600 hover:text-zinc-100',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <Field label="Gym" htmlFor="session-gym">
             <Select

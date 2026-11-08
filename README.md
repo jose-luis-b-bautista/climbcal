@@ -28,24 +28,26 @@ read or write what.
 - **Auth** - email + password (Supabase Auth).
 - **Onboarding** - pick a username, display name, and profile visibility (defaults to private).
 - **Calendar** (home) - one page, no tabs: **Today** and **Tomorrow** summary cards on top (with
-  "On now" / "Starts in 45m" badges on today's sessions), then the **Mon–Sun week** below
+  "On now" / "Finished" badges on today's sessions), then the **Mon–Sun week** below
   (prev / this week / next), with `?week=YYYY-MM-DD` in the URL so weeks are linkable. Each day shows
-  session cards, plus a count of friends climbing from `sm` up - like the day cards' nudges, that
-  small print is desktop-only so phones stay uncluttered. Your own sessions are highlighted and
-  editable. The day cards always describe the *real* today and tomorrow, whatever week the grid is
-  parked on, and both **open on arrival** - fold one to bring the week grid up.
+  session cards, and your own sessions are highlighted and editable. The day cards always describe
+  the *real* today and tomorrow, whatever week the grid is parked on, and both **open on arrival** -
+  fold one to bring the week grid up.
 - **Add / edit / delete session** - date, gym (dropdown grouped by region - Luzon / Visayas /
   Mindanao - or free-text "Other"), an optional second gym so it reads as **"Either X or Y"**, or
   **"Not sure yet"** when the venue isn't decided; a time window (exact clock times **or** flexible
   labels such as "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day
-  are allowed.
+  are allowed. The calendar header puts **+ Add session** (today) and **+ Tomorrow** side by side,
+  and the dialog itself has **Today** / **Tomorrow** quick picks - so "I meant tomorrow" is one
+  click, not an edit.
 - **Friends** - the newest public climbers are listed ready to add (20 at a time, most recently joined
   first), plus a username search; send/accept/decline requests, cancel, unfriend.
 - **Feed** - public profiles **plus your own** sessions, so your posts are always visible to you,
   with two layouts switched from the header:
-  - **List** - the next ~3 weeks, grouped by day and then **by gym** ("who is going where"), each
-    gym showing its own colours and how many distinct climbers are heading there. A session that
-    offers two gyms ("Either X or Y") is listed under both.
+  - **List** - the next week, grouped by day and then **by gym** ("who is going where"), each gym
+    showing its own colours. Today starts open and the other days fold; **View all days**, beside
+    Refresh, opens (or folds) every day at once - and in the calendar it takes you back to that
+    fully expanded list. A session that offers two gyms ("Either X or Y") is listed under both.
   - **Calendar** - a month of days carrying one avatar dot per climber; tapping a day opens that
     day's sessions underneath, so the grid stays scannable. Tapping again collapses it. The layout
     and month live in the URL (`/feed?view=calendar&month=2026-09`), so a view is linkable.

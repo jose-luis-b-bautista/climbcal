@@ -269,7 +269,7 @@ export default function SharedProfile() {
                           key={entry.id}
                           entry={entry}
                           isOwn={false}
-                          // "On now" / "Starts in 45m" only make sense for today.
+                          // "On now" / "Finished" only make sense for today.
                           timing={
                             isToday(day)
                               ? sessionTiming(

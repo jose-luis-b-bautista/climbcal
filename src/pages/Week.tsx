@@ -15,7 +15,6 @@ import {
   ghostButtonClass,
   primaryButtonClass,
   secondaryButtonClass,
-  subTextClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
@@ -99,17 +98,6 @@ export default function Week() {
   const dayEntries = (dateISO: string) => upcoming.filter((entry) => entry.climb_date === dateISO)
 
   const isCurrentWeek = weekStartDate === toISODate(startOfWeek(today))
-  const friendCountTotal = useMemo(
-    () =>
-      new Set(weekEntries.filter((entry) => entry.user_id !== userId).map((entry) => entry.user_id))
-        .size,
-    [weekEntries, userId],
-  )
-  const friendLabel =
-    friendCountTotal === 0
-      ? 'no friends climbing'
-      : `${friendCountTotal} friend${friendCountTotal === 1 ? '' : 's'} climbing`
-
   const goToWeek = (offset: number) => {
     setSearchParams({ week: toISODate(addWeeks(weekStart, offset)) })
   }
@@ -119,9 +107,21 @@ export default function Week() {
       <SectionHeading
         title="Climbing calendar"
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button type="button" onClick={reload} className={ghostButtonClass}>
               Refresh
+            </button>
+            {/* The header used to default to today only, which made "oops, it is
+                tomorrow" an edit round trip. This opens the same dialog already
+                set to tomorrow's date. */}
+            <button
+              type="button"
+              className={secondaryButtonClass}
+              onClick={() => setModal({ open: true, date: tomorrowISO, initial: null })}
+              aria-label="Add a session for tomorrow"
+              title="Add a session for tomorrow"
+            >
+              + Tomorrow
             </button>
             <button
               type="button"
@@ -181,7 +181,6 @@ export default function Week() {
         <section>
           <SectionHeading
             title="Week"
-            hint={`${formatWeekRange(weekStart)} · ${friendLabel}`}
             action={
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" className={secondaryButtonClass} onClick={() => goToWeek(-1)}>
@@ -210,11 +209,6 @@ export default function Week() {
                 {days.map((day, index) => {
                   const dateISO = toISODate(day)
                   const columnEntries = byDate.get(dateISO) ?? []
-                  const friendCount = new Set(
-                    columnEntries
-                      .filter((entry) => entry.user_id !== userId)
-                      .map((entry) => entry.user_id),
-                  ).size
                   const isTodayColumn = isToday(day) && isCurrentWeek
 
                   return (
@@ -234,11 +228,6 @@ export default function Week() {
                             <span className="font-normal text-zinc-500">
                               {formatShortDate(day)}
                             </span>
-                          </p>
-                          <p className={subTextClass}>
-                            {friendCount === 0
-                              ? 'No friends yet'
-                              : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`}
                           </p>
                         </div>
                         <button

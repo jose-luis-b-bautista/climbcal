@@ -7,13 +7,12 @@ export interface SessionCardProps {
   entry: ClimbEntry
   isOwn: boolean
   onEdit: (climb: Climb) => void
-  /** Optional "On now" / "Starts in 45m" badge, used by the day views. */
+  /** Optional "On now" / "Finished" badge, used by the day views. */
   timing?: SessionTiming | null
 }
 
 const TIMING_CLASSES: Record<SessionTiming['state'], string> = {
   live: 'border-emerald-800 bg-emerald-950/60 text-emerald-300',
-  soon: 'border-zinc-700 bg-zinc-800/60 text-zinc-300',
   done: 'border-zinc-800 bg-zinc-900/60 text-zinc-500',
 }
 

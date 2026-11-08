@@ -240,6 +240,11 @@ A section that *is* the reason for the page can opt out with `defaultOpen`: the
 calendar's Today/Tomorrow cards do, so the next two days are readable on arrival
 and folding one is what brings the week grid up.
 
+A parent that has to move several sections at once - the feed's **View all
+days** control - passes `open` / `onOpenChange` instead: the section then
+follows the parent's state, and a hand toggle reports back instead of being
+swallowed.
+
 ### URL as UI state
 
 View modes and periods live in the query string so they are linkable and
@@ -267,8 +272,8 @@ keep the gym picker grouped by region; a sentinel option (`__other__`,
 
 - **Breakpoint:** a single `sm:` step does most of the work; layout is
   single-column on phones.
-- **Desktop-only small print:** `subTextClass = 'hidden … sm:block'`. Friend
-  nudges and per-day counts are hidden on phones so cards stay uncluttered.
+- **Desktop-only small print:** `subTextClass = 'hidden … sm:block'`. The empty
+  day card's aside is hidden on phones so the cards stay uncluttered.
 - **iOS focus-zoom guard** (`src/index.css`): form controls are forced to
   `16px` for `@media (hover: none) and (pointer: coarse)`. iOS Safari zooms the
   page whenever a focused field is under 16px; the shared `inputClass` is 14px

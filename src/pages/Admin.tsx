@@ -211,19 +211,11 @@ function ClimbBrowser() {
       .some((value) => value.toLowerCase().includes(search))
   })
 
-  const climberCount = new Set(matches.map((climb) => climb.user_id)).size
-
   return (
     <Card>
       <SectionHeading
         title="Climbs"
         hint="Every session in the database - private profiles included - newest first."
-        action={
-          <span className="text-xs text-zinc-500">
-            {matches.length} of {climbs.length} · {climberCount} climber
-            {climberCount === 1 ? '' : 's'}
-          </span>
-        }
       />
 
       {error ? <ErrorBanner message={error} /> : null}

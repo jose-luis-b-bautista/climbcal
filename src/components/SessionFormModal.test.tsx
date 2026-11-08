@@ -4,7 +4,7 @@
  * option, so a one-off gym is always reachable.
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OTHER_REGION_LABEL } from '../lib/format'
 import type { Climb, Gym } from '../types'
 import { SessionFormModal } from './SessionFormModal'
@@ -14,6 +14,11 @@ const { insertSpy } = vi.hoisted(() => ({ insertSpy: vi.fn() }))
 
 beforeEach(() => {
   insertSpy.mockClear()
+})
+
+// The quick-date test pins the clock; make sure it never leaks into the next one.
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 vi.mock('../lib/supabase', () => ({
@@ -333,5 +338,33 @@ describe('<SessionFormModal />', () => {
 
     expect((screen.getByLabelText('Gym') as HTMLSelectElement).value).toBe('Boulder Space')
     expect((screen.getByLabelText('Second gym') as HTMLSelectElement).value).toBe('Boulder24')
+  })
+
+  it('moves the date to tomorrow with one click', async () => {
+    // The quick picks read the wall clock, so pin it: "today" is the default date.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-09-16T12:00:00'))
+
+    renderModal()
+
+    const dateInput = screen.getByLabelText('Date') as HTMLInputElement
+    const today = screen.getByRole('button', { name: 'Today' })
+    const tomorrow = screen.getByRole('button', { name: 'Tomorrow' })
+
+    // The dialog opens on the date it was given, and the matching pick is active.
+    expect(dateInput.value).toBe('2026-09-16')
+    expect(today.getAttribute('aria-pressed')).toBe('true')
+    expect(tomorrow.getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(tomorrow)
+
+    // A click (not a submit) is enough: the row that gets written is tomorrow's.
+    expect(dateInput.value).toBe('2026-09-17')
+    expect(today.getAttribute('aria-pressed')).toBe('false')
+    expect(tomorrow.getAttribute('aria-pressed')).toBe('true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }))
+    await waitFor(() => expect(insertSpy).toHaveBeenCalledTimes(1))
+    expect(insertSpy.mock.calls[0][0]).toMatchObject({ climb_date: '2026-09-17' })
   })
 })

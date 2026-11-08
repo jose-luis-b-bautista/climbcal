@@ -194,11 +194,10 @@ describe('<Friends /> find climbers', () => {
     // empty state rather than rows.
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     expect(panel?.hasAttribute('hidden')).toBe(true)
-    expect(screen.getByText(/No friends yet - search below to add someone/)).toBeTruthy()
 
     fireEvent.click(toggle)
 
-    // Open: the body arrives, and the label and count were never hidden.
+    // Open: the body arrives, and the label was never hidden.
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
     expect(panel?.hasAttribute('hidden')).toBe(false)
     expect(within(panel as HTMLElement).getByText('No friends yet')).toBeTruthy()

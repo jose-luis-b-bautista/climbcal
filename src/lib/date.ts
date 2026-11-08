@@ -185,25 +185,19 @@ export function minutesOfDay(value: string): number {
   return clockMinutes(value) ?? 0
 }
 
-/** Compact minutes span, e.g. "45m", "2h", "2h 15m". */
-export function formatMinutesSpan(totalMinutes: number): string {
-  const clamped = Math.max(0, Math.round(totalMinutes))
-  const hours = Math.floor(clamped / 60)
-  const minutes = clamped % 60
-  if (hours === 0) return `${minutes}m`
-  if (minutes === 0) return `${hours}h`
-  return `${hours}h ${minutes}m`
-}
-
 export interface SessionTiming {
-  state: 'live' | 'soon' | 'done'
+  state: 'live' | 'done'
   label: string
 }
 
 /**
- * Where a session sits relative to now, for the day views: "On now",
- * "Starts in 45m" or "Finished". Only meaningful for the current day, so any
- * other date returns null and the card shows no badge.
+ * Where a session sits relative to now, for the day views: "On now" or
+ * "Finished". Only meaningful for the current day, so any other date returns
+ * null and the card shows no badge.
+ *
+ * A session that has not started yet gets no badge either: a countdown would be
+ * a snapshot that goes stale while the page sits open, and the time window on
+ * the card already says when it begins.
  *
  * A flexible window ("Opening", "After Dinner") is placed on the same scale as
  * a clock time via `windowMinutes`; an end that maps to neither gets no badge.
@@ -227,9 +221,7 @@ export function sessionTiming(
   if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
     return { state: 'live', label: 'On now' }
   }
-  if (nowMinutes < startMinutes) {
-    return { state: 'soon', label: `Starts in ${formatMinutesSpan(startMinutes - nowMinutes)}` }
-  }
+  if (nowMinutes < startMinutes) return null
   return { state: 'done', label: 'Finished' }
 }
 

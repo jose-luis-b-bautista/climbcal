@@ -145,10 +145,10 @@ vi.mock('../lib/supabase', async () => {
   }
 })
 
-function renderFeed() {
+function renderFeed(path = '/feed') {
   return render(
     <ThemeProvider>
-      <MemoryRouter initialEntries={['/feed']}>
+      <MemoryRouter initialEntries={[path]}>
         <AuthProvider>
           <App />
         </AuthProvider>
@@ -273,18 +273,17 @@ describe('<Feed />', () => {
     // day stays folded and contributes nothing to the role tree.
     const space = await screen.findByRole('group', { name: 'Boulder Space' })
     expect(within(space).getByText('Luis')).toBeTruthy()
-    expect(within(space).getByText('1 climber')).toBeTruthy()
 
     // Mara has two sessions at BHive, both listed under that gym.
     const hive = screen.getByRole('group', { name: 'BHive' })
     expect(within(hive).getAllByText('Mara').length).toBe(2)
-    expect(within(hive).getByText('1 climber')).toBeTruthy()
 
-    // Boulder World holds Noor *and* the flexible session, so two distinct
-    // climbers - the count is climbers, not sessions.
+    // Boulder World holds Noor *and* the flexible session, one row each.
     const world = screen.getByRole('group', { name: 'Boulder World' })
     expect(within(world).getByText('@noor')).toBeTruthy()
-    expect(within(world).getByText('2 climbers')).toBeTruthy()
+
+    // The heading does not count climbers - the rows below it say who is coming.
+    expect(screen.queryByText(/\d+ climbers?$/)).toBeNull()
 
     // A private climber's session is in no group at all, and the folded later day
     // keeps its own group out of reach until it is opened.
@@ -342,6 +341,54 @@ describe('<Feed />', () => {
     expect(todayHeading.textContent).toBe(todayLabel)
   })
 
+  it('opens every day from the header, and folds them all back', async () => {
+    renderFeed()
+
+    const [todayHeading, laterHeading] = await screen.findAllByRole('heading', { level: 3 })
+    const toggleOf = (heading: HTMLElement) => within(heading).getByRole('button')
+    const panelOf = (heading: HTMLElement) =>
+      document.getElementById(toggleOf(heading).getAttribute('aria-controls') ?? '') as HTMLElement
+
+    // Default: today open, the later day folded.
+    expect(panelOf(laterHeading).hasAttribute('hidden')).toBe(true)
+
+    // One click opens every day at once…
+    const viewAll = screen.getByRole('button', { name: 'View all days' })
+    expect(viewAll.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(viewAll)
+    expect(panelOf(todayHeading).hasAttribute('hidden')).toBe(false)
+    expect(panelOf(laterHeading).hasAttribute('hidden')).toBe(false)
+    expect(screen.getByRole('group', { name: 'Future Wall' })).toBeTruthy()
+
+    // …and the same control - now "Fold all days" - folds them again, today too.
+    const foldAll = screen.getByRole('button', { name: 'Fold all days' })
+    expect(foldAll.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(foldAll)
+    expect(panelOf(todayHeading).hasAttribute('hidden')).toBe(true)
+    expect(panelOf(laterHeading).hasAttribute('hidden')).toBe(true)
+
+    // After opening them all, a day folded by hand keeps its own state.
+    fireEvent.click(screen.getByRole('button', { name: 'View all days' }))
+    fireEvent.click(toggleOf(laterHeading))
+    expect(panelOf(laterHeading).hasAttribute('hidden')).toBe(true)
+    expect(panelOf(todayHeading).hasAttribute('hidden')).toBe(false)
+  })
+
+  it('lands on the fully expanded list from the calendar', async () => {
+    // The month view keeps itself in the URL, so a reload can leave you there -
+    // the header shortcut is the way back to every day at once.
+    renderFeed('/feed?view=calendar&month=2026-09')
+    expect(await screen.findByText(/September 2026/)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'View all days' }))
+
+    // Back on the list: today's groups and the later day's are all readable.
+    expect(await screen.findByRole('group', { name: 'Future Wall' })).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'BHive' })).toBeTruthy()
+    expect(screen.queryByText(/September 2026/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Fold all days' })).toBeTruthy()
+  })
+
   it('switches to a calendar of avatar dots and opens a day on tap', async () => {
     renderFeed()
 
@@ -350,6 +397,8 @@ describe('<Feed />', () => {
     // Pinned "today" is 2026-09-20, so the calendar opens on September 2026.
     expect(await screen.findByText(/September 2026/)).toBeTruthy()
     expect(screen.getByText('Tap a day to see who is climbing.')).toBeTruthy()
+    // The header shortcut is there in the calendar too…
+    expect(screen.getByRole('button', { name: 'View all days' })).toBeTruthy()
 
     // The 20th carries me, Mara and Noor as dots - not as cards.
     const day = screen.getByRole('button', { name: /Sep 20/ })
@@ -358,9 +407,10 @@ describe('<Feed />', () => {
     expect(day.querySelectorAll('.rounded-full').length).toBe(3)
     expect(screen.queryByRole('group', { name: 'BHive' })).toBeNull()
 
-    // Tapping the day opens its list underneath, grouped per gym.
+    // Tapping the day opens its list underneath, grouped per gym. No count line:
+    // the date and the rows are the whole summary.
     fireEvent.click(day)
-    expect(screen.getByText(/3 climbing at 3 gyms/)).toBeTruthy()
+    expect(screen.queryByText(/climbing at \d+ gym/)).toBeNull()
     expect(within(screen.getByRole('group', { name: 'BHive' })).getAllByText('Mara').length).toBe(2)
     expect(
       within(screen.getByRole('group', { name: 'Boulder Space' })).getByText('Luis'),

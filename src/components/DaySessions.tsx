@@ -22,7 +22,7 @@ interface DaySessionsProps {
  * Each card folds away on its own and **starts open**: the next two days are why
  * the page gets opened, so hiding them behind a tap would be backwards - and on a
  * phone the fold is still one click away when the week grid needs the room. The
- * label, the date and the summary stay either way.
+ * label and the date stay on screen either way.
  */
 export function DaySessions({
   kind,
@@ -39,30 +39,6 @@ export function DaySessions({
   // Captured once: the "On now" badges are a snapshot, not a ticking clock.
   const now = useMemo(() => new Date(), [])
 
-  const ownCount = entries.filter((entry) => entry.user_id === userId).length
-  const friendCount = new Set(
-    entries.filter((entry) => entry.user_id !== userId).map((entry) => entry.user_id),
-  ).size
-
-  // The day summary is the social signal only: the session count duplicates the
-  // cards below, and the friends line is what a phone needs at a glance.
-  const summary = loading
-    ? 'Loading sessions…'
-    : entries.length === 0
-      ? 'Nobody has posted a session yet.'
-      : friendCount === 0
-        ? 'no friends climbing'
-        : `${friendCount} friend${friendCount === 1 ? '' : 's'} climbing`
-
-  const nudge =
-    loading || entries.length === 0
-      ? null
-      : ownCount === 0
-        ? 'Your friends are out - add your own session to join them.'
-        : friendCount === 0
-          ? 'No friends have posted anything, so this one is all yours.'
-          : null
-
   return (
     <Card>
       <Disclosure
@@ -71,12 +47,6 @@ export function DaySessions({
         defaultOpen
         // The date rides on the label's baseline; the heading stays just "Today".
         meta={<p className="text-sm text-zinc-500">{formatDayLabel(date)}</p>}
-        hint={
-          <>
-            <p>{summary}</p>
-            {nudge ? <p className={cx('mt-1', subTextClass)}>{nudge}</p> : null}
-          </>
-        }
         panelClassName="mt-4"
       >
         {loading ? null : entries.length === 0 ? (
