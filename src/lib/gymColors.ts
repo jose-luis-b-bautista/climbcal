@@ -36,6 +36,8 @@ export const GYM_PALETTES: Record<string, { primary: string; background: string 
   'Power Up Alabang': { primary: '#FFC72C', background: '#1A1A1A' },
   'Flow State Bouldering': { primary: '#5B3182', background: '#f5c034' },
   'Urban Peak Wall Climbing': { primary: '#008506', background: '#000000' },
+  'Hangar 8': { primary: '#000000', background: '#fe057c' },
+  'Climb Shack': { primary:'#424419', background: '#faf6e1' },
   // Visayas
   'Rock On Boulder': { primary: '#FF007F', background: '#000000' },
   'Vertex Bouldering': { primary: '#4F46E5', background: '#0F172A' },
