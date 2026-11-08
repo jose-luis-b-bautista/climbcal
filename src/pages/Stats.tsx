@@ -3,16 +3,17 @@
  *
  * Everything on this page comes from the read-only views in
  * `supabase/migrations/20260923000000_stats_views.sql`: headline cards from
- * `climber_totals`, the daily heatmap from `climber_daily_activity`, and the
+ * `climber_totals`, the daily heatmap from `climber_daily_activity` (with the gym
+ * names behind each day from `climb_gyms`, for the hover label), and the
  * "where I climb" breakdown from `climber_gym_stats`. The views are
  * `security_invoker`, so RLS decides the scope - which is why the climber picker
  * offers yourself plus your accepted friends and nothing else.
  *
  * A session here is a *plan you posted*, not a logged send: the schema has no
- * grades, so the honest numbers are frequency, timing and place. Durations count
- * only windows whose ends are both clock times (`is_exact_window`); a slot-only
- * plan ("Opening" – "Closing") has a notional length and is never shown as time
- * on the wall.
+ * grades, and a climb row is a day on the calendar rather than a stopwatch, so
+ * this page counts **days, sessions and places** - never hours. Durations exist in
+ * the views (`exact_minutes`, exact clock windows only) for other surfaces; here
+ * they would only invite comparing training loads the data cannot support.
  */
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -32,7 +33,12 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { useClimberStats } from '../hooks/useClimberStats'
 import { useFriends } from '../hooks/useFriends'
-import { DAY_NAMES_SHORT, formatMediumDate, formatMinutesSpan, formatShortDate } from '../lib/date'
+import {
+  DAY_NAMES,
+  DAY_NAMES_SHORT,
+  formatMediumDate,
+  formatShortDate,
+} from '../lib/date'
 import { displayNameOf, usernameOf } from '../lib/format'
 import {
   HEAT_LEVEL_CLASSES,
@@ -40,11 +46,18 @@ import {
   HEATMAP_WEEKS,
   activityByDate,
   buildHeatmap,
+  favouriteWeekday,
+  groupHeatmapByMonth,
   gymShare,
+  gymsByDate,
   heatLevel,
   heatmapStartDate,
+  nextPlannedDay,
   rankGymStats,
-  type HeatmapWeek,
+  sessionsByRegion,
+  weekStreak,
+  type HeatmapDay,
+  type HeatmapMonth,
 } from '../lib/stats'
 
 /** The migration a stats page needs before its views exist. */
@@ -60,49 +73,68 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   )
 }
 
-/** Tooltip/label for one day: "Sep 16: 2 sessions, 1h" or "… (planned)". */
-function dayLabel(week: HeatmapWeek, index: number): string {
-  const day = week.days[index]
+/**
+ * Tooltip/label for one day: "Sep 16: 2 sessions · BHive" or "… (planned)".
+ * The gyms come from `climb_gyms`, so hovering a square answers *where* the day
+ * was spent - and no duration: this grid is about the day, not the hours in it.
+ */
+function dayLabel(day: HeatmapDay): string {
   const count =
     day.sessions === 0 ? 'no sessions' : `${day.sessions} session${day.sessions === 1 ? '' : 's'}`
-  const minutes = day.exactMinutes > 0 ? `, ${formatMinutesSpan(day.exactMinutes)}` : ''
-  return `${formatMediumDate(day.date)}: ${count}${minutes}${day.planned ? ' (planned)' : ''}`
+  const gyms = day.gyms.length > 0 ? ` · ${day.gyms.join(', ')}` : ''
+  return `${formatMediumDate(day.date)}: ${count}${gyms}${day.planned ? ' (planned)' : ''}`
 }
 
 /**
- * 13 weeks of days (a quarter of a year) as Monday-first columns. A future day is
- * drawn as an outline: a climb row is a plan, so next week's sessions are real
- * data and must not read as "nothing yet".
+ * 13 weeks of days (a quarter of a year) as Monday-first columns, split into
+ * month blocks so the grid can be read a month at a time. A future day is drawn
+ * as an outline: a climb row is a plan, so next week's sessions are real data and
+ * must not read as "nothing yet".
+ *
+ * A block carries its own month header, and the flex gap between blocks is the
+ * visual break between months - no dividers, which would compete with the cells.
+ * The weekday column gets a matching spacer so its labels stay on the squares.
  */
-function Heatmap({ weeks }: { weeks: HeatmapWeek[] }) {
+function Heatmap({ months }: { months: HeatmapMonth[] }) {
   return (
     <div className="overflow-x-auto">
       <div className="flex gap-1.5">
-        <div aria-hidden="true" className="flex flex-col gap-0.5 pr-1 text-[10px] text-zinc-500">
-          {DAY_NAMES_SHORT.map((name, index) => (
-            <span key={name} className="h-3 leading-3">
-              {index % 2 === 0 ? name : ''}
-            </span>
-          ))}
+        <div aria-hidden="true" className="flex flex-col gap-1 pr-1 text-[10px] text-zinc-500">
+          {/* Sits beside the month headers, so the day labels line up with cells. */}
+          <span className="h-3 leading-3" />
+          <div className="flex flex-col gap-0.5">
+            {DAY_NAMES_SHORT.map((name, index) => (
+              <span key={name} className="h-3 leading-3">
+                {index % 2 === 0 ? name : ''}
+              </span>
+            ))}
+          </div>
         </div>
 
-        <div role="group" aria-label="Daily activity" className="flex gap-0.5">
-          {weeks.map((week) => (
-            <div key={week.weekStart} className="flex flex-col gap-0.5">
-              {week.days.map((day, index) => (
-                <span
-                  key={day.date}
-                  role="img"
-                  aria-label={dayLabel(week, index)}
-                  title={dayLabel(week, index)}
-                  className={cx(
-                    'h-3 w-3 rounded-sm',
-                    day.planned
-                      ? HEAT_PLANNED_CLASS
-                      : HEAT_LEVEL_CLASSES[heatLevel(day.sessions)],
-                  )}
-                />
-              ))}
+        <div role="group" aria-label="Daily activity" className="flex gap-3">
+          {months.map((month) => (
+            <div key={month.month} className="flex flex-col gap-1">
+              <span className="h-3 text-[10px] leading-3 text-zinc-500">{month.label}</span>
+              <div className="flex gap-0.5">
+                {month.weeks.map((week) => (
+                  <div key={week.weekStart} className="flex flex-col gap-0.5">
+                    {week.days.map((day) => (
+                      <span
+                        key={day.date}
+                        role="img"
+                        aria-label={dayLabel(day)}
+                        title={dayLabel(day)}
+                        className={cx(
+                          'h-3 w-3 rounded-sm',
+                          day.planned
+                            ? HEAT_PLANNED_CLASS
+                            : HEAT_LEVEL_CLASSES[heatLevel(day.sessions)],
+                        )}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -130,7 +162,32 @@ function HeatmapLegend() {
   )
 }
 
-/** "Where I climb": one bar per gym, most sessions first, unnamed bucket last. */
+/**
+ * Where the sessions happen, in one line: the per-gym bars answer "which gym",
+ * this answers "how far do I travel". Hidden when everything is in one region -
+ * the Gyms card already says so.
+ */
+function RegionSplit({ regions }: { regions: ReturnType<typeof sessionsByRegion> }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
+      <span className="tracking-wide text-zinc-500 uppercase">By region</span>
+      {regions.map((row) => (
+        <span key={row.region} className="flex items-center gap-1.5">
+          {row.region}
+          <span className="rounded-md bg-zinc-800/70 px-1.5 py-0.5 font-semibold text-zinc-200">
+            {row.sessions}
+          </span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * "Where I climb": one bar per gym, most sessions first, unnamed bucket last.
+ * The trailing "last …" is the nudge - a gym you have not been to in two months is
+ * the interesting row, not the busiest one.
+ */
 function GymBreakdown({ rows }: { rows: ReturnType<typeof rankGymStats> }) {
   // The unnamed bucket can be the biggest, so the scale takes the maximum across
   // every row rather than the first (which ranking puts first among *named* gyms).
@@ -153,8 +210,7 @@ function GymBreakdown({ rows }: { rows: ReturnType<typeof rankGymStats> }) {
             </span>
             <span className="text-xs text-zinc-400">
               {row.sessions} session{row.sessions === 1 ? '' : 's'} · {row.days} day
-              {row.days === 1 ? '' : 's'}
-              {row.exact_minutes > 0 ? ` · ${formatMinutesSpan(row.exact_minutes)}` : ''}
+              {row.days === 1 ? '' : 's'} · last {formatShortDate(row.last_visit)}
             </span>
           </div>
           <div className="h-1.5 rounded-full bg-zinc-800">
@@ -189,11 +245,12 @@ export default function Stats() {
   const targetId = requested ?? userId ?? null
   const isSelf = targetId === userId
 
-  const { totals, activity, gymStats, loading, error, missingViews, reload } = useClimberStats({
-    userId: targetId,
-    sinceDate,
-    enabled: Boolean(targetId),
-  })
+  const { totals, activity, climbGyms, gymStats, loading, error, missingViews, reload } =
+    useClimberStats({
+      userId: targetId,
+      sinceDate,
+      enabled: Boolean(targetId),
+    })
 
   // Only ever render rows that belong to the climber on screen: switching in the
   // picker re-queries, and the previous climber's numbers must not sit under the
@@ -203,16 +260,49 @@ export default function Stats() {
     () => activity.filter((row) => row.user_id === targetId),
     [activity, targetId],
   )
+  const gymNameRows = useMemo(
+    () => climbGyms.filter((row) => row.user_id === targetId),
+    [climbGyms, targetId],
+  )
   const gymRows = useMemo(
     () => gymStats.filter((row) => row.user_id === targetId),
     [gymStats, targetId],
   )
 
   const weeks = useMemo(
-    () => buildHeatmap(today, activityByDate(activityRows), HEATMAP_WEEKS),
-    [today, activityRows],
+    () =>
+      buildHeatmap(today, activityByDate(activityRows), HEATMAP_WEEKS, gymsByDate(gymNameRows)),
+    [today, activityRows, gymNameRows],
   )
+  const months = useMemo(() => groupHeatmapByMonth(weeks), [weeks])
+
+  // The rhythm cards all read the same 13 weeks the grid draws, so the numbers and
+  // the squares can never disagree.
+  const streak = useMemo(() => weekStreak(weeks), [weeks])
+  const weekday = useMemo(() => favouriteWeekday(weeks), [weeks])
+  const nextDay = useMemo(() => nextPlannedDay(weeks), [weeks])
+  const regions = useMemo(() => sessionsByRegion(gymRows), [gymRows])
   const rankedGyms = useMemo(() => rankGymStats(gymRows), [gymRows])
+
+  /** One line under the cards: how far back this goes, and what is next. */
+  const rangeLine = useMemo(() => {
+    if (!totalRow) return ''
+
+    const parts: string[] = []
+    if (totalRow.first_session && totalRow.last_session) {
+      parts.push(
+        `First session ${formatMediumDate(totalRow.first_session)}, most recent ${formatMediumDate(
+          totalRow.last_session,
+        )}.`,
+      )
+    }
+    if (nextDay) {
+      const where = nextDay.gyms.length > 0 ? ` at ${nextDay.gyms.join(' or ')}` : ''
+      parts.push(`Next ${formatMediumDate(nextDay.date)}${where}.`)
+    }
+
+    return parts.join(' ')
+  }, [totalRow, nextDay])
 
   const selectClimber = (id: string) => {
     const next = new URLSearchParams(searchParams)
@@ -297,24 +387,39 @@ export default function Stats() {
             <StatCard
               label="Active days"
               value={`${totalRow.active_days}`}
-              hint={`over ${totalRow.active_weeks} week${totalRow.active_weeks === 1 ? '' : 's'}`}
+              hint={`over ${totalRow.active_weeks} week${
+                totalRow.active_weeks === 1 ? '' : 's'
+              }, ${totalRow.active_months} month${totalRow.active_months === 1 ? '' : 's'}`}
+            />
+            {/* Weeks, not days, and not hours: a climb row is a day on the calendar. */}
+            <StatCard
+              label="Week streak"
+              value={`${streak.current} week${streak.current === 1 ? '' : 's'}`}
+              hint={`best ${streak.best} in ${HEATMAP_WEEKS}`}
             />
             <StatCard
-              label="On the wall"
-              value={formatMinutesSpan(totalRow.exact_minutes)}
-              hint="clock-time sessions only"
-            />
-            <StatCard
-              label="Usual session"
-              value={totalRow.avg_exact_minutes ? formatMinutesSpan(totalRow.avg_exact_minutes) : '-'}
-              hint="average, exact windows"
+              label="Usual day"
+              value={weekday.isoDow ? DAY_NAMES[weekday.isoDow - 1] : '-'}
+              hint={
+                weekday.isoDow
+                  ? `${weekday.sessions} of ${weekday.total} session${
+                      weekday.total === 1 ? '' : 's'
+                    }`
+                  : 'nothing climbed yet'
+              }
             />
             <StatCard
               label="Gyms"
               value={`${totalRow.gyms_visited}`}
               hint={`${totalRow.regions_visited} region${totalRow.regions_visited === 1 ? '' : 's'}`}
             />
-            <StatCard label="Notes written" value={`${totalRow.sessions_with_note}`} />
+            <StatCard
+              label="Notes written"
+              value={`${totalRow.sessions_with_note}`}
+              hint={
+                totalRow.sessions_with_note > 0 ? `of ${totalRow.sessions} sessions` : undefined
+              }
+            />
           </div>
 
           <Card>
@@ -324,7 +429,7 @@ export default function Stats() {
                 today,
               )}.`}
             />
-            <Heatmap weeks={weeks} />
+            <Heatmap months={months} />
             <HeatmapLegend />
           </Card>
 
@@ -336,16 +441,14 @@ export default function Stats() {
             {rankedGyms.length === 0 ? (
               <EmptyState title="No gyms yet" hint="Name a gym on a session to see this fill in." />
             ) : (
-              <GymBreakdown rows={rankedGyms} />
+              <>
+                {regions.length > 1 ? <RegionSplit regions={regions} /> : null}
+                <GymBreakdown rows={rankedGyms} />
+              </>
             )}
           </Card>
 
-          {totalRow.first_session && totalRow.last_session ? (
-            <p className="text-xs text-zinc-500">
-              First session {formatMediumDate(totalRow.first_session)}, most recent{' '}
-              {formatMediumDate(totalRow.last_session)}.
-            </p>
-          ) : null}
+          {rangeLine ? <p className="text-xs text-zinc-500">{rangeLine}</p> : null}
         </>
       )}
     </div>

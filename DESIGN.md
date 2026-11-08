@@ -127,7 +127,8 @@ pattern, with `text-emerald-200/300` for readable ink on top.
 - **Spacing rhythm:** gap/padding multiples of Tailwind's scale - `p-2.5`,
   `p-3`, `p-4`, `gap-2`, `gap-3`, `space-y-2`, `space-y-4`.
 - **Grids:** `grid-cols-2 gap-3 sm:grid-cols-3` for stat cards; a 7-column
-  Mon–Sun grid for the week; `flex gap-0.5` for the stats heatmap.
+  Mon–Sun grid for the week; `flex gap-0.5` inside a month block of the stats
+  heatmap, with `gap-3` between the month blocks.
 
 ---
 

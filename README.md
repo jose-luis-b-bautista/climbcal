@@ -52,13 +52,15 @@ read or write what.
 
   Both layouts respect the gym filter (defaults to all gyms).
 - **Stats** - a tab for your own climbing, and for a friend's from the climber picker: sessions posted
-  and active days, time on the wall, gyms visited and notes written; a 13-week **activity heatmap**
-  where a day is shaded if you climbed it and dashed if it has not happened yet; and a **"where I
-  climb"** breakdown, each gym in its own colours. It reads the `security_invoker` views from
+  and active days, a **week streak**, your **usual day**, gyms visited and notes written; a 13-week
+  **activity heatmap**, split into one block per month, where a day is shaded if you climbed it and
+  dashed if it has not happened yet, and hovering a square names the gym for that day; and a **"where
+  I climb"** breakdown, sessions per region then per gym, each in its own colours, with the last visit
+  on every row. It reads the `security_invoker` views from
   [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql), so RLS
   decides what a friend's page can show, and `?climber=<id>` makes one linkable. A session is a posted
-  *plan*, so nothing pretends to be a logged send: slot-only windows ("Opening" – "Closing") are never
-  counted as time on the wall.
+  *plan*, so nothing pretends to be a logged send: the page counts days, sessions and places - never
+  hours - and a slot-only window ("Opening" – "Closing") is never dressed up as time on the wall.
 - **Settings** - edit profile, flip public/private. The gym list itself is curated by admins (see
   [Adding a gym](#adding-a-gym)).
 - **Share** - Settings (and your own public page) carry a **Share link** built from your username,
@@ -401,7 +403,8 @@ src/
   lib/          supabase (client), date (week + month math, window helpers),
                 format (names/usernames, gym-by-region grouping),
                 group (feed grouping: per gym, per date, unique climbers),
-                stats (heatmap grid + gym-breakdown ordering),
+                stats (heatmap grid + month blocks, per-day gyms, week streak,
+                weekday habit, region split, gym-breakdown ordering),
                 avatar + gymColors (per-climber / per-gym colours),
                 slots (the eight time-of-day window labels), admin,
                 routes (share paths + safe post-login redirect targets)
@@ -474,7 +477,7 @@ the climbs their RLS allows - their own, accepted friends', and anyone's public 
 | View | Grain | For |
 | --- | --- | --- |
 | `climb_sessions` | one climb | the window normalised onto one scale - `duration_minutes`, `is_exact_window`, `week_start`, `iso_dow` |
-| `climb_gyms` | one climb per named gym | a two-gym session counts under both; an unnamed one keeps a `'Not sure yet'` row with `is_named_gym = false` |
+| `climb_gyms` | one climb per named gym | a two-gym session counts under both; an unnamed one keeps a `'Not sure yet'` row with `is_named_gym = false`. The stats page also reads it for the same window as the heatmap, to name the gym on a day |
 | `climber_daily_activity` | climber × day | the heatmap |
 | `climber_totals` | climber | the headline cards (past/upcoming split at `current_date`; minutes are past-only and count exact clock windows) |
 | `climber_gym_stats` | climber × gym | the "where I climb" breakdown, untagged gyms bucketed as `'Other'` |
@@ -491,7 +494,11 @@ const { data: heatmap } = await supabase
 ```
 
 A slot-only window ("Opening"…"Closing") gives a *notional* `duration_minutes`, so read it only when
-`is_exact_window` is true - `window_minutes` exists to order windows, not to describe them. The row
+`is_exact_window` is true - `window_minutes` exists to order windows, not to describe them. The stats
+page deliberately shows none of the minute totals (`climber_totals.exact_minutes`,
+`avg_exact_minutes`, `climber_gym_stats.exact_minutes`): a climb row is a plan for a *day*, so its
+cards count sessions, days, streaks and places and leave durations to surfaces that can be honest
+about them. The row
 types live in `src/types.ts`, and [`src/lib/statsViews.test.ts`](src/lib/statsViews.test.ts) reads
 both it and the migration, failing if the view names, the `security_invoker` opt-in, the grants, or
 the two labels shared with the app (`'Not sure yet'` from `gymNameOf`, `'Other'` from
