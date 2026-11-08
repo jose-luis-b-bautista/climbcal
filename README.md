@@ -167,8 +167,15 @@ npm run lint       # oxlint
    automatically (`npm run build`, output `dist/`).
 3. **Settings → Environment Variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
    (the Project URL + publishable key) for Production *and* Preview. Redeploy after adding them.
-4. `vercel.json` rewrites every path to `index.html` so client-side routes such as `/friends` - and a
-   shared `/u/<username>` link - work on refresh.
+4. `vercel.json` keeps the SPA working: it rewrites every path to `index.html`, so client-side routes
+   such as `/friends` - and a shared `/u/<username>` link - work on refresh. It also sends the
+   `climbcal.vercel.app` hostname to `climbcal.app` with a 301, using a `redirects` entry whose `has`
+   condition matches the host.
+   **`source` must be a path.** A `rewrites`/`redirects` entry whose `source` is a full URL fails the
+   *whole deployment* with "Invalid route source pattern"
+   ([docs](https://vercel.com/docs/errors/error-list#invalid-route-source-pattern)): Vercel compiles
+   `source` with path-to-regexp, so a hostname belongs in `has` (`{"type":"host","value":"…"}`), never
+   in `source`. `src/vercel-config.test.ts` asserts this, so the config cannot regress silently.
 5. Go back to Supabase → Auth → URL Configuration and set the Site URL to the Vercel domain.
 6. **Analytics** (optional): Project → **Analytics → Enable Web Analytics**. Nothing is collected
    until that toggle is on - the app already reports cookieless pageviews (initial load plus
@@ -540,7 +547,10 @@ that URL, so the deployed origin (and `http://localhost:5173` while developing) 
 CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push
 to `main` and on pull requests - no secrets required.
 
-`npm test` covers the date/format helpers plus two integration renders against a mocked Supabase
+`npm test` also asserts `vercel.json` stays deployable: the SPA fallback is intact and no `source` is a
+full URL (that mistake fails the whole deployment, and lint/test/build would not notice).
+
+It covers the date/format helpers plus two integration renders against a mocked Supabase
 client (`src/test/`): the week view, which verifies the auth gate, friend lookup, climb query and gym
 join end to end, and the share page, which verifies it renders for a **signed-out** visitor, that a
 private/unknown username reads as "not shared", and that its `rpc('shared_profile')` call and

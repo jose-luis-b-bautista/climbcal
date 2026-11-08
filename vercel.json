@@ -1,14 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "climbcal\\.vercel\\.app" }],
+      "destination": "https://climbcal.app/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
-    {
-      "source": "https://climbcal.vercel.app/",
-      "destination": "https://climbcal.app/"
-    },
-    {
-      "source": "https://climbcal.vercel.app/:splat*",
-      "destination": "https://climbcal.app/:splat*"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
