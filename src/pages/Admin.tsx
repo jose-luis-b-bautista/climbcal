@@ -8,13 +8,16 @@
  */
 import { useEffect, useState } from 'react'
 import {
+  Avatar,
   Card,
   ErrorBanner,
   Field,
+  GymCell,
   Notice,
   PageLoader,
   SectionHeading,
   Select,
+  VisibilityBadge,
   dangerButtonClass,
   ghostButtonClass,
   inputClass,
@@ -23,13 +26,20 @@ import {
 } from '../components/ui'
 import { useGyms } from '../hooks/useGyms'
 import { ADMIN_PASSWORD, isAdminUnlocked, lockAdmin, unlockAdmin } from '../lib/admin'
-import { addDays, toISODate } from '../lib/date'
-import { GYM_REGIONS, groupGymsByRegion } from '../lib/format'
+import { addDays, formatMediumDate, formatTimeWindow, toISODate } from '../lib/date'
+import { GYM_REGIONS, displayNameOf, groupGymsByRegion, gymNameOf, usernameOf } from '../lib/format'
 import { supabase } from '../lib/supabase'
-import type { FeedbackRow, Gym } from '../types'
+import type { ClimbWithGym, FeedbackRow, Gym, Profile, Visibility } from '../types'
 
 /** How far ahead the "coming up" stat looks. */
 const HORIZON_DAYS = 21
+
+/**
+ * How many climbs the dashboard lists in one go. Being able to see *any* of the
+ * table is the feature - reading all of it is not - so the list is capped and
+ * says so, rather than quietly implying it is complete.
+ */
+const CLIMB_LIMIT = 200
 
 interface Counts {
   climbers: number
@@ -109,6 +119,200 @@ function AdminStats() {
         <Stat label="Gyms listed" value={counts?.gyms ?? null} />
         <Stat label="Sessions ahead" value={counts?.upcoming ?? null} />
       </div>
+    </Card>
+  )
+}
+
+/**
+ * Every climb in the app, whoever logged it and whatever that climber's own
+ * visibility is set to.
+ *
+ * Seeing all of it is a database grant, not a UI trick: `climbs_select_admin`
+ * (`supabase/migrations/20260920000400_admin.sql`) adds an admin-only SELECT
+ * policy, so this same query returns only the caller's visible rows for a
+ * non-admin and the whole table for an admin. Nothing here filters on
+ * `profiles.visibility` - a private profile hides its climbs from the feed, not
+ * from the dashboard.
+ *
+ * The climber names arrive in a second query: `climbs.user_id` and `profiles.id`
+ * both reference `auth.users`, so there is no foreign key for PostgREST to embed
+ * through (the same reason `hooks/useWeekClimbs` fetches profiles separately).
+ */
+function ClimbBrowser() {
+  const [climbs, setClimbs] = useState<ClimbWithGym[]>([])
+  const [profiles, setProfiles] = useState<Record<string, Profile>>({})
+  const [query, setQuery] = useState('')
+  const [visibility, setVisibility] = useState<Visibility | 'all'>('all')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    const load = async () => {
+      const { data: climbRows, error: climbsError } = await supabase
+        .from('climbs')
+        .select(
+          '*, gym:gyms!climbs_gym_id_fkey(id, name), gym_2:gyms!climbs_gym_id_2_fkey(id, name)',
+        )
+        .order('created_at', { ascending: false })
+        .limit(CLIMB_LIMIT)
+
+      if (!active) return
+
+      if (climbsError) {
+        setError(climbsError.message)
+        setLoading(false)
+        return
+      }
+
+      const rows = (climbRows ?? []) as ClimbWithGym[]
+      const userIds = Array.from(new Set(rows.map((row) => row.user_id)))
+
+      let profileMap: Record<string, Profile> = {}
+      if (userIds.length > 0) {
+        const { data: profileRows, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', userIds)
+
+        if (!active) return
+
+        if (profilesError) {
+          setError(profilesError.message)
+        } else {
+          profileMap = Object.fromEntries((profileRows ?? []).map((row) => [row.id, row]))
+        }
+      }
+
+      setClimbs(rows)
+      setProfiles(profileMap)
+      setLoading(false)
+    }
+
+    void load()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const search = query.trim().toLowerCase()
+
+  const matches = climbs.filter((climb) => {
+    const climber = profiles[climb.user_id]
+    // An unknown profile counts as private: it is the cautious guess, and it
+    // keeps a missing row from padding the "public" filter.
+    if (visibility !== 'all' && (climber?.visibility ?? 'private') !== visibility) return false
+    if (!search) return true
+
+    return [displayNameOf(climber), usernameOf(climber), gymNameOf(climb), climb.note]
+      .filter((value): value is string => Boolean(value))
+      .some((value) => value.toLowerCase().includes(search))
+  })
+
+  const climberCount = new Set(matches.map((climb) => climb.user_id)).size
+
+  return (
+    <Card>
+      <SectionHeading
+        title="Climbs"
+        hint="Every session in the database - private profiles included - newest first."
+        action={
+          <span className="text-xs text-zinc-500">
+            {matches.length} of {climbs.length} · {climberCount} climber
+            {climberCount === 1 ? '' : 's'}
+          </span>
+        }
+      />
+
+      {error ? <ErrorBanner message={error} /> : null}
+
+      <div className="mb-3 grid gap-3 sm:grid-cols-[2fr_1fr] sm:items-end">
+        <Field label="Search" htmlFor="admin-climbs-search">
+          <input
+            id="admin-climbs-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="e.g. mara or BHive"
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label="Climber visibility" htmlFor="admin-climbs-visibility">
+          <Select
+            id="admin-climbs-visibility"
+            value={visibility}
+            onChange={(event) => setVisibility(event.target.value as Visibility | 'all')}
+          >
+            <option value="all">All</option>
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+          </Select>
+        </Field>
+      </div>
+
+      {climbs.length >= CLIMB_LIMIT ? (
+        <Notice>
+          Showing the {CLIMB_LIMIT} most recently logged climbs only. Narrow the search to find older
+          ones.
+        </Notice>
+      ) : null}
+
+      {loading ? (
+        <p className="py-4 text-sm text-zinc-400">Loading climbs…</p>
+      ) : matches.length === 0 ? (
+        <p className="py-4 text-sm text-zinc-400">
+          {climbs.length === 0 ? 'No climbs logged yet.' : 'No climbs match those filters.'}
+        </p>
+      ) : (
+        <ul aria-label="Climbs" className="divide-y divide-zinc-800/80">
+          {matches.map((climb) => {
+            const climber = profiles[climb.user_id]
+            const handle = usernameOf(climber)
+
+            return (
+              <li key={climb.id} className="py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Avatar profile={climber} size="sm" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-100">
+                        {displayNameOf(climber)}
+                        {handle ? (
+                          <span className="ml-1.5 text-xs font-normal text-zinc-500">{handle}</span>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {formatMediumDate(climb.climb_date)} ·{' '}
+                        {formatTimeWindow(
+                          climb.start_time,
+                          climb.end_time,
+                          climb.start_slot,
+                          climb.end_slot,
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <VisibilityBadge visibility={climber?.visibility ?? 'private'} />
+                    <span className="text-xs text-zinc-500">
+                      logged {new Date(climb.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <GymCell climb={climb} />
+                  {climb.note ? <span className="text-xs text-zinc-400">{climb.note}</span> : null}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </Card>
   )
 }
@@ -492,7 +696,7 @@ export default function Admin() {
     <div className="space-y-6">
       <SectionHeading
         title="Admin"
-        hint="The gym list, and a quick look at the numbers."
+        hint="The numbers, every climb and who logged it, feedback, and the gym list."
         action={
           <button
             type="button"
@@ -515,6 +719,7 @@ export default function Admin() {
       </Notice>
 
       <AdminStats />
+      <ClimbBrowser />
       <FeedbackManager />
       <GymManager />
     </div>

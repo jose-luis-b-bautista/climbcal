@@ -5,7 +5,7 @@
  * ships in the bundle, and the real gate is `profiles.is_admin` + RLS (verified
  * against Postgres in the migration notes).
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -40,7 +40,17 @@ vi.mock('../lib/supabase', async () => {
     created_at: stamp,
     updated_at: stamp,
   }
-  const profiles = [me, mara]
+  // Private profile: its climbs stay out of the feed, but the dashboard lists
+  // them (that is the `climbs_select_admin` policy, not a client-side filter).
+  const noe = {
+    id: '33333333-3333-3333-3333-333333333333',
+    username: 'noe',
+    display_name: 'Noe',
+    visibility: 'private',
+    created_at: stamp,
+    updated_at: stamp,
+  }
+  const profiles = [me, mara, noe]
   const climbs = [
     {
       id: 'c1',
@@ -55,6 +65,24 @@ vi.mock('../lib/supabase', async () => {
       gym_id_2: null,
       custom_gym_name_2: null,
       note: null,
+      created_at: stamp,
+      updated_at: stamp,
+      gym: null,
+      gym_2: null,
+    },
+    {
+      id: 'c2',
+      user_id: noe.id,
+      climb_date: '2026-09-22',
+      start_time: null,
+      end_time: null,
+      start_slot: 'Opening',
+      end_slot: 'Before Lunch',
+      gym_id: null,
+      custom_gym_name: 'The Wall',
+      gym_id_2: null,
+      custom_gym_name_2: null,
+      note: 'First time back since the knee.',
       created_at: stamp,
       updated_at: stamp,
       gym: null,
@@ -150,10 +178,54 @@ describe('<Admin />', () => {
     await unlock()
 
     expect(await screen.findByRole('heading', { name: 'Numbers' })).toBeTruthy()
-    // head/count queries: 2 climbers (both public), 1 gym, 1 session ahead.
-    expect(screen.getByText('Climbers').parentElement?.textContent).toContain('2')
+    // head/count queries: 3 climbers (2 of them public), 1 gym, 2 sessions ahead.
+    expect(screen.getByText('Climbers').parentElement?.textContent).toContain('3')
     expect(screen.getByText('Gyms listed').parentElement?.textContent).toContain('1')
-    expect(screen.getByText('Sessions ahead').parentElement?.textContent).toContain('1')
+    expect(screen.getByText('Sessions ahead').parentElement?.textContent).toContain('2')
+  })
+
+  it('lists every climb with the climber who logged it - private profiles too', async () => {
+    renderAdmin()
+    await unlock()
+
+    expect(await screen.findByRole('heading', { name: 'Climbs' })).toBeTruthy()
+    const list = await screen.findByRole('list', { name: 'Climbs' })
+
+    // A public climber's session…
+    expect(within(list).getByText('Mara')).toBeTruthy()
+    expect(within(list).getByText('@mara')).toBeTruthy()
+    expect(within(list).getByText('BHive')).toBeTruthy()
+    expect(within(list).getByText(/18:00 – 20:00/)).toBeTruthy()
+
+    // …and one from a profile set to private, which the feed would never show.
+    expect(within(list).getByText('Noe')).toBeTruthy()
+    expect(within(list).getByText('@noe')).toBeTruthy()
+    expect(within(list).getByText('The Wall')).toBeTruthy()
+    expect(within(list).getByText(/Opening – Before Lunch/)).toBeTruthy()
+    expect(within(list).getByText('First time back since the knee.')).toBeTruthy()
+
+    // One row per climb, whoever logged it.
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2)
+  })
+
+  it('filters the climb list by search and by climber visibility', async () => {
+    renderAdmin()
+    await unlock()
+
+    const list = await screen.findByRole('list', { name: 'Climbs' })
+    fireEvent.change(await screen.findByLabelText('Search'), { target: { value: 'mara' } })
+
+    // Searching a climber keeps their row and drops everyone else's.
+    expect(within(list).getByText('Mara')).toBeTruthy()
+    expect(within(list).queryByText('Noe')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Search'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Climber visibility'), { target: { value: 'private' } })
+
+    // The private filter reaches the private climber only - the point of the
+    // section: visibility changes the feed, not the dashboard.
+    expect(within(list).getByText('Noe')).toBeTruthy()
+    expect(within(list).queryByText('Mara')).toBeNull()
   })
 
   it('adds a gym from the dashboard', async () => {

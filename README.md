@@ -235,8 +235,17 @@ it is only reachable by typing the URL (`vercel.json` keeps the SPA rewrite work
 2. Open `/admin` and enter the shared password - **`ilikepie`** (`ADMIN_PASSWORD` in
    [`src/lib/admin.ts`](src/lib/admin.ts), change it there).
 
-It shows a few counts (climbers, public climbers, gyms, sessions in the next three weeks) and manages
-the shared gym list: add, edit, delete - the only way to change gyms in the app.
+It shows a few counts (climbers, public climbers, gyms, sessions in the next three weeks), lists every
+climb in the app, shows the feedback inbox, and manages the shared gym list: add, edit, delete - the
+only way to change gyms in the app.
+
+**Climbs.** The second section lists the 200 most recently logged sessions - **every climber's,
+public or private** - each with the climber (avatar, name, `@username`, a **Public** / **Private**
+badge and when it was saved), the date and time window, the gym and the note. **Search** matches the
+climber, the gym or the note, and the visibility filter narrows the list to one side. Nothing here
+hides private profiles, and the client does not fake it: `climbs_select_admin` is an *extra*
+admin-only `select` policy, so the identical query run as a non-admin comes back with only the rows
+that account's own visibility rules allow.
 
 **What actually protects it.** The password is a *convenience lock*: the bundle is public, so anyone
 can read it out of the JavaScript, and an unlinked route is only obscurity. The real gate is
