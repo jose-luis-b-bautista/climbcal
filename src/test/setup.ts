@@ -1,5 +1,6 @@
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, beforeEach } from 'vitest'
+import { WHATS_NEW_LATEST, WHATS_NEW_STORAGE_KEY } from '../lib/whatsNew'
 
 /**
  * jsdom's Storage is shadowed by Node's experimental `localStorage` global, which
@@ -34,6 +35,13 @@ function installInMemoryStorage() {
 }
 
 installInMemoryStorage()
+
+beforeEach(() => {
+  // Release notes are page chrome: every test starts with the current release
+  // already read, so the pop-up never sits in front of the page under test. The
+  // what's-new tests remove the key to see it (src/components/WhatsNew.test.tsx).
+  window.localStorage.setItem(WHATS_NEW_STORAGE_KEY, WHATS_NEW_LATEST.id)
+})
 
 afterEach(() => {
   cleanup()

@@ -65,6 +65,9 @@ read or write what.
   hours - and a slot-only window ("Opening" – "Closing") is never dressed up as time on the wall.
 - **Settings** - edit profile, flip public/private. The gym list itself is curated by admins (see
   [Adding a gym](#adding-a-gym)).
+- **What was updated** - a release-notes pop-up opens once per release and per browser (the device
+  records the release id it has read), then stays out of the way; Settings carries a **Show what was
+  updated** button to bring the current notes back by hand.
 - **Share** - Settings (and your own public page) carry a **Share link** built from your username,
   `/u/<username>`. It opens for someone who has *not* signed up, which is the point: the page renders
   the week as a read-only snapshot and offers a **create an account** link that brings them straight
@@ -102,7 +105,9 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      (the `shared_profile` function behind `/u/<username>` share links - the one thing `anon` may
      execute), then
      [`20260929000000_grava_gym.sql`](supabase/migrations/20260929000000_grava_gym.sql) (one more
-     Luzon gym, **Grava**).
+     Luzon gym, **Grava**), then
+     [`20261109000000_hangar8_climb_shack_gyms.sql`](supabase/migrations/20261109000000_hangar8_climb_shack_gyms.sql)
+     (two more Luzon gyms, **Hangar 8** and **Climb Shack**).
    - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
      ```bash
      npx supabase@latest login          # opens the browser once
@@ -114,7 +119,7 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
      `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
      date."* - safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
      add a `seed.sql`.
-   All ten files are idempotent, so re-running is safe.
+   Every migration is idempotent, so re-running is safe.
    > Already set the project up earlier? Just run the migrations you haven't:
    > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
    > (keeping sessions that referenced them as free-text names) and seeds the regional list;
@@ -126,8 +131,9 @@ Out of scope for v1: notifications, chat, maps, recurring sessions, comments, na
    > stats views (they need Postgres 15+ for `security_invoker`);
    > `20260924000000_public_profile_share.sql` adds the `shared_profile` function behind share links
    > and lets `anon` execute it (it still gets no table access);
-   > `20260929000000_grava_gym.sql` adds the Grava gym to the Luzon list. Running `db push` does all
-   > of them for you.
+   > `20260929000000_grava_gym.sql` adds the Grava gym to the Luzon list;
+   > `20261109000000_hangar8_climb_shack_gyms.sql` adds Hangar 8 and Climb Shack to it. Running
+   > `db push` does all of them for you.
 3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
    - ON (default): new users must click the link in the email before signing in. The app shows a
      "check your inbox" notice.
@@ -422,7 +428,8 @@ supabase/
                 admin: is_admin flag + admin-only gym writes,
                 stats_views: read-only stats views (security_invoker, PG15+),
                 public_profile_share: shared_profile() RPC + anon execute,
-                grava_gym: Grava added to the Luzon list
+                grava_gym: Grava added to the Luzon list,
+                hangar8_climb_shack_gyms: Hangar 8 + Climb Shack added to it
   config.toml   minimal CLI config (link / db push)
 ```
 

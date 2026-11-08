@@ -258,6 +258,12 @@ shareable:
 keep the gym picker grouped by region; a sentinel option (`__other__`,
 `__exact__`) switches between preset and free-text/clock input.
 
+`WhatsNewDialog` reuses the same sheet (bottom-anchored on phones, centred card
+from `sm` up): `role="dialog"` + `aria-modal`, `aria-labelledby` on the title,
+Escape and a backdrop click both dismiss, and the primary action is focused so
+Enter gets you out. Its **release id** is the read marker - the copy lives in
+`src/lib/whatsNew.ts`, and a new id is what makes the pop-up appear again.
+
 ### Feedback
 
 - Loading: `PageLoader` (spinner + label) or a per-section loading hint.

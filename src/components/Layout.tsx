@@ -1,7 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
+import { WhatsNewProvider, useWhatsNew } from '../hooks/useWhatsNew'
+import { WHATS_NEW_LATEST } from '../lib/whatsNew'
 import { ThemeToggle } from './ThemeToggle'
+import { WhatsNewDialog } from './WhatsNewDialog'
 import { Avatar, cx, ghostButtonClass } from './ui'
 
 const NAV_ITEMS = [
@@ -14,9 +17,19 @@ const NAV_ITEMS = [
 
 /** App shell for every signed-in page. */
 export function Layout() {
+  return (
+    <WhatsNewProvider>
+      <LayoutShell />
+    </WhatsNewProvider>
+  )
+}
+
+function LayoutShell() {
   const { profile, signOut } = useAuth()
   const { incoming } = useFriends()
   const pendingCount = incoming.length
+  // Release notes live at the shell, so they greet you on whichever page you land.
+  const whatsNew = useWhatsNew()
 
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-4 pb-12 pt-5 sm:px-6">
@@ -69,6 +82,10 @@ export function Layout() {
       <main className="flex-1">
         <Outlet />
       </main>
+
+      {whatsNew.open ? (
+        <WhatsNewDialog entry={WHATS_NEW_LATEST} onClose={whatsNew.dismiss} />
+      ) : null}
     </div>
   )
 }

@@ -12,13 +12,17 @@ import {
   textareaClass,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { useWhatsNew } from '../hooks/useWhatsNew'
 import { normaliseUsername } from '../lib/format'
 import { profileSharePath } from '../lib/routes'
 import { supabase } from '../lib/supabase'
+import { WHATS_NEW_LATEST } from '../lib/whatsNew'
 import type { Visibility } from '../types'
 
 export default function Settings() {
   const { profile, session, userId, refreshProfile, signOut } = useAuth()
+  // The dialog itself lives in the shell; this card is the way back to it.
+  const { show: showWhatsNew } = useWhatsNew()
 
   // Settings only renders once RequireProfile has loaded the row, so the
   // current values can seed the form directly.
@@ -214,6 +218,17 @@ export default function Settings() {
         ) : (
           <Notice>Choose a username first - your link is built from it.</Notice>
         )}
+      </Card>
+
+      <Card>
+        <SectionHeading
+          title="What's new"
+          hint={`Release notes from ${WHATS_NEW_LATEST.date} - the pop-up shows once per release.`}
+        />
+
+        <button type="button" className={secondaryButtonClass} onClick={showWhatsNew}>
+          Show what was updated
+        </button>
       </Card>
 
       <Card>

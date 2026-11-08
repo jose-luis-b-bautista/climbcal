@@ -3,12 +3,13 @@
  * proves the auth gate, friend lookup, climb queries and gym join all wire up,
  * render the expected cards, and that today, tomorrow and the week share a page.
  */
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { AuthProvider } from '../hooks/useAuth'
 import { ThemeProvider } from '../hooks/useTheme'
+import { WHATS_NEW_LATEST, WHATS_NEW_STORAGE_KEY } from '../lib/whatsNew'
 
 vi.mock('../lib/supabase', async () => {
   const { createClimbcalSupabaseMock } = await import('../test/fixture')
@@ -109,5 +110,40 @@ describe('<Week />', () => {
     // And no view switcher to switch between them.
     expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Week' })).toBeNull()
+  })
+
+  it('greets you with the release notes once, then stays quiet', async () => {
+    // A first visit: the test setup normally marks the release read, so clear it.
+    window.localStorage.removeItem(WHATS_NEW_STORAGE_KEY)
+
+    const renderApp = () =>
+      render(
+        <ThemeProvider>
+          <MemoryRouter initialEntries={['/week?week=2026-09-14']}>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </MemoryRouter>
+        </ThemeProvider>,
+      )
+
+    const first = renderApp()
+
+    // The pop-up carries the current release's copy, over the page.
+    const dialog = await screen.findByRole('dialog', { name: 'What was updated' })
+    expect(within(dialog).getByText(WHATS_NEW_LATEST.date)).toBeTruthy()
+    for (const highlight of WHATS_NEW_LATEST.highlights) {
+      expect(within(dialog).getByText(highlight)).toBeTruthy()
+    }
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('dialog', { name: 'What was updated' })).toBeNull()
+    expect(window.localStorage.getItem(WHATS_NEW_STORAGE_KEY)).toBe(WHATS_NEW_LATEST.id)
+
+    // Next visit: the app renders as usual, with no pop-up in the way.
+    first.unmount()
+    renderApp()
+    expect(await screen.findByText('Mara')).toBeTruthy()
+    expect(screen.queryByRole('dialog', { name: 'What was updated' })).toBeNull()
   })
 })

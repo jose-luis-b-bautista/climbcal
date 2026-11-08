@@ -11,6 +11,7 @@ import { GYM_PALETTES, gymPaletteFor, gymPaletteOf } from './gymColors'
 const SEED_MIGRATIONS = [
   'supabase/migrations/20260920000000_gym_regions.sql',
   'supabase/migrations/20260929000000_grava_gym.sql',
+  'supabase/migrations/20261109000000_hangar8_climb_shack_gyms.sql',
 ]
 
 // Read as one script, so the scan below covers the whole seeded list.
@@ -24,7 +25,7 @@ describe('gym palette', () => {
       (match) => match[1],
     )
 
-    expect(seeded.length).toBe(22)
+    expect(seeded.length).toBe(24)
     expect(Object.keys(GYM_PALETTES).sort()).toEqual([...seeded].sort())
   })
 
