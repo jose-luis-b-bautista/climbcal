@@ -2,153 +2,102 @@
 
 [![CI](https://github.com/jose-luis-b-bautista/climbcal/actions/workflows/ci.yml/badge.svg)](https://github.com/jose-luis-b-bautista/climbcal/actions/workflows/ci.yml)
 
-A small web app for answering one question: **who is climbing, where, and when - this week?**
+A small web app for one question: **who is climbing, where, and when - this week?** Open the week
+view, see your friends' sessions as cards (name, gym, time window), and add your own. Profiles are
+public or private: private schedules are only visible to accepted friends, public profiles also show
+up on a public climbers feed and can be handed out as a share link (`/u/<username>`) that opens even
+for someone without an account. Built for a friend group (~50–75 users) entirely on free tiers.
 
-Open the week view, see your friends' sessions as cards (name, gym, time window), and add your
-own. Profiles are public or private: private schedules are only visible to accepted friends,
-public profiles additionally appear on a public climbers feed - and can be handed out as a share
-link (`/u/<username>`) that opens even for someone without an account. Built for a friend group
-(~50–75 users) entirely on free tiers.
+[DESIGN.md](DESIGN.md) is the UI/design guide (theming, colours, component primitives).
 
 ## Stack
 
-| Layer     | Choice                                                            |
-| --------- | ----------------------------------------------------------------- |
-| Frontend  | React 19 + Vite + TypeScript + Tailwind CSS 4 + React Router      |
-| Backend   | Supabase (Auth + Postgres + Row Level Security) - no server       |
-| Hosting   | Vercel (Hobby) for the static build                               |
-| Analytics | Vercel Web Analytics (`@vercel/analytics`) - cookieless pageviews |
-| Tests     | Vitest + Testing Library (jsdom)                                  |
+| Layer     | Choice                                                        |
+| --------- | ------------------------------------------------------------- |
+| Frontend  | React 19 + Vite + TypeScript + Tailwind CSS 4 + React Router  |
+| Backend   | Supabase (Auth + Postgres + Row Level Security) - no server   |
+| Hosting   | Vercel (Hobby) for the static build                           |
+| Analytics | Vercel Web Analytics (`@vercel/analytics`) - cookieless       |
+| Tests     | Vitest + Testing Library (jsdom)                              |
 
-There is no custom backend: the browser talks to Supabase directly and **RLS** enforces who may
-read or write what.
+There is no custom backend: the browser talks to Supabase directly and **RLS** enforces who may read
+or write what.
 
 ## Features
 
-- **Auth** - email + password (Supabase Auth).
-- **Onboarding** - pick a username, display name, and profile visibility (defaults to private).
-- **Calendar** (home) - one page, no tabs: **Today** and **Tomorrow** summary cards on top (with
-  "On now" / "Finished" badges on today's sessions), then the **Mon–Sun week** below
-  (prev / this week / next), with `?week=YYYY-MM-DD` in the URL so weeks are linkable. Each day shows
-  session cards, and your own sessions are highlighted and editable. The day cards always describe
-  the *real* today and tomorrow, whatever week the grid is parked on, and both **open on arrival** -
-  fold one to bring the week grid up.
-- **Add / edit / delete session** - date, gym (dropdown grouped by region - Luzon / Visayas /
-  Mindanao - or free-text "Other"), an optional second gym so it reads as **"Either X or Y"**, or
-  **"Not sure yet"** when the venue isn't decided; a time window (exact clock times **or** flexible
-  labels such as "Opening" / "Before Dinner" / "Closing"), optional note. Multiple sessions per day
-  are allowed. The calendar header puts **+ Add session** (today) and **+ Tomorrow** side by side,
-  and the dialog itself has **Today** / **Tomorrow** quick picks - so "I meant tomorrow" is one
-  click, not an edit.
-- **Friends** - the newest public climbers are listed ready to add (20 at a time, most recently joined
-  first), plus a username search; send/accept/decline requests, cancel, unfriend.
-- **Feed** - public profiles **plus your own** sessions, so your posts are always visible to you,
-  with two layouts switched from the header:
-  - **List** - the next week, grouped by day and then **by gym** ("who is going where"), each gym
-    showing its own colours. Today starts open and the other days fold; **View all days**, beside
-    Refresh, opens (or folds) every day at once - and in the calendar it takes you back to that
-    fully expanded list. A session that offers two gyms ("Either X or Y") is listed under both.
-  - **Calendar** - a month of days carrying one avatar dot per climber; tapping a day opens that
-    day's sessions underneath, so the grid stays scannable. Tapping again collapses it. The layout
-    and month live in the URL (`/feed?view=calendar&month=2026-09`), so a view is linkable.
-
-  Both layouts respect the gym filter (defaults to all gyms).
-- **Stats** - a tab for your own climbing, and for a friend's from the climber picker: sessions posted
-  and active days, a **week streak**, your **usual day**, gyms visited and notes written; a 13-week
-  **activity heatmap**, split into one block per month, where a day is shaded if you climbed it and
-  dashed if it has not happened yet, and hovering a square names the gym for that day; and a **"where
-  I climb"** breakdown, sessions per region then per gym, each in its own colours, with the last visit
-  on every row. It reads the `security_invoker` views from
-  [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql), so RLS
-  decides what a friend's page can show, and `?climber=<id>` makes one linkable. A session is a posted
-  *plan*, so nothing pretends to be a logged send: the page counts days, sessions and places - never
-  hours - and a slot-only window ("Opening" – "Closing") is never dressed up as time on the wall.
-- **Settings** - edit profile, flip public/private. The gym list itself is curated by admins (see
-  [Adding a gym](#adding-a-gym)).
-- **What was updated** - a release-notes pop-up opens once per release and per browser (the device
-  records the release id it has read), then stays out of the way; Settings carries a **Show what was
-  updated** button to bring the current notes back by hand.
-- **Share** - Settings (and your own public page) carry a **Share link** built from your username,
-  `/u/<username>`. It opens for someone who has *not* signed up, which is the point: the page renders
-  the week as a read-only snapshot and offers a **create an account** link that brings them straight
-  back to that profile afterwards (via `?next=`, kept across the email-confirmation round trip). What
-  it shows is deliberately narrow - the **time and gym** of each session for one week, never the
-  session notes - and only profiles set to **Public** answer at all. A private profile and an unknown
-  username give the same "not shared" page, so a link cannot be used to probe for accounts.
-- **Light / dark mode** - a toggle in the header (and on the auth screens) that remembers your
-  choice per browser and falls back to your OS setting. No flash on load: a tiny inline script in
-  `index.html` sets the theme before first paint.
+- **Auth & onboarding** - email + password; pick a username, display name and visibility (private by
+  default).
+- **Calendar** (home) - **Today** and **Tomorrow** summary cards on top (with "On now" / "Finished"
+  badges), then the **Mon–Sun week** (prev / this / next) at `?week=YYYY-MM-DD`, so weeks are
+  linkable. Your own sessions are highlighted and editable. The day cards always describe the *real*
+  today and tomorrow and open on arrival.
+- **Sessions** - several per day, each with a date, a gym from the curated list (grouped by region)
+  or a typed "Other" name, an optional second gym (**"Either X or Y"**) or **"Not sure yet"**, a
+  time window (exact clock times **or** labels such as "Opening" / "Closing"), and an optional note.
+  Today / Tomorrow quick picks in the dialog.
+- **Friends** - the newest public climbers listed ready to add, plus username search; send, accept,
+  decline, cancel, unfriend.
+- **Feed** - public profiles **plus your own** sessions, in two URL-backed layouts:
+  - **List** - the next week grouped by day and then by gym ("who is going where"); today starts
+    open, **View all days** expands everything. Two-gym sessions appear under both.
+  - **Calendar** - a month of days carrying one avatar dot per climber; tap a day to expand its
+    sessions underneath.
+- **Stats** - yours, or a friend's from the climber picker (`?climber=<id>`): sessions and active
+  days, week streak, usual day, gyms visited, notes written, a 13-week activity heatmap, and a
+  "where I climb" region → gym breakdown. Reads `security_invoker` views, so RLS decides what a
+  friend's page can show. A session is a posted *plan*, so the page counts days, sessions and places
+  - never hours.
+- **Settings** - edit profile, flip public/private, share link, send feedback.
+- **Share links** - `/u/<username>` renders one week (time and gym only, never notes) for a
+  signed-out visitor, with a sign-up link that brings them back to that page.
+- **What was updated** - release notes once per release per browser, re-openable from Settings.
+- **Light / dark mode** - remembered per browser, falls back to the OS, no flash on load.
 
 Out of scope for v1: notifications, chat, maps, recurring sessions, comments, native apps.
 
 ## 1. Create the Supabase project
 
-1. Create a project at [supabase.com](https://supabase.com) (free tier).
-2. **Apply the schema.** Either:
-   - **Dashboard → SQL Editor → New query**: run every file under `supabase/migrations/` in
-     filename order - [`20260919000000_init.sql`](supabase/migrations/20260919000000_init.sql)
-     (schema + RLS), [`20260919000100_seed_gyms.sql`](supabase/migrations/20260919000100_seed_gyms.sql)
-     and [`20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql) (the
-     gym list, tagged by region), then
-     [`20260920000100_session_windows.sql`](supabase/migrations/20260920000100_session_windows.sql)
-     (flexible time-of-day windows), then
-     [`20260920000200_gyms_admin_only.sql`](supabase/migrations/20260920000200_gyms_admin_only.sql)
-     (the gym list becomes read-only for users), then
-     [`20260920000300_second_gym.sql`](supabase/migrations/20260920000300_second_gym.sql) (the
-     optional second gym and "Not sure yet"), then
-     [`20260920000400_admin.sql`](supabase/migrations/20260920000400_admin.sql) (the admin flag and
-     admin-only gym writes), then
-     [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql) (the five
-     read-only stats views - `climb_sessions`, `climb_gyms`, `climber_daily_activity`,
-     `climber_totals`, `climber_gym_stats`), then
-     [`20260924000000_public_profile_share.sql`](supabase/migrations/20260924000000_public_profile_share.sql)
-     (the `shared_profile` function behind `/u/<username>` share links - the one thing `anon` may
-     execute), then
-     [`20260929000000_grava_gym.sql`](supabase/migrations/20260929000000_grava_gym.sql) (one more
-     Luzon gym, **Grava**), then
-     [`20261109000000_hangar8_climb_shack_gyms.sql`](supabase/migrations/20261109000000_hangar8_climb_shack_gyms.sql)
-     (two more Luzon gyms, **Hangar 8** and **Climb Shack**).
-   - or use the CLI (verified end to end with CLI v2.117; no Docker needed):
-     ```bash
-     npx supabase@latest login          # opens the browser once
-     npx supabase@latest link --project-ref <your-project-ref>
-     npx supabase@latest db push        # asks for your DB password if not linked with -p
-     npx supabase@latest migration list --linked   # local vs remote should match
-     ```
-     `db push` applies the files in `supabase/migrations/` in filename order and records them in
-     `supabase_migrations.schema_migrations`, so re-running it prints *"Remote database is up to
-     date."* - safe to repeat. Use `--dry-run` to preview and `--include-seed` only if you later
-     add a `seed.sql`.
-   Every migration is idempotent, so re-running is safe.
-   > Already set the project up earlier? Just run the migrations you haven't:
-   > `20260920000000_gym_regions.sql` adds the `region` column, retires the old placeholder gyms
-   > (keeping sessions that referenced them as free-text names) and seeds the regional list;
-   > `20260920000100_session_windows.sql` adds the flexible `start_slot` / `end_slot` windows and
-   > leaves existing clock-time sessions untouched; `20260920000200_gyms_admin_only.sql` makes the
-   > gym list read-only for users; `20260920000300_second_gym.sql` adds the optional second gym and
-   > relaxes the old "a gym is required" rule; `20260920000400_admin.sql` adds `profiles.is_admin`
-   > and lets admins write the gym list; `20260923000000_stats_views.sql` adds the five read-only
-   > stats views (they need Postgres 15+ for `security_invoker`);
-   > `20260924000000_public_profile_share.sql` adds the `shared_profile` function behind share links
-   > and lets `anon` execute it (it still gets no table access);
-   > `20260929000000_grava_gym.sql` adds the Grava gym to the Luzon list;
-   > `20261109000000_hangar8_climb_shack_gyms.sql` adds Hangar 8 and Climb Shack to it. Running
-   > `db push` does all of them for you.
-3. **Auth → Providers → Email**: keep Email enabled. Decide about "Confirm email":
-   - ON (default): new users must click the link in the email before signing in. The app shows a
-     "check your inbox" notice.
-   - OFF: sign-up logs the user straight in (handy while testing).
-4. **Auth → URL Configuration**: set *Site URL* to your deployed URL (e.g.
-   `https://climbcal.vercel.app`) and add `http://localhost:5173` to *Redirect URLs*.
-5. **Settings → API Keys**: copy the **Project URL** and the **publishable key**
-   (`sb_publishable_…`). That pair is what a browser app uses. The *secret* key (`sb_secret_…`)
-   and the legacy `service_role` key bypass RLS and must never reach the frontend. Supabase is
-   deprecating the legacy `anon` / `service_role` keys by the end of 2026 - if your project still
-   only shows the legacy keys, the `anon` key works in exactly the same slot.
+Create a project at [supabase.com](https://supabase.com) (free tier), then apply the schema - paste
+every file under `supabase/migrations/` into the SQL editor in filename order, or use the CLI (no
+Docker needed):
 
-> The var is named `VITE_SUPABASE_ANON_KEY` for historical reasons; paste the **publishable** key
-> there (a legacy anon key also still works - verified identical handling in supabase-js 2.116).
-> Everything prefixed with `VITE_` ships to users, so a secret key must never appear in it.
+```bash
+npx supabase@latest login                     # opens the browser once
+npx supabase@latest link --project-ref <your-project-ref>
+npx supabase@latest db push                   # applies pending migrations, safe to repeat
+npx supabase@latest migration list --linked   # local vs remote should match
+```
+
+| Migration                                     | Adds                                                       |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| `20260919000000_init.sql`                     | schema, RLS, triggers                                      |
+| `20260919000100_seed_gyms.sql`                | placeholder starter gym list                               |
+| `20260920000000_gym_regions.sql`              | `region` column + the real gym list                        |
+| `20260920000100_session_windows.sql`          | flexible `start_slot` / `end_slot` windows                 |
+| `20260920000200_gyms_admin_only.sql`          | gym list becomes read-only for users                       |
+| `20260920000300_second_gym.sql`               | second gym + "Not sure yet"                                |
+| `20260920000400_admin.sql`                    | `is_admin` + admin-only gym writes                         |
+| `20260923000000_stats_views.sql`              | five stats views (`security_invoker`)                      |
+| `20260924000000_public_profile_share.sql`     | `shared_profile()` RPC for `/u/` links                     |
+| `20260929000000_grava_gym.sql`                | Grava (Luzon)                                              |
+| `20261109000000_hangar8_climb_shack_gyms.sql` | Hangar 8 + Climb Shack (Luzon)                             |
+| `20270912000000_feedback.sql`                 | `feedback` table + RLS                                     |
+
+Every migration is idempotent, so re-running is safe.
+
+Then, in the dashboard:
+
+- **Auth → Providers → Email** stays enabled. With *Confirm email* on, new users click the
+  emailed link before signing in (the app shows a "check your inbox" notice); off, sign-up logs in
+  straight away.
+- **Auth → URL Configuration** - Site URL = your deployed URL, and add `http://localhost:5173` to
+  *Redirect URLs* (the email-confirmation round trip lands there).
+- **Settings → API Keys** - copy the **Project URL** and the **publishable key**
+  (`sb_publishable_…`). That pair is what a browser app uses. The secret / `service_role` keys
+  bypass RLS and must never reach the frontend.
+
+> `VITE_SUPABASE_ANON_KEY` is named for historical reasons; paste the **publishable** key there (a
+> legacy `anon` key also works). Everything prefixed with `VITE_` ships to users.
 
 ## 2. Run locally
 
@@ -158,10 +107,8 @@ cp .env.example .env.local     # then paste your two Supabase values
 npm run dev                    # http://localhost:5173
 ```
 
-`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are read from `.env.local` (gitignored). If they
-are missing, the app renders a setup screen instead of failing with opaque network errors.
-
-Other scripts:
+`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` come from `.env.local` (gitignored); when they are
+missing the app renders a setup screen instead of failing with opaque network errors.
 
 ```bash
 npm run build      # type-check + production build into dist/
@@ -172,25 +119,18 @@ npm run lint       # oxlint
 
 ## 3. Deploy to Vercel
 
-1. Push this repo to GitHub.
-2. In Vercel: **Add New → Project → Import** the repository. The Vite preset is detected
-   automatically (`npm run build`, output `dist/`).
-3. **Settings → Environment Variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-   (the Project URL + publishable key) for Production *and* Preview. Redeploy after adding them.
-4. `vercel.json` keeps the SPA working: it rewrites every path to `index.html`, so client-side routes
-   such as `/friends` - and a shared `/u/<username>` link - work on refresh. It also sends the
-   `climbcal.vercel.app` hostname to `climbcal.app` with a 301, using a `redirects` entry whose `has`
-   condition matches the host.
-   **`source` must be a path.** A `rewrites`/`redirects` entry whose `source` is a full URL fails the
-   *whole deployment* with "Invalid route source pattern"
-   ([docs](https://vercel.com/docs/errors/error-list#invalid-route-source-pattern)): Vercel compiles
-   `source` with path-to-regexp, so a hostname belongs in `has` (`{"type":"host","value":"…"}`), never
-   in `source`. `src/vercel-config.test.ts` asserts this, so the config cannot regress silently.
-5. Go back to Supabase → Auth → URL Configuration and set the Site URL to the Vercel domain.
-6. **Analytics** (optional): Project → **Analytics → Enable Web Analytics**. Nothing is collected
-   until that toggle is on - the app already reports cookieless pageviews (initial load plus
-   client-side route changes, no cookies and no personal data), and off Vercel the script simply
-   404s, so local dev is unaffected.
+1. Push this repo to GitHub, then **Add New → Project → Import** it in Vercel (the Vite
+   preset is detected automatically).
+2. **Settings → Environment Variables**: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for
+   Production *and* Preview, then redeploy.
+3. `vercel.json` rewrites every path to `index.html`, so client-side routes such as `/friends` and a
+   shared `/u/<username>` link work on refresh. It also 301s `climbcal.vercel.app` to `climbcal.app`
+   via a `redirects` entry whose `has` condition matches the host. **`source` must be a path.** A
+   `source` holding a full URL fails the *whole deployment* with "Invalid route source pattern" - a
+   hostname belongs in `has`. `src/vercel-config.test.ts` asserts this so the config cannot regress.
+4. Set Supabase's Site URL to the Vercel domain.
+5. Optional: **Analytics → Enable Web Analytics**. Nothing is collected until that toggle is on;
+   off Vercel the script simply 404s, so local dev is unaffected.
 
 ## Data model
 
@@ -198,108 +138,78 @@ npm run lint       # oxlint
 auth.users ──1:1── profiles (username, display_name, visibility[public|private])
 auth.users ──1:n── climbs   (climb_date, start_time | start_slot, end_time | end_slot,
                              gym_id | custom_gym_name, gym_id_2 | custom_gym_name_2, note)
-gyms                        (name, city, region, admin-curated reference data, created_by)
+gyms                        (name, city, region - admin-curated reference data)
 auth.users ──n:n── friendships (requester_id, addressee_id, status[pending|accepted])
 ```
 
-- One `friendships` row per pair: a unique index on `(least(requester_id, addressee_id),
-  greatest(requester_id, addressee_id))` makes an A→B / B→A duplicate impossible.
-- The gym is **optional** - "Not sure yet" simply stores nulls - and there are two slots: `gym_id` /
-  `custom_gym_name`, plus an optional alternative `gym_id_2` / `custom_gym_name_2`. Each slot is
-  either a listed gym or a typed name (never both, never blank), the alternative cannot repeat the
-  first, and a session with two names renders as **"Either X or Y"** (`gymNameOf` in `lib/format`).
-- Because `climbs` now references `gyms` twice, every embed names its foreign key:
-  `gym:gyms!climbs_gym_id_fkey(id, name)` and `gym_2:gyms!climbs_gym_id_2_fkey(id, name)`. Without
-  the hint PostgREST cannot tell the two relationships apart (and the types need it too).
-- A window is **either** two clock times (`start_time` / `end_time`) **or** two time-of-day labels
-  (`start_slot` / `end_slot`, one of the eight in `src/lib/slots.ts`). `public.window_minutes()` puts
-  both forms on one canonical scale, so a single constraint can insist the end comes after the start
-  - mixed windows such as `Opening → 21:00` included. The scale is never displayed: labels are shown
-  verbatim, and a duration appears only when both ends are clock times.
-- `gyms.region` is free text (`Luzon` / `Visayas` / `Mindanao` for the seeded list): the session
-  dropdown groups by it, with an "Other" bucket for untagged gyms.
-- The gym list is **admin-curated**: signed-in users only ever read it. Add or change a row in the
-  `/admin` dashboard, the SQL editor or a migration (see [Adding a gym](#adding-a-gym)); a one-off
-  gym is recorded by typing its name on a session, which never creates a gym row.
-- Signing up creates the `profiles` row automatically (`on_auth_user_created` trigger).
-- `updated_at` is maintained by triggers.
+- One `friendships` row per pair: a unique index over `least()` / `greatest()` of the two ids makes
+  an A→B / B→A duplicate impossible.
+- Two gym slots, each either a listed gym or a typed name (never both, never blank, the second
+  cannot repeat the first); "Not sure yet" simply stores nulls. A two-name session renders as
+  **"Either X or Y"**. Because `climbs` references `gyms` twice, every embed names its foreign key
+  (`gym:gyms!climbs_gym_id_fkey`, `gym_2:gyms!climbs_gym_id_2_fkey`) or PostgREST cannot tell them
+  apart.
+- A window is **either** two clock times **or** two labels from `src/lib/slots.ts`;
+  `public.window_minutes()` puts both forms on one canonical scale so a single constraint can insist
+  the end comes after the start (mixed windows included). The scale is never displayed: labels show
+  verbatim and a duration appears only when both ends are clock times.
+- Signing up creates the `profiles` row (`on_auth_user_created` trigger); `updated_at` is
+  trigger-maintained.
 
-### Visibility rules (enforced by RLS, not by the client)
+### Visibility rules (enforced by RLS, not the client)
 
-| Table         | Read                                                               | Write                                                                                  |
-| ------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `profiles`    | any signed-in user (needed for username search + feed attribution)  | owner only                                                                             |
-| `gyms`        | any signed-in user                                                  | **admins only** (the `/admin` dashboard), or the SQL editor                            |
-| `climbs`      | owner, **accepted friends**, or everyone when the owner is `public` | owner only                                                                             |
-| `friendships` | only the two participants                                           | insert self as requester; **only the addressee can accept**; either side can delete      |
+| Table         | Read                                                                | Write                                         |
+| ------------- | ------------------------------------------------------------------- | --------------------------------------------- |
+| `profiles`    | any signed-in user                                                  | owner only                                    |
+| `gyms`        | any signed-in user                                                  | **admins only** (via `/admin`)                |
+| `climbs`      | owner, **accepted friends**, or everyone when the owner is `public` | owner only                                    |
+| `friendships` | the two participants only                                           | insert self as requester; either side deletes |
+| `feedback`    | admins only                                                         | any signed-in user inserts; admins manage     |
 
-Nothing is granted to the `anon` role for the tables, so there is no anonymous browsing: every
-surface except `/login` and `/u/<username>` requires a session. The share page is the single
-exception and it is deliberately narrow - `anon` may execute `public.shared_profile(text, date)` and
-nothing else (see [Share links](#share-links)).
+Two rules worth knowing: only the **addressee** can flip a request to accepted, and one row exists
+per pair (see the data model above).
+
+Nothing is granted to `anon` on the tables, so every surface except `/login` and `/u/<username>`
+requires a session. The share page is the single exception and it is deliberately narrow - `anon`
+may execute `public.shared_profile(text, date)` and nothing else (see [Share links](#share-links)).
 
 ## Admin dashboard
 
-There is a second, deliberately unlinked surface at **`/admin`**: nothing in the UI points at it, so
-it is only reachable by typing the URL (`vercel.json` keeps the SPA rewrite working on refresh).
+A second, deliberately unlinked surface at **`/admin`**: nothing in the UI points at it, so it is
+only reachable by typing the URL.
 
-1. **Promote yourself once**, in the SQL editor:
+1. Promote yourself once, in the SQL editor:
 
    ```sql
    update public.profiles set is_admin = true where username = '<you>';
    ```
+2. Open `/admin` and enter the shared password - `ADMIN_PASSWORD` in
+   [`src/lib/admin.ts`](src/lib/admin.ts) (`ilikepie`; change it there).
 
-2. Open `/admin` and enter the shared password - **`ilikepie`** (`ADMIN_PASSWORD` in
-   [`src/lib/admin.ts`](src/lib/admin.ts), change it there).
+It shows a few counts (climbers, public climbers, gyms, sessions in the next three weeks), the 200
+most recent sessions - **every climber's, public or private** - with search and a visibility filter,
+the feedback inbox, and the gym list editor (see [Adding a gym](#adding-a-gym)).
 
-It shows a few counts (climbers, public climbers, gyms, sessions in the next three weeks), lists every
-climb in the app, shows the feedback inbox, and manages the shared gym list: add, edit, delete - the
-only way to change gyms in the app.
-
-**Climbs.** The second section lists the 200 most recently logged sessions - **every climber's,
-public or private** - each with the climber (avatar, name, `@username`, a **Public** / **Private**
-badge and when it was saved), the date and time window, the gym and the note. **Search** matches the
-climber, the gym or the note, and the visibility filter narrows the list to one side. Nothing here
-hides private profiles, and the client does not fake it: `climbs_select_admin` is an *extra*
-admin-only `select` policy, so the identical query run as a non-admin comes back with only the rows
-that account's own visibility rules allow.
-
-**What actually protects it.** The password is a *convenience lock*: the bundle is public, so anyone
-can read it out of the JavaScript, and an unlinked route is only obscurity. The real gate is
-`profiles.is_admin` + RLS. Verified against Postgres: a signed-in non-admin who unlocks the UI has
-every write refused (`new row violates row-level security policy`), the promoted admin's write is
-accepted, a non-admin still reads the gym list, and `is_admin` additionally grants read access to all
-sessions - which is what makes the dashboard's counts real rather than "whatever this account is
-allowed to see".
+The password is a **convenience lock only**: the bundle is public, so anyone can read it out of the
+JavaScript, and an unlinked route is obscurity. The real gate is `profiles.is_admin` + RLS - a
+signed-in non-admin who unlocks the UI has every write refused. The extra `climbs_select_admin`
+policy is what makes the dashboard's counts real rather than "whatever this account is allowed to
+see".
 
 ## Adding a gym
 
 Gyms are **shared reference data** - one list everybody picks from - not per-user content. A row is
-written by an admin or by a migration (see
-[`20260920000200_gyms_admin_only.sql`](supabase/migrations/20260920000200_gyms_admin_only.sql));
-signed-in climbers only ever read it. A one-off venue does **not** need a row at all: type its name in
-the session's "Other" field and it is stored as `custom_gym_name` on that climb.
+written by an admin or a migration; signed-in climbers only read it. A one-off venue needs no row at
+all: type its name in the session's "Other" field and it is stored as `custom_gym_name` on that
+climb.
 
-There are three ways in, depending on whether the gym should be permanent and versioned:
+**a. From the admin dashboard (normal way).** Promote yourself (above), unlock `/admin`, scroll to
+**Gyms** and press **Add gym**: name (required, blank rejected by `gyms_name_not_blank`), city
+(display-only) and region (**Luzon** / **Visayas** / **Mindanao**, or *No region*). The row appears
+immediately in the session dropdown, the feed's gym filter and the stats breakdown - no deploy
+needed, because it lives in the database.
 
-### a. From the admin dashboard (normal way)
-
-1. Make sure your account is an admin (once): `update public.profiles set is_admin = true where username = '<you>';`
-   - see [Admin dashboard](#admin-dashboard).
-2. Open `/admin`, enter the shared password, scroll to **Gyms**.
-3. Fill the form and press **Add gym**:
-   - **Gym name** (required, trimmed; blank is rejected by the `gyms_name_not_blank` check)
-   - **City** (optional, display-only - it shows in the admin list)
-   - **Region** - the dropdown offers **Luzon** / **Visayas** / **Mindanao**, or *No region* for the
-     "Other" bucket. Any other label can be set via SQL and forms its own group.
-
-The row appears immediately in the session dialog's gym dropdown, the feed's gym filter and the stats
-breakdown - no deploy needed, because it lives in the database. Use **Edit** / **Delete** on the list
-to change it later.
-
-### b. From the SQL editor
-
-Same effect, handy when you want the statement written down:
+**b. From the SQL editor.**
 
 ```sql
 insert into public.gyms (name, city, region)
@@ -308,224 +218,96 @@ on conflict ((lower(btrim(name)))) do update
   set region = excluded.region;
 ```
 
-The conflict target is the `gyms_name_lower_key` unique index on `lower(btrim(name))`, so
-`'New Gym'` and `'new gym'` cannot both exist and re-running the statement is safe. Match the seeded
-spelling exactly (`Luzon`, `Visayas`, `Mindanao`) to land in the right dropdown group; notice the
-existing rows do not update `city`, so add `city = coalesce(excluded.city, public.gyms.city)` if you
-need that.
+The conflict target is the `gyms_name_lower_key` unique index, so `'New Gym'` and `'new gym'` cannot
+coexist and re-running is safe. Match the seeded spelling exactly to land in the right dropdown
+group.
 
-### c. As a migration (keeps the list in the repo)
+**c. As a migration** (keeps the list in version control - see
+[`20260929000000_grava_gym.sql`](supabase/migrations/20260929000000_grava_gym.sql)):
 
-Use this when the gym belongs to the seeded list in version control - see
-[`20260929000000_grava_gym.sql`](supabase/migrations/20260929000000_grava_gym.sql) as the template:
+1. Add `supabase/migrations/<timestamp>_<slug>_gym.sql` with the idempotent insert above, then push
+   it with `npx supabase@latest db push`.
+2. Give it brand colours or it renders the neutral cell: add an entry to `GYM_PALETTES` in
+   [`src/lib/gymColors.ts`](src/lib/gymColors.ts), keyed by the gym name, with `primary` and
+   `background` hex values.
+3. Add the file to `SEED_MIGRATIONS` in [`src/lib/gymColors.test.ts`](src/lib/gymColors.test.ts) and
+   bump the `seeded.length` assertion - that test asserts the palette covers **exactly** the seeded
+   gyms, so a missing (or extra) palette fails CI.
+4. Mention the file in the migration table above and in the project layout below.
 
-1. Add `supabase/migrations/<timestamp>_<slug>_gym.sql` (timestamp format `YYYYMMDDHHMMSS`, e.g.
-   `20261101000000_new_gym.sql`) with the idempotent `insert … on conflict` above.
-2. Apply it: `npx supabase@latest db push` (or paste it into the SQL editor). All migrations are
-   idempotent, so re-running is safe.
-3. Give it brand colours, or it renders the neutral cell:
-   - add `'New Gym': { primary: '#RRGGBB', background: '#RRGGBB' }` to `GYM_PALETTES` in
-     [`src/lib/gymColors.ts`](src/lib/gymColors.ts);
-   - add the new file to `SEED_MIGRATIONS` in
-     [`src/lib/gymColors.test.ts`](src/lib/gymColors.test.ts) and bump the `seeded.length` assertion -
-     that test asserts the palette covers **exactly** the seeded gyms, so a palette for an
-     admin-added (non-migration) gym, or a seeded gym without one, fails CI.
-4. Mention the new file in [step 1.2](#1-create-the-supabase-project) and the
-   [project layout](#project-layout) migration list in this README.
+**Renaming and deleting.** A rename shows up everywhere, because `climbs.gym_id` is a foreign key.
+Delete is permanent: the FK is `on delete set null`, so sessions that used the gym read as **"Not
+sure yet"** - rename instead, or back-fill the label first the way
+[`20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql) did for the
+retired placeholders.
 
-### If a gym write is refused (RLS)
-
-`new row violates row-level security policy for table "gyms"` (from the REST API, `psql`, or an older
-build of the dashboard) means the request was authenticated but `public.is_admin(auth.uid())` was
-false - the password only unlocks the UI. The `/admin` form reports the same cause in plain words:
-*"Only admins can change the gym list. Ask an admin to set is_admin on your profile."* The policies live in
-[`20260920000400_admin.sql`](supabase/migrations/20260920000400_admin.sql), which also re-grants
-`insert, update, delete` to `authenticated`.
-
-Check, in the SQL editor:
-
-```sql
--- Is the flag actually set on the account you are signed in as?
-select id, username, is_admin from public.profiles order by created_at;
-
--- Do the policies and the helper exist? Expect gyms_insert_admin / _update_admin / _delete_admin.
-select policyname, cmd from pg_policies where schemaname = 'public' and tablename = 'gyms';
-select proname from pg_proc where proname = 'is_admin';
-```
-
-Then set the flag by the account's email, which catches a mistyped or differently-cased username:
-
-```sql
-update public.profiles p
-set is_admin = true
-from auth.users u
-where u.id = p.id
-  and lower(u.email) = lower('you@example.com')
-returning p.username, p.is_admin;
-```
-
-`UPDATE 1` means it worked; `UPDATE 0` means the email matched no profile. Reload `/admin` and
-retry - no sign-out needed, because the policy reads the table on the server.
-
-Two gotchas:
-
-- **`auth.uid()` is null in the SQL editor**, which runs as the project owner (so RLS is bypassed and
-  `select public.is_admin(auth.uid())` usefully returns `false`). Do not use that to test the flag;
-  query `profiles` by username/email instead.
-- **Wrong project.** `.env.local` can point at a different Supabase project than the one you just
-  updated - compare `VITE_SUPABASE_URL`'s project ref with the dashboard, and remember that the SQL
-  editor's own inserts bypass RLS, so "it works in the SQL editor" proves nothing about the app.
-
-As a last resort the SQL editor can always write the row (it runs as the owner), which is exactly
-route **b** above.
-
-### Renaming and deleting
-
-- **Rename** with Edit: `climbs.gym_id` is a foreign key, so every session that linked the gym picks
-  up the new label automatically.
-- **Delete is permanent.** The FK is `on delete set null`, so sessions that used the gym lose their
-  gym link and read as **"Not sure yet"** (an existing `custom_gym_name` / second slot is untouched).
-  Rename instead if the gym still exists under a new name, or back-fill the label first, as
-  [`20260920000000_gym_regions.sql`](supabase/migrations/20260920000000_gym_regions.sql) did for the
-  retired placeholder gyms:
-
-  ```sql
-  update public.climbs c
-  set custom_gym_name = g.name
-  from public.gyms g
-  where c.gym_id = g.id and c.custom_gym_name is null and g.name = 'Old Name';
-  ```
+**If a gym write is refused.** `new row violates row-level security policy for table "gyms"` means
+the request was authenticated but `public.is_admin(auth.uid())` was false - the password only
+unlocks the UI. Check `select id, username, is_admin from public.profiles order by created_at;`, set
+the flag (by email catches a mistyped username), then reload `/admin`; no sign-out needed. Two
+gotchas: `auth.uid()` is null in the SQL editor, so `select public.is_admin(auth.uid())` there
+always returns false, and SQL-editor writes bypass RLS - "it works in the SQL editor" proves nothing
+about the app.
 
 ## Project layout
 
 ```
 src/
-  components/   Layout (nav shell), ProtectedRoute (session/onboarding gates),
-                SessionFormModal, SessionCard + DaySessions (day summaries),
-                ShareLink (copy/share a profile URL), ThemeToggle,
-                ui.tsx (shared primitives + class tokens)
-  hooks/        useAuth (session + profile context), useTheme (light/dark),
-                useWeekClimbs (range queries), useClimberStats (the stats views),
-                useSharedProfile (the public /u/<username> RPC), useFriends,
-                usePublicClimbers, useGyms
-  lib/          supabase (client), date (week + month math, window helpers),
-                format (names/usernames, gym-by-region grouping),
-                group (feed grouping: per gym, per date, unique climbers),
-                stats (heatmap grid + month blocks, per-day gyms, week streak,
-                weekday habit, region split, gym-breakdown ordering),
-                avatar + gymColors (per-climber / per-gym colours),
-                slots (the eight time-of-day window labels), admin,
-                routes (share paths + safe post-login redirect targets)
+  components/   Layout, ProtectedRoute, SessionFormModal, SessionCard + DaySessions,
+                ShareLink, ThemeToggle, WhatsNewDialog, ui.tsx (primitives + class tokens)
+  hooks/        useAuth, useTheme, useWeekClimbs, useClimberStats, useSharedProfile,
+                useFriends, usePublicClimbers, useGyms, useWhatsNew
+  lib/          supabase (client), date (week/month + window math), format (names, gym
+                grouping), group (feed grouping), stats (heatmap, streaks, breakdowns),
+                avatar + gymColors, slots (the eight window labels), admin, routes
+                (share paths + safe redirects), whatsNew
   pages/        Login, Onboarding, Week, Stats, Friends, Feed, Settings,
-                SharedProfile (public /u/<username>), Admin (hidden route)
+                SharedProfile (public /u/<username>), Admin (unlinked)
   test/         Supabase client mock (tables + `rpc`) + fixtures
 supabase/
-  migrations/   init: schema + RLS + triggers, seed_gyms: placeholder starter list,
-                gym_regions: real gym list grouped by region,
-                session_windows: flexible window columns + constraints,
-                gyms_admin_only: gyms read-only for users,
-                second_gym: optional "either" gym + "not sure yet",
-                admin: is_admin flag + admin-only gym writes,
-                stats_views: read-only stats views (security_invoker, PG15+),
-                public_profile_share: shared_profile() RPC + anon execute,
-                grava_gym: Grava added to the Luzon list,
-                hangar8_climb_shack_gyms: Hangar 8 + Climb Shack added to it
+  migrations/   see the table in step 1
   config.toml   minimal CLI config (link / db push)
 ```
 
-Queries work in two steps: load the accepted friend ids, then fetch climbs for `self + friends`
-in the selected week (embedded gym name included) and map the climber profiles onto the rows. The
-feed reuses the same hook with no user filter, letting RLS return the visible rows and keeping only
+Queries work in two steps: load the accepted friend ids, then fetch climbs for `self + friends` in
+the selected week (embedded gym name included) and map the climber profiles onto the rows. The feed
+reuses the same hook with no user filter, letting RLS return the visible rows and keeping only
 `visibility = 'public'` profiles - plus your own rows, whatever your visibility.
 
 ## Theming
 
-The components are written **dark-first** against the Tailwind scales: `zinc-950` is the page
-background, `zinc-900` a card, `zinc-800` a border, `zinc-100` primary text, `zinc-400/500` muted
-text, and `emerald` is the accent with `red`/`sky` for danger and info surfaces.
-
-Instead of duplicating `dark:` variants everywhere, [`src/index.css`](src/index.css) redefines those
-same tokens for the light theme, so every existing class keeps its *role* in both themes (surface
-shades become light, text shades become dark). `ThemeProvider` toggles a `.dark` class on `<html>`,
-which is what the token overrides and any future `dark:` utilities key off.
-
-Practical consequences when editing UI:
-
-- Keep using the existing scales rather than raw hex values, or a colour will not adapt.
-- Light-theme values are checked for contrast by `src/theme.test.ts` - it parses the tokens out of
-  the CSS and asserts WCAG AA (4.5:1) for body text, and perceivable borders. Change a colour and
-  the test tells you if it broke.
-
-### Avatar colours
-
-Each climber's avatar chip takes a **stable** hue from their user id (`src/lib/avatar.ts`), so it
-looks random across a friend group but never changes for one person - a colour picked per render
-would flicker. The hues are not part of the zinc/emerald scales: each one needs a chip *and* an ink
-value **per theme** to stay readable, so they live as `--color-avatar-<hue>` /
-`--color-avatar-<hue>-ink` pairs in `index.css`, and `theme.test.ts` asserts every pair at AA in both
-themes and fails if the CSS and the palette list drift apart.
-
-### Gym cells
-
-Each session's gym renders as a small cell (`GymCell`) wearing that gym's own two colours, from
-[`src/lib/gymColors.ts`](src/lib/gymColors.ts): `primary` fills the cell, `background` is the label
-ink, and every cell shares a **black outline**. `gymColors.test.ts` parses the seed migration, so a
-new gym without a palette fails CI. One-off names and "Not sure yet" get a neutral bordered cell, and
-an "either" session borrows the look of its first *known* gym.
-
-The colours are used **verbatim** - deliberately not contrast-corrected, so several pairs are
-low-contrast by WCAG (Good Climbs PH is `#0F172A` on `#2A52BE`). Editing a colour in that one file is
-what everybody sees.
+Components are written **dark-first** against the Tailwind scales (`zinc` surfaces/text, `emerald`
+accent); [`src/index.css`](src/index.css) redefines those same tokens for the light theme, so every
+class keeps its *role* in both themes. `ThemeProvider` toggles a `.dark` class on `<html>`.
+`src/theme.test.ts` parses the tokens and asserts WCAG AA, and avatar hues stay stable per user id.
+Gym cells wear each gym's verbatim brand colours from [`src/lib/gymColors.ts`](src/lib/gymColors.ts)
+(deliberately not contrast-corrected). Tokens, primitives and design guidance live in
+[DESIGN.md](DESIGN.md).
 
 ## Stats views
 
 [`20260923000000_stats_views.sql`](supabase/migrations/20260923000000_stats_views.sql) adds five
-read-only views for a climber stats page. Every one is `security_invoker`, so a reader sees exactly
-the climbs their RLS allows - their own, accepted friends', and anyone's public ones:
+read-only views, every one `security_invoker`, so a reader sees exactly the climbs their RLS allows:
 
-| View | Grain | For |
-| --- | --- | --- |
-| `climb_sessions` | one climb | the window normalised onto one scale - `duration_minutes`, `is_exact_window`, `week_start`, `iso_dow` |
-| `climb_gyms` | one climb per named gym | a two-gym session counts under both; an unnamed one keeps a `'Not sure yet'` row with `is_named_gym = false`. The stats page also reads it for the same window as the heatmap, to name the gym on a day |
-| `climber_daily_activity` | climber × day | the heatmap |
-| `climber_totals` | climber | the headline cards (past/upcoming split at `current_date`; minutes are past-only and count exact clock windows) |
-| `climber_gym_stats` | climber × gym | the "where I climb" breakdown, untagged gyms bucketed as `'Other'` |
+| View                     | Grain             | For                                               |
+| ------------------------ | ----------------- | ------------------------------------------------- |
+| `climb_sessions`         | one climb         | the window normalised onto one scale              |
+| `climb_gyms`             | one climb per gym | a two-gym session counts under both               |
+| `climber_daily_activity` | climber × day     | the 13-week heatmap                               |
+| `climber_totals`         | climber           | the headline cards                                |
+| `climber_gym_stats`      | climber × gym     | the "where I climb" breakdown, untagged = `Other` |
 
-```ts
-const { data: totals } = await supabase
-  .from('climber_totals')
-  .select('*')
-  .eq('user_id', userId)
-  .maybeSingle()
-const { data: heatmap } = await supabase
-  .from('climber_daily_activity')
-  .select('climb_date, sessions, exact_minutes')
-```
-
-A slot-only window ("Opening"…"Closing") gives a *notional* `duration_minutes`, so read it only when
-`is_exact_window` is true - `window_minutes` exists to order windows, not to describe them. The stats
-page deliberately shows none of the minute totals (`climber_totals.exact_minutes`,
-`avg_exact_minutes`, `climber_gym_stats.exact_minutes`): a climb row is a plan for a *day*, so its
-cards count sessions, days, streaks and places and leave durations to surfaces that can be honest
-about them. The row
-types live in `src/types.ts`, and [`src/lib/statsViews.test.ts`](src/lib/statsViews.test.ts) reads
-both it and the migration, failing if the view names, the `security_invoker` opt-in, the grants, or
-the two labels shared with the app (`'Not sure yet'` from `gymNameOf`, `'Other'` from
-`OTHER_REGION_LABEL`) ever drift apart.
+A slot-only window ("Opening"…"Closing") gives a *notional* `duration_minutes`, so read it only
+when `is_exact_window` is true - `window_minutes` exists to order windows, not to describe them. The
+stats page shows none of the minute totals: a climb row is a plan for a *day*. Row types live in
+`src/types.ts`, and [`src/lib/statsViews.test.ts`](src/lib/statsViews.test.ts) fails if the view
+names, grants or the two labels shared with the app drift apart.
 
 ## Share links
 
 A **Share link** (`/u/<username>`) is the one page that works without a session, so it is the only
-route outside `RequireAuth` / `RequireProfile`:
-
-```tsx
-<Route path="/u/:username" element={<SharedProfile />} />   {/* public on purpose */}
-```
-
-Its data does **not** come from the tables. Anonymous visitors have no table grants, so the page calls
-one `security definer` function,
-[`public.shared_profile(p_username, p_week_start)`](supabase/migrations/20260924000000_public_profile_share.sql),
-which answers `jsonb`:
+route outside `RequireAuth` / `RequireProfile`. Its data does not come from the tables - anonymous
+visitors have no grants - but from one `security definer` function:
 
 ```ts
 const { data } = await supabase.rpc('shared_profile', {
@@ -537,47 +319,31 @@ const { data } = await supabase.rpc('shared_profile', {
 // → null when the username is unknown *or* the profile is private
 ```
 
-Why a function rather than an RLS policy on `profiles` / `climbs`:
+A function rather than an RLS policy, because: only public profiles answer (matched on
+`lower(username)`); **notes never leave the database**, since a policy would expose the `note`
+column that this hand-built payload simply omits; nothing can be enumerated, as `anon` can ask about
+one username at a time; and a private profile is indistinguishable from a typo, so a link cannot be
+used to probe for accounts.
 
-- **Only public profiles answer**, matched on `lower(username)`, so a private week stays exactly as
-  private as it was.
-- **Notes never leave the database.** RLS is row-level, so a policy would hand the `note` column to
-  anyone who asked for it; the function builds the payload, so the column is not in it at all.
-- **Nothing to scrape.** `anon` cannot enumerate `profiles`, read `climbs` or walk the site - it can
-  ask one question about one username at a time.
-- **A private profile and a typo look identical** (`null` either way), so a share link cannot be used
-  to find out whether an account exists.
+`?next=` carries the visitor back - the page links to `/login?next=%2Fu%2Fmara`, and `Login` passes
+the same URL as `emailRedirectTo` so the confirmation round trip lands on the profile too.
+`loginRedirectPath` / `safeRedirectPath` in [`src/lib/routes.ts`](src/lib/routes.ts) keep that
+same-origin, so `?next=` cannot become an open redirect.
 
-`?next=` is what carries a visitor back: the page links to `/login?next=%2Fu%2Fmara`, `Login` sends
-them on once they have a session (and passes the same URL as `emailRedirectTo`, so the
-email-confirmation round trip lands back on the profile too). `loginRedirectPath` / `safeRedirectPath`
-in [`src/lib/routes.ts`](src/lib/routes.ts) keep that to same-origin paths only - `?next=` comes from
-the URL, so it would otherwise be an open redirect.
+## Testing
 
-With Supabase's *Confirm email* switched on, the confirmation link is what returns the visitor to
-that URL, so the deployed origin (and `http://localhost:5173` while developing) has to be listed under
-**Auth → URL Configuration → Redirect URLs** - see [step 1.4](#1-create-the-supabase-project).
+CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push to
+`main` and on pull requests - no secrets required.
 
-## Testing notes
+The suite covers the date/format helpers plus two integration renders against a mocked Supabase
+client (`src/test/`): the week view (auth gate, friend lookup, climb query, gym join) and the share
+page (renders signed out, a private/unknown username reads as "not shared", `rpc('shared_profile')`
+and the `?next=` sign-up link are wired). It also asserts `vercel.json` stays deployable - the SPA
+fallback is intact and no `source` is a full URL - and that the theme tokens hold AA contrast in
+both themes.
 
-CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm test` and `npm run build` on every push
-to `main` and on pull requests - no secrets required.
+The SQL was validated against a local Postgres with a stubbed `auth` schema: signup trigger, check
+constraints, per-visibility reads, one-row-per-pair, "only the addressee accepts", the `anon`
+posture (no table access, only `shared_profile` executable), and the stats views against
+hand-computed fixture rollups.
 
-`npm test` also asserts `vercel.json` stays deployable: the SPA fallback is intact and no `source` is a
-full URL (that mistake fails the whole deployment, and lint/test/build would not notice).
-
-It covers the date/format helpers plus two integration renders against a mocked Supabase
-client (`src/test/`): the week view, which verifies the auth gate, friend lookup, climb query and gym
-join end to end, and the share page, which verifies it renders for a **signed-out** visitor, that a
-private/unknown username reads as "not shared", and that its `rpc('shared_profile')` call and
-`?next=` sign-up link are wired up. The SQL was validated against a local Postgres with a stubbed
-`auth` schema: signup trigger, check constraints, per-visibility read rules, the one-row-per-pair
-constraint, "only the addressee accepts", and the `anon` posture (no table access at all, with only
-`shared_profile` executable - public profile answered, private profile and unknown username both
-`null`, note column absent from the payload). The stats views were
-checked the same way, against fixture rows with hand-computed rollups (the `security_invoker` opt-in
-itself needs the Postgres 15+ the project runs on).
-
-Curating gyms: add, rename or retire rows in the SQL editor or a migration (users have no write
-access to the table). Retiring a gym leaves its sessions intact - they fall back to the session's
-own name text.
