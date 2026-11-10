@@ -374,9 +374,9 @@ Two flat threads, no replies, both 1–280 characters:
   session's thread is exactly as public as the session. In the week grid - seven columns at
   `xl:grid-cols-7`, ~150px each - the toggle is icon + count and the thread opens in a sheet, so
   the narrow column never has to hold a composer.
-- **Wall notes** - `/wall/<id>`, reached from a climber's name in the feed, from a Friends row, or
-  from the Stats header. Readable by the climber, their friends, and anyone while the profile is
-  public.
+- **Wall notes** - `/wall/<id>`, reached from your own profile chip in the navbar, a climber's name in
+  the feed, a Friends row, or the Stats header. Readable by the climber, their friends, and anyone
+  while the profile is public.
 
 The author deletes their own comment, and the owner of the session or wall deletes any comment on it
 (the delete policies, not the UI, are the real rule - the button is just a mirror). Deletes take two

@@ -10,6 +10,7 @@ import App from '../App'
 import { AuthProvider } from '../hooks/useAuth'
 import { ThemeProvider } from '../hooks/useTheme'
 import { WHATS_NEW_LATEST, WHATS_NEW_STORAGE_KEY } from '../lib/whatsNew'
+import { TEST_USER_ID } from '../test/supabaseMock'
 
 vi.mock('../lib/supabase', async () => {
   const { createClimbcalSupabaseMock } = await import('../test/fixture')
@@ -110,6 +111,25 @@ describe('<Week />', () => {
     // And no view switcher to switch between them.
     expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Week' })).toBeNull()
+  })
+
+  it('opens your wall from the header profile chip', async () => {
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/week?week=2026-09-14']}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    // The avatar + handle in the navbar is a link to your own wall.
+    const chip = await screen.findByRole('link', { name: /your wall/i })
+    expect(chip.getAttribute('href')).toBe(`/wall/${TEST_USER_ID}`)
+
+    fireEvent.click(chip)
+    expect(await screen.findByRole('heading', { name: 'Your wall' })).toBeTruthy()
   })
 
   it('greets you with the release notes once, then stays quiet', async () => {

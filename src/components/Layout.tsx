@@ -1,7 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useFriends } from '../hooks/useFriends'
 import { WhatsNewProvider, useWhatsNew } from '../hooks/useWhatsNew'
+import { climberWallPath } from '../lib/routes'
 import { ThemeToggle } from './ThemeToggle'
 import { WhatsNewDialog } from './WhatsNewDialog'
 import { Avatar, cx, ghostButtonClass } from './ui'
@@ -68,10 +69,23 @@ function LayoutShell() {
 
         <div className="order-2 flex items-center gap-2 sm:order-3">
           <ThemeToggle />
-          <Avatar profile={profile} size="sm" />
-          <span className="hidden text-sm text-zinc-300 sm:inline">
-            {profile?.username ? `@${profile.username}` : 'climber'}
-          </span>
+          {profile ? (
+            // The profile chip is the way to your own wall: avatar on a phone,
+            // avatar + handle on a wider screen.
+            <Link
+              to={climberWallPath(profile.id)}
+              aria-label={profile.username ? `Your wall (@${profile.username})` : 'Your wall'}
+              title="Your wall"
+              className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600"
+            >
+              <Avatar profile={profile} size="sm" />
+              <span className="hidden text-sm text-zinc-300 sm:inline">
+                {profile.username ? `@${profile.username}` : 'climber'}
+              </span>
+            </Link>
+          ) : (
+            <Avatar profile={profile} size="sm" />
+          )}
           <button type="button" className={ghostButtonClass} onClick={() => void signOut()}>
             Sign out
           </button>
