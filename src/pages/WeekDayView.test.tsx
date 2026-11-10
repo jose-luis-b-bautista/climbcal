@@ -1,7 +1,7 @@
 /**
  * Integration coverage for the calendar page: the Today and Tomorrow cards sit
- * on top of the week grid, on one page and with no tab switcher - and both start
- * open, so the next two days are readable without a tap.
+ * on top of a rolling 7-day grid, on one page and with no tab switcher - and
+ * both start open, so the next two days are readable without a tap.
  *
  * The clock is pinned, so "today" is deterministic, and the fixture is built
  * around that pinned day: a session spanning the whole day, a slot-based one,
@@ -189,12 +189,12 @@ describe('<Week /> day views', () => {
     vi.useRealTimers()
   })
 
-  it('opens on today and tomorrow above the week, with no tab switcher', async () => {
+  it('opens on today and tomorrow above the next 7 days, with no tab switcher', async () => {
     renderApp('/week')
 
     expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Tomorrow' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Week' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Next 7 days' })).toBeTruthy()
 
     // Today's sessions are summarised up top; today is also a column in the grid
     // below, so each name legitimately shows up more than once. The friend's row
@@ -218,11 +218,12 @@ describe('<Week /> day views', () => {
     expect(screen.queryByText(/\d+ sessions?/)).toBeNull()
     expect(screen.queryByText(/friends? climbing/)).toBeNull()
 
-    // Tomorrow's card is on the page too - there is no tab to reach it.
-    expect(screen.getAllByText('Riverside Boulders').length).toBe(1)
+    // Tomorrow's card is on the page too - there is no tab to reach it - and the
+    // grid's second column (today + 1) repeats it.
+    expect(screen.getAllByText('Riverside Boulders').length).toBe(2)
 
-    // The grid covers Mon–Sun with an add button per day, and the view switcher
-    // is gone entirely.
+    // The grid covers the next seven days with an add button per day, and the
+    // view switcher is gone entirely.
     expect(screen.getAllByRole('button', { name: /^Add a session on / })).toHaveLength(7)
     expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
 
@@ -234,12 +235,12 @@ describe('<Week /> day views', () => {
     )
 
     // Two ranges: the day cards always ask for the real today → tomorrow, the
-    // grid asks for the week being browsed.
+    // grid asks for the rolling window starting today.
     expect(climbRanges()).toContain(`${TODAY}..${TOMORROW}`)
-    expect(climbRanges()).toContain('2026-09-14..2026-09-20')
+    expect(climbRanges()).toContain('2026-09-20..2026-09-26')
   })
 
-  it('keeps the day cards on today when the grid is paged to another week', async () => {
+  it('keeps the day cards on today when the grid is paged to another window', async () => {
     renderApp('/week?week=2026-08-31')
 
     // The far-away week is empty…
@@ -262,10 +263,10 @@ describe('<Week /> day views', () => {
     expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: '← Prev' }))
-    await waitFor(() => expect(climbRanges()).toContain('2026-09-07..2026-09-13'))
+    await waitFor(() => expect(climbRanges()).toContain('2026-09-13..2026-09-19'))
 
-    fireEvent.click(screen.getByRole('button', { name: 'This week' }))
-    await waitFor(() => expect(climbRanges()).toContain('2026-09-14..2026-09-20'))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to today' }))
+    await waitFor(() => expect(climbRanges()).toContain('2026-09-20..2026-09-26'))
 
     // The day cards were never re-scoped by either move.
     expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy()

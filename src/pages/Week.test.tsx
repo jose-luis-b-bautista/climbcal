@@ -1,7 +1,8 @@
 /**
  * Integration render of the calendar page with the Supabase client mocked out:
  * proves the auth gate, friend lookup, climb queries and gym join all wire up,
- * render the expected cards, and that today, tomorrow and the week share a page.
+ * render the expected cards, and that today, tomorrow and the 7-day grid share a
+ * page.
  */
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -64,8 +65,8 @@ describe('<Week />', () => {
     expect(screen.getByText(/18:30 – 21:00/)).toBeTruthy()
     expect(screen.getByText(/07:00 – 09:00/)).toBeTruthy()
 
-    // Week header for the requested week (appears in the range hint and the
-    // Monday column), so at least one match is expected.
+    // The requested window (appears in the range hint and its first column), so
+    // at least one match is expected.
     expect(screen.getAllByText(/Sep 14/).length).toBeGreaterThan(0)
 
     // The empty-week placeholder must not be shown.
@@ -92,14 +93,14 @@ describe('<Week />', () => {
     // All three sections on one page.
     expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Tomorrow' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Week' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Next 7 days' })).toBeTruthy()
 
     // The fixture has nothing on the pinned today / tomorrow, so those cards say
     // so instead of borrowing Wednesday's sessions.
     expect(await screen.findByText('Nothing on today')).toBeTruthy()
     expect(screen.getByText('Nothing on tomorrow')).toBeTruthy()
 
-    // Mon–Sun grid below: six empty columns plus Wednesday's two sessions.
+    // 7-day grid below: six empty columns plus Wednesday's two sessions.
     expect(screen.getAllByText('Nothing planned')).toHaveLength(6)
 
     // The muted aside (the empty card's hint) is desktop-only, so it keeps
@@ -111,6 +112,32 @@ describe('<Week />', () => {
     // And no view switcher to switch between them.
     expect(screen.queryByRole('group', { name: 'Calendar view' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Week' })).toBeNull()
+  })
+
+  it('starts the grid on today, even halfway through the week', async () => {
+    // The report behind this: on a Tuesday the grid still opened on Monday, so
+    // the first column was a day that had already happened.
+    vi.setSystemTime(new Date('2026-09-16T19:00:00')) // a Wednesday
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/week']}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    // Today's session is in the fixture, and it is the first column of the
+    // window - Wed 16 → Tue 22 rather than Mon 14 → Sun 20.
+    expect((await screen.findAllByText('Vertical Hub')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Sep 16/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Sep 14/)).toBeNull()
+
+    // The first column is labelled from its own date: "Wed Sep 16", not the
+    // "Mon Sep 16" an index-based label would produce for a mid-week window.
+    expect(screen.getByText('Wed').textContent).toBe('Wed Sep 16')
   })
 
   it('opens your wall from the header profile chip', async () => {

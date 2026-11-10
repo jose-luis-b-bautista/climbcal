@@ -24,14 +24,13 @@ import { groupByDate, useWeekClimbs } from '../hooks/useWeekClimbs'
 import {
   DAY_NAMES_SHORT,
   addDays,
-  addWeeks,
   formatShortDate,
   formatWeekRange,
   isToday,
-  resolveWeekStart,
-  startOfWeek,
+  resolveWindowStart,
   toISODate,
   weekDays,
+  weekdayIndex,
 } from '../lib/date'
 import type { Climb, ClimbEntry } from '../types'
 
@@ -48,10 +47,17 @@ export default function Week() {
   const todayISO = toISODate(today)
   const tomorrowISO = toISODate(tomorrow)
 
-  const weekStart = useMemo(() => resolveWeekStart(searchParams.get('week')), [searchParams])
-  const weekStartDate = toISODate(weekStart)
-  const weekEndDate = toISODate(addDays(weekStart, 6))
-  const days = useMemo(() => weekDays(weekStart), [weekStart])
+  // A rolling window, not the calendar week: on a Tuesday, a Monday column is a
+  // row of sessions that already happened. The window always starts on the day
+  // being browsed - today unless `?week=` says otherwise - and runs for seven
+  // days, so "today + 6" is the far edge.
+  const windowStart = useMemo(
+    () => resolveWindowStart(searchParams.get('week'), today),
+    [searchParams, today],
+  )
+  const windowStartDate = toISODate(windowStart)
+  const windowEndDate = toISODate(addDays(windowStart, 6))
+  const days = useMemo(() => weekDays(windowStart), [windowStart])
 
   const participantIds = useMemo(
     () => (userId ? [userId, ...friendIds] : null),
@@ -59,7 +65,7 @@ export default function Week() {
   )
 
   // Two queries on purpose: the day cards always describe the real today and
-  // tomorrow, whatever week the grid below is parked on.
+  // tomorrow, whatever window the grid below is parked on.
   const {
     entries: upcoming,
     loading: upcomingLoading,
@@ -68,27 +74,27 @@ export default function Week() {
   } = useWeekClimbs(todayISO, tomorrowISO, participantIds, Boolean(userId))
 
   const {
-    entries: weekEntries,
-    loading: weekLoading,
-    error: weekError,
-    reload: reloadWeek,
-  } = useWeekClimbs(weekStartDate, weekEndDate, participantIds, Boolean(userId))
+    entries: windowEntries,
+    loading: windowLoading,
+    error: windowError,
+    reload: reloadWindow,
+  } = useWeekClimbs(windowStartDate, windowEndDate, participantIds, Boolean(userId))
 
   const reload = () => {
     reloadUpcoming()
-    reloadWeek()
+    reloadWindow()
   }
 
   // One batched count for every session on the page - the day cards and the
-  // week grid share it, so opening the page costs a single extra request.
+  // 7-day grid share it, so opening the page costs a single extra request.
   const commentIds = useMemo(
-    () => [...upcoming, ...weekEntries].map((entry) => entry.id),
-    [upcoming, weekEntries],
+    () => [...upcoming, ...windowEntries].map((entry) => entry.id),
+    [upcoming, windowEntries],
   )
   const commentCounts = useCommentCounts('climb', commentIds)
 
   // Both queries fail together in practice, so surface a single banner.
-  const dataError = upcomingError ?? weekError
+  const dataError = upcomingError ?? windowError
 
   const [modal, setModal] = useState<{ open: boolean; date: string; initial: Climb | null }>({
     open: false,
@@ -98,16 +104,17 @@ export default function Week() {
 
   const byDate = useMemo(() => {
     const map = new Map<string, ClimbEntry[]>()
-    for (const group of groupByDate(weekEntries)) map.set(group.date, group.entries)
+    for (const group of groupByDate(windowEntries)) map.set(group.date, group.entries)
     return map
-  }, [weekEntries])
+  }, [windowEntries])
 
   /** The two-day query feeds both day cards, so split it by date here. */
   const dayEntries = (dateISO: string) => upcoming.filter((entry) => entry.climb_date === dateISO)
 
-  const isCurrentWeek = weekStartDate === toISODate(startOfWeek(today))
-  const goToWeek = (offset: number) => {
-    setSearchParams({ week: toISODate(addWeeks(weekStart, offset)) })
+  // The default window already starts today, so the reset has nothing to do.
+  const isDefaultWindow = windowStartDate === todayISO
+  const goToWindow = (offset: number) => {
+    setSearchParams({ week: toISODate(addDays(windowStart, offset * 7)) })
   }
 
   return (
@@ -178,47 +185,51 @@ export default function Week() {
           onEdit={(climb) => setModal({ open: true, date: climb.climb_date, initial: climb })}
         />
 
-                      {profile && userId ? (
-                <WeekSessionImage
-                  sessions={weekEntries}
-                  weekTitle={formatWeekRange(weekStart)}
-                  userId={userId}
-                  theme={theme}
-                />
-              ) : null}
+        {profile && userId ? (
+          <WeekSessionImage
+            sessions={windowEntries}
+            weekTitle={formatWeekRange(windowStart)}
+            userId={userId}
+            theme={theme}
+          />
+        ) : null}
 
         <section>
           <SectionHeading
-            title="Week"
+            title="Next 7 days"
+            hint={formatWeekRange(windowStart)}
             action={
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className={secondaryButtonClass} onClick={() => goToWeek(-1)}>
+                <button type="button" className={secondaryButtonClass} onClick={() => goToWindow(-1)}>
                   ← Prev
                 </button>
+                {/* The day cards above carry a "Today" toggle of their own, so
+                    this reset says what it does to a screen reader. */}
                 <button
                   type="button"
                   className={secondaryButtonClass}
                   onClick={() => setSearchParams({})}
-                  disabled={isCurrentWeek}
+                  disabled={isDefaultWindow}
+                  aria-label="Back to today"
                 >
-                  This week
+                  Today
                 </button>
-                <button type="button" className={secondaryButtonClass} onClick={() => goToWeek(1)}>
+                <button type="button" className={secondaryButtonClass} onClick={() => goToWindow(1)}>
                   Next →
                 </button>
               </div>
             }
           />
 
-          {weekLoading ? (
-            <PageLoader label="Loading this week…" />
+          {windowLoading ? (
+            <PageLoader label="Loading these days…" />
           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-                {days.map((day, index) => {
+                {days.map((day) => {
                   const dateISO = toISODate(day)
                   const columnEntries = byDate.get(dateISO) ?? []
-                  const isTodayColumn = isToday(day) && isCurrentWeek
+                  const isTodayColumn = isToday(day)
 
                   return (
                     <div
@@ -232,8 +243,10 @@ export default function Week() {
                     >
                       <div className="mb-2 flex items-start justify-between gap-1">
                         <div>
+                          {/* The window starts on any weekday, so the name comes
+                              from the date rather than the column's position. */}
                           <p className="text-sm font-semibold text-zinc-100">
-                            {DAY_NAMES_SHORT[index]}{' '}
+                            {DAY_NAMES_SHORT[weekdayIndex(day)]}{' '}
                             <span className="font-normal text-zinc-500">
                               {formatShortDate(day)}
                             </span>
@@ -278,7 +291,7 @@ export default function Week() {
                 })}
               </div>
 
-              {weekEntries.length === 0 ? (
+              {windowEntries.length === 0 ? (
                 <div className="mt-3">
                   <EmptyState
                     title="Bone dry week"

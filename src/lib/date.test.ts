@@ -17,12 +17,14 @@ import {
   parseISODate,
   parseISOMonth,
   resolveWeekStart,
+  resolveWindowStart,
   startOfMonth,
   startOfWeek,
   toISODate,
   toISOMonth,
   trimTime,
   weekDays,
+  weekdayIndex,
   windowMinutes,
 } from './date'
 
@@ -70,6 +72,14 @@ describe('weekDays', () => {
       '2026-09-19',
       '2026-09-20',
     ])
+  })
+})
+
+describe('weekdayIndex', () => {
+  it('maps a date onto the Monday-first DAY_NAMES_SHORT order', () => {
+    expect(weekdayIndex(new Date(2026, 8, 14))).toBe(0) // Monday
+    expect(weekdayIndex(new Date(2026, 8, 16))).toBe(2) // Wednesday
+    expect(weekdayIndex(new Date(2026, 8, 20))).toBe(6) // Sunday
   })
 })
 
@@ -228,6 +238,24 @@ describe('resolveWeekStart', () => {
     // 2026-09-20 is a Sunday, so its week starts on the 14th.
     expect(toISODate(resolveWeekStart(null, new Date(2026, 8, 20)))).toBe('2026-09-14')
     expect(toISODate(resolveWeekStart('not-a-date', new Date(2026, 8, 20)))).toBe('2026-09-14')
+  })
+})
+
+describe('resolveWindowStart', () => {
+  it('keeps the day the rolling window starts on', () => {
+    // No snapping to Monday: the Week page shows "today → today + 6".
+    expect(toISODate(resolveWindowStart('2026-09-16'))).toBe('2026-09-16')
+    expect(toISODate(resolveWindowStart('2026-09-21'))).toBe('2026-09-21')
+  })
+
+  it('falls back to the given day when there is no usable param', () => {
+    expect(toISODate(resolveWindowStart(null, new Date(2026, 8, 20)))).toBe('2026-09-20')
+    expect(toISODate(resolveWindowStart('not-a-date', new Date(2026, 8, 20)))).toBe('2026-09-20')
+  })
+
+  it('drops the time of day from the fallback', () => {
+    const start = resolveWindowStart(null, new Date(2026, 8, 20, 19, 30, 15))
+    expect([start.getHours(), start.getMinutes(), start.getSeconds()]).toEqual([0, 0, 0])
   })
 })
 

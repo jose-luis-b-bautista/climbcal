@@ -52,9 +52,23 @@ export function startOfWeek(date: Date): Date {
   return monday
 }
 
-/** The seven local dates of the week starting at `weekStart` (a Monday). */
+/**
+ * The seven local dates starting at `weekStart` - a Monday for the calendar
+ * week (the public share page), today for the Week page's rolling window.
+ */
 export function weekDays(weekStart: Date): Date[] {
   return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index))
+}
+
+/** Index of `date` in `DAY_NAMES_SHORT` (Monday = 0 … Sunday = 6). */
+export function weekdayIndex(date: Date): number {
+  // `getDay()` is Sunday-first, so shift it onto the Monday-first scale.
+  return (date.getDay() + 6) % 7
+}
+
+/** Local midnight for `date`, dropping the time of day. */
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 /**
@@ -62,14 +76,33 @@ export function weekDays(weekStart: Date): Date[] {
  * belongs to, falling back to the week containing `fallback` (today) when the
  * param is missing or unparseable.
  *
- * Shared by the calendar and the public share page so a shared `/u/<username>`
- * link and the app itself always agree on what "a week" is.
+ * The public share page still talks in calendar weeks (`/u/<username>`), where
+ * a shared link and the app agree on what "a week" is. The Week page itself
+ * shows a rolling window instead - see `resolveWindowStart`.
  */
 export function resolveWeekStart(param: string | null, fallback: Date = new Date()): Date {
   if (!param) return startOfWeek(fallback)
   const parsed = parseISODate(param)
   if (Number.isNaN(parsed.getTime())) return startOfWeek(fallback)
   return startOfWeek(parsed)
+}
+
+/**
+ * Resolves a `?week=YYYY-MM-DD` search param into the first day of a rolling
+ * seven-day window, falling back to `fallback` (today) when the param is
+ * missing or unparseable.
+ *
+ * Unlike {@link resolveWeekStart} the day is kept as given: the Week page shows
+ * "today → today + 6", so a Wednesday param means Wed → Tue. Snapping back to
+ * Monday would put a day on screen that has already passed - the thing the
+ * rolling window exists to avoid.
+ */
+export function resolveWindowStart(param: string | null, fallback: Date = new Date()): Date {
+  if (param) {
+    const parsed = parseISODate(param)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  return startOfDay(fallback)
 }
 
 export function isSameDate(a: Date, b: Date): boolean {

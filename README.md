@@ -28,9 +28,11 @@ or write what.
 - **Auth & onboarding** - email + password; pick a username, display name and visibility (private by
   default).
 - **Calendar** (home) - **Today** and **Tomorrow** summary cards on top (with "On now" / "Finished"
-  badges), then the **Mon–Sun week** (prev / this / next) at `?week=YYYY-MM-DD`, so weeks are
-  linkable. Your own sessions are highlighted and editable. The day cards always describe the *real*
-  today and tomorrow and open on arrival.
+  badges), then the **next 7 days** (prev / today / next) starting from today at `?week=YYYY-MM-DD`
+  (the first day of the window), so every window is linkable. The grid is rolling, not Mon–Sun:
+  on a Tuesday the first column is Tuesday, so no space is spent on a day that has already passed.
+  Your own sessions are highlighted and editable. The day cards always describe the *real* today
+  and tomorrow and open on arrival.
 - **Sessions** - several per day, each with a date, a gym from the curated list (grouped by region)
   or a typed "Other" name, an optional second gym (**"Either X or Y"**) or **"Not sure yet"**, a
   time window (exact clock times **or** labels such as "Opening" / "Closing"), and an optional note.
@@ -301,9 +303,9 @@ supabase/
 ```
 
 Queries work in two steps: load the accepted friend ids, then fetch climbs for `self + friends` in
-the selected week (embedded gym name included) and map the climber profiles onto the rows. The feed
-reuses the same hook with no user filter, letting RLS return the visible rows and keeping only
-`visibility = 'public'` profiles - plus your own rows, whatever your visibility.
+the selected 7-day window (embedded gym name included) and map the climber profiles onto the rows.
+The feed reuses the same hook with no user filter, letting RLS return the visible rows and keeping
+only `visibility = 'public'` profiles - plus your own rows, whatever your visibility.
 
 Comments follow the same shape: one batched count per page, then a thread query (plus an author
 profile join) only when a card is opened. Writes are the caller's own rows; the delete policies are

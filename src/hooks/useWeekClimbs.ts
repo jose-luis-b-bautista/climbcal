@@ -144,7 +144,7 @@ export function useClimbs({
 
 /**
  * Convenience wrapper for the home page: climbs for the signed-in user plus
- * their accepted friends, for one week.
+ * their accepted friends, across one seven-day window.
  */
 export function useWeekClimbs(
   weekStartDate: string,

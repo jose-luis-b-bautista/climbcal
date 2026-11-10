@@ -92,7 +92,8 @@ export default function SharedProfile() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { profile: ownProfile, loading: authLoading, profileLoading } = useAuth()
 
-  // The visitor's own Monday, so the week they see matches the app's idea of it.
+  // The visitor's own Monday: a shared link still shows a calendar week, even
+  // though the in-app Week page runs a rolling window from today.
   const weekStart = useMemo(() => resolveWeekStart(searchParams.get('week')), [searchParams])
   const days = useMemo(() => weekDays(weekStart), [weekStart])
   const weekStartISO = toISODate(weekStart)

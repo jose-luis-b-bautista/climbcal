@@ -249,8 +249,8 @@ swallowed.
 
 View modes and periods live in the query string so they are linkable and
 shareable:
-`/week?week=2026-09-14`, `/feed?view=calendar&month=2026-09`,
-`/u/<username>` for public shares.
+`/week?week=2026-09-14` (the first day of the rolling seven-day window),
+`/feed?view=calendar&month=2026-09`, `/u/<username>` for public shares.
 
 ### Modals
 
