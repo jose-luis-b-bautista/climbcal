@@ -596,13 +596,6 @@ export function WeekSessionImage({
         </div>
       ) : null}
 
-      {shareFirst ? (
-        <p className="text-xs text-zinc-400">
-          Safari cannot write to the Photos app on its own. Use “Save to Photos”, then choose “Save
-          Image” in the share sheet.
-        </p>
-      ) : null}
-
       {actionStatus === 'shared' ? (
         <p className="text-xs text-emerald-300">
           Choose “Save Image” in the share sheet to add it to Photos.
