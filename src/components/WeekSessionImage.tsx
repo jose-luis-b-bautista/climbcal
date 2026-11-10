@@ -23,13 +23,36 @@ const FONT_FAMILY = 'system-ui, -apple-system, sans-serif'
 const TOP_SAFE_INSET = 250
 const BOTTOM_SAFE_INSET = 250
 
-const HEADER_LABEL_BASELINE = TOP_SAFE_INSET + 42
+/**
+ * Headline on the shared story image. It replaces the date range as the big
+ * title, which reads better as a standalone post; the range stays as the
+ * eyebrow above it. Swap the copy here to retitle every generated image.
+ */
+export const WEEK_IMAGE_HEADLINE = 'My week in climbing'
+
+const HEADER_EYEBROW_BASELINE = TOP_SAFE_INSET + 42
 const HEADER_TITLE_BASELINE = TOP_SAFE_INSET + 116
-const CONTENT_TOP = 470
+const CONTENT_TOP = 420
 const CONTENT_BOTTOM = 1560
 
-const CARD_HEIGHT = 210
+/**
+ * Card geometry. Heights are derived per day rather than fixed: a card only
+ * grows for a second time line or a note, so the note sits just under the
+ * date/time line and a quiet card carries no empty tail.
+ */
+const CARD_MIN_HEIGHT = 160
 const CARD_SPACING = 26
+const CARD_RADIUS = 28
+const CARD_BOTTOM_PADDING = 24
+const CARD_STRIPE_INSET = 26
+
+const DAY_LABEL_BASELINE = 52
+const DAY_NUMBER_BASELINE = 124
+const GYM_BASELINE = 86
+const FIRST_TIME_BASELINE = 128
+const TIME_LINE_STEP = 30
+const NOTE_GAP = 32
+
 const FOOTER_CONTENT_GAP = 56
 
 const FOOTER_BASELINE = CANVAS_HEIGHT - BOTTOM_SAFE_INSET - 34
@@ -108,7 +131,6 @@ function svgNode(
 export function generateWeekSessionSVG(
   sessions: ClimbEntry[],
   weekTitle: string,
-  displayName: string,
   theme: Theme,
 ): string {
   const palette = PALETTES[theme]
@@ -121,20 +143,21 @@ export function generateWeekSessionSVG(
   // No background rect: the page stays transparent so the image can be pasted
   // over any photo in Instagram Stories.
 
-  // Typographic header: no gradient slab, just the climber identity and week.
+  // Typographic header: a standing headline with the date range above it as an
+  // eyebrow. The climber's name is deliberately absent so the image stands alone.
   root.appendChild(
     svgNode(
       'text',
       {
         x: PADDING,
-        y: HEADER_LABEL_BASELINE,
+        y: HEADER_EYEBROW_BASELINE,
         'font-family': FONT_FAMILY,
-        'font-size': 22,
+        'font-size': 24,
         'font-weight': 600,
-        'letter-spacing': 6,
+        'letter-spacing': 3,
         fill: palette.headerMuted,
       },
-      `${displayName}`,
+      weekTitle,
     ),
   )
   root.appendChild(
@@ -148,7 +171,7 @@ export function generateWeekSessionSVG(
         'font-weight': 'bold',
         fill: palette.headerText,
       },
-      weekTitle,
+      WEEK_IMAGE_HEADLINE,
     ),
   )
 
@@ -166,8 +189,32 @@ export function generateWeekSessionSVG(
     .sort()
     .map((dayKey) => ({ dayKey, entries: byDay.get(dayKey) ?? [] }))
 
+  // Each card's height follows its content, so the block is planned first and
+  // the same numbers drive both the measurement and the drawing.
+  const cards = dayBlocks.map(({ dayKey, entries }) => {
+    // One card per active day. A second gym on the same day is the edge case:
+    // both names share the headline and each session keeps its own time line.
+    const gymLabel = [...new Set(entries.map((session) => gymNameOf(session)))].join(' + ')
+    const lines = entries.map((session) =>
+      formatTimeWindow(session.start_time, session.end_time, session.start_slot, session.end_slot),
+    )
+    if (lines.length > 2) {
+      lines[1] = `${lines[1]} · +${lines.length - 2} more`
+    }
+    const visibleLines = lines.slice(0, 2)
+    const note = entries.find((session) => session.note)?.note ?? null
+    const lastLineBaseline =
+      FIRST_TIME_BASELINE + Math.max(0, visibleLines.length - 1) * TIME_LINE_STEP
+    const height = Math.max(
+      CARD_MIN_HEIGHT,
+      lastLineBaseline + (note ? NOTE_GAP : 0) + CARD_BOTTOM_PADDING,
+    )
+    return { dayKey, entries, gymLabel, visibleLines, note, lastLineBaseline, height }
+  })
+
   const cardsHeight =
-    dayBlocks.length * CARD_HEIGHT + Math.max(0, dayBlocks.length - 1) * CARD_SPACING
+    cards.reduce((total, card) => total + card.height, 0) +
+    Math.max(0, cards.length - 1) * CARD_SPACING
   const availableHeight = CONTENT_BOTTOM - CONTENT_TOP
   // Shrink only when the week is busy enough to overflow the story canvas.
   const scale = Math.min(1, availableHeight / Math.max(cardsHeight, 1))
@@ -175,20 +222,10 @@ export function generateWeekSessionSVG(
 
   let y = 0
 
-  dayBlocks.forEach(({ dayKey, entries }, dayIndex) => {
+  cards.forEach(({ dayKey, entries, gymLabel, visibleLines, note, lastLineBaseline, height }, dayIndex) => {
     const dayDate = new Date(`${dayKey}T00:00:00`)
     const dayShort = DAY_NAMES_SHORT[(dayDate.getDay() + 6) % 7].toUpperCase()
-
-    // One card per active day. A second gym on the same day is the edge case:
-    // both names share the headline and each session keeps its own time line.
-    const gymLabel = [...new Set(entries.map((session) => gymNameOf(session)))].join(' + ')
     const gymSize = gymLabel.length > 30 ? 28 : gymLabel.length > 22 ? 34 : 40
-    const lines = entries.map((session) =>
-      formatTimeWindow(session.start_time, session.end_time, session.start_slot, session.end_slot),
-    )
-    if (lines.length > 2) {
-      lines[1] = `${lines[1]} · +${lines.length - 2} more`
-    }
 
     // The accent stripe is the gym's own primary colour (first gym wins when a
     // day has two); unknown gyms fall back to the theme accent.
@@ -203,8 +240,8 @@ export function generateWeekSessionSVG(
         x: PADDING,
         y: cardY,
         width: CANVAS_WIDTH - PADDING * 2,
-        height: CARD_HEIGHT,
-        rx: 28,
+        height,
+        rx: CARD_RADIUS,
         fill: palette.cardBg,
         stroke: palette.dayBorder,
         'stroke-width': 2,
@@ -213,9 +250,9 @@ export function generateWeekSessionSVG(
     contentGroup.appendChild(
       svgNode('rect', {
         x: PADDING + 28,
-        y: cardY + 30,
+        y: cardY + CARD_STRIPE_INSET,
         width: 6,
-        height: CARD_HEIGHT - 60,
+        height: height - CARD_STRIPE_INSET * 2,
         rx: 3,
         fill: accent,
       }),
@@ -225,7 +262,7 @@ export function generateWeekSessionSVG(
         'text',
         {
           x: PADDING + 52,
-          y: cardY + 58,
+          y: cardY + DAY_LABEL_BASELINE,
           'font-family': FONT_FAMILY,
           'font-size': 22,
           'font-weight': 600,
@@ -240,7 +277,7 @@ export function generateWeekSessionSVG(
         'text',
         {
           x: PADDING + 52,
-          y: cardY + 132,
+          y: cardY + DAY_NUMBER_BASELINE,
           'font-family': FONT_FAMILY,
           'font-size': 58,
           'font-weight': 'bold',
@@ -254,7 +291,7 @@ export function generateWeekSessionSVG(
         'text',
         {
           x: PADDING + 170,
-          y: cardY + 92,
+          y: cardY + GYM_BASELINE,
           'font-family': FONT_FAMILY,
           'font-size': gymSize,
           'font-weight': 'bold',
@@ -264,13 +301,13 @@ export function generateWeekSessionSVG(
       ),
     )
 
-    lines.slice(0, 2).forEach((line, lineIndex) => {
+    visibleLines.forEach((line, lineIndex) => {
       contentGroup.appendChild(
         svgNode(
           'text',
           {
             x: PADDING + 170,
-            y: cardY + 134 + lineIndex * 30,
+            y: cardY + FIRST_TIME_BASELINE + lineIndex * TIME_LINE_STEP,
             'font-family': FONT_FAMILY,
             'font-size': 23,
             fill: palette.meta,
@@ -280,7 +317,6 @@ export function generateWeekSessionSVG(
       )
     })
 
-    const note = entries.find((session) => session.note)?.note
     if (note) {
       const noteText = note.length > 44 ? `${note.slice(0, 41)}...` : note
       contentGroup.appendChild(
@@ -288,7 +324,7 @@ export function generateWeekSessionSVG(
           'text',
           {
             x: PADDING + 170,
-            y: cardY + 194,
+            y: cardY + lastLineBaseline + NOTE_GAP,
             'font-family': FONT_FAMILY,
             'font-size': 18,
             fill: palette.footerMuted,
@@ -298,8 +334,8 @@ export function generateWeekSessionSVG(
       )
     }
 
-    y += CARD_HEIGHT
-    if (dayIndex < dayBlocks.length - 1) y += CARD_SPACING
+    y += height
+    if (dayIndex < cards.length - 1) y += CARD_SPACING
   })
 
   const offsetX = (CANVAS_WIDTH - CANVAS_WIDTH * scale) / 2
@@ -333,7 +369,6 @@ export function generateWeekSessionSVG(
 export interface WeekSessionImageProps {
   sessions: ClimbEntry[]
   weekTitle: string
-  displayName: string
   userId: string
   /** Mirrors the app theme so the shared image matches what the user sees. */
   theme: Theme
@@ -465,7 +500,6 @@ function downloadBlob(blob: Blob, filename: string): void {
 export function WeekSessionImage({
   sessions,
   weekTitle,
-  displayName,
   userId,
   theme,
 }: WeekSessionImageProps) {
@@ -491,7 +525,7 @@ export function WeekSessionImage({
     setImage(null)
 
     try {
-      const svg = generateWeekSessionSVG(ownSessions, weekTitle, displayName, theme)
+      const svg = generateWeekSessionSVG(ownSessions, weekTitle, theme)
       let blob: Blob | null = null
       let transparentBlob: Blob | null = null
       try {

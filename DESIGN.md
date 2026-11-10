@@ -291,6 +291,10 @@ read, so it shows the whole list.
   rendered as a sibling below - never inside the row - so an open thread spans the
   card instead of shrinking to the row's width. This is what keeps the
   Today/Tomorrow cards matching the feed on desktop.
+- **The toggle rides on the time row.** `SessionCard` renders the action row next
+  to the session's hours (the wrapping row lets the opened panel take a full line
+  below), so the comment count sits with the schedule instead of being pushed to
+  the card's footer under the note.
 - **Flat, not nested.** Comments are a hairline list (no per-comment cards) and the
   composer is a soft, borderless field at 13px, so a thread inside a session card
   does not read as boxes within boxes. The character counter appears only once you

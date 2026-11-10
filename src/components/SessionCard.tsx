@@ -48,8 +48,8 @@ export function SessionCard({
   commentsDisplay = 'inline',
   variant = 'card',
 }: SessionCardProps) {
-  // Comments sit first in the footer; this rides along on the same left-aligned
-  // row via the thread's `action` slot.
+  // The Edit button rides on the comment thread's `action` slot, so it sits
+  // right after the toggle on the time row.
   const editButton = isOwn ? (
     <button
       type="button"
@@ -100,38 +100,40 @@ export function SessionCard({
         ) : null}
       </div>
 
-      <p className="mt-2 text-xs font-medium text-emerald-300">
-        {formatTimeWindow(entry.start_time, entry.end_time, entry.start_slot, entry.end_slot)}
-        {/* A duration only makes sense when both ends are clock times. */}
-        {entry.start_time && entry.end_time ? (
-          <span className="text-zinc-500">
-            {' '}
-            · {formatDuration(entry.start_time, entry.end_time)}
-          </span>
+      {/* The comment toggle shares the time row: the count belongs beside the
+          session's hours, not buried under the note. The thread's panel is a
+          full-width sibling inside this wrapping row, so an opened thread still
+          spans the card. */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p className="text-xs font-medium text-emerald-300">
+          {formatTimeWindow(entry.start_time, entry.end_time, entry.start_slot, entry.end_slot)}
+          {/* A duration only makes sense when both ends are clock times. */}
+          {entry.start_time && entry.end_time ? (
+            <span className="text-zinc-500">
+              {' '}
+              · {formatDuration(entry.start_time, entry.end_time)}
+            </span>
+          ) : null}
+        </p>
+
+        {/* Comments first, then Edit - both flush left, matching the feed. The
+            thread takes the Edit button as its `action` so the opened panel stays
+            a full-width sibling rather than a squeezed flex item. */}
+        {viewerId ? (
+          <SessionComments
+            climbId={entry.id}
+            ownerId={entry.user_id}
+            viewerId={viewerId}
+            count={commentCount}
+            display={commentsDisplay}
+            action={editButton}
+          />
+        ) : isOwn ? (
+          <div className="-ml-2 flex flex-wrap items-center gap-2">{editButton}</div>
         ) : null}
-      </p>
+      </div>
 
       {entry.note ? <p className="mt-1 text-xs text-zinc-400">{entry.note}</p> : null}
-
-      {isOwn || viewerId ? (
-        // Comments first, then Edit - both flush left, matching the feed. The
-        // thread takes the Edit button as its `action` so the opened panel stays a
-        // full-width sibling rather than a squeezed flex item.
-        <div className="mt-1 border-t border-zinc-800/60 pt-1">
-          {viewerId ? (
-            <SessionComments
-              climbId={entry.id}
-              ownerId={entry.user_id}
-              viewerId={viewerId}
-              count={commentCount}
-              display={commentsDisplay}
-              action={editButton}
-            />
-          ) : (
-            <div className="-ml-2 flex flex-wrap items-center gap-2">{editButton}</div>
-          )}
-        </div>
-      ) : null}
     </div>
   )
 }

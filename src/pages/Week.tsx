@@ -4,7 +4,6 @@ import { DaySessions } from '../components/DaySessions'
 import { SessionCard } from '../components/SessionCard'
 import { SessionFormModal } from '../components/SessionFormModal'
 import { WeekSessionImage } from '../components/WeekSessionImage'
-import { displayNameOf } from '../lib/format'
 import {
   EmptyState,
   ErrorBanner,
@@ -183,7 +182,6 @@ export default function Week() {
                 <WeekSessionImage
                   sessions={weekEntries}
                   weekTitle={formatWeekRange(weekStart)}
-                  displayName={displayNameOf(profile)}
                   userId={userId}
                   theme={theme}
                 />
